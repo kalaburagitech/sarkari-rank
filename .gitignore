@@ -1,0 +1,20 @@
+# Dependencies
+node_modules/
+.expo/
+dist/
+.next/
+
+# Environment
+.env
+.env.local
+.env*.local
+
+# OS
+.DS_Store
+
+# Build
+*.log
+.turbo
+
+# Secrets - never commit deploy keys
+*.pem

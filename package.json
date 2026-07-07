@@ -1,0 +1,12 @@
+{
+  "name": "sarkari-rank",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "admin": "cd backend && npm run dev:web",
+    "app": "cd app && npm start",
+    "convex:deploy": "cd backend && npx convex deploy",
+    "convex:seed": "cd backend && npx convex run seed:seedDatabase",
+    "install:all": "cd backend && npm install && cd ../app && npm install --legacy-peer-deps"
+  }
+}
