@@ -13,6 +13,7 @@ import type * as content from "../content.js";
 import type * as exams from "../exams.js";
 import type * as questionBank from "../questionBank.js";
 import type * as seed from "../seed.js";
+import type * as seedKarnataka from "../seedKarnataka.js";
 import type * as seedProduction from "../seedProduction.js";
 import type * as users from "../users.js";
 
@@ -28,6 +29,7 @@ declare const fullApi: ApiFromModules<{
   exams: typeof exams;
   questionBank: typeof questionBank;
   seed: typeof seed;
+  seedKarnataka: typeof seedKarnataka;
   seedProduction: typeof seedProduction;
   users: typeof users;
 }>;

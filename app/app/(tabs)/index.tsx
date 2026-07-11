@@ -31,7 +31,7 @@ export default function HomeScreen() {
           <View className="flex-1 mr-3">
             <Text className="text-indigo-300 text-sm font-medium">Welcome back 👋</Text>
             <Text className="text-white text-2xl font-bold mt-1">{user?.name ?? "Aspirant"}</Text>
-            <Text className="text-indigo-200 text-sm mt-1">Crack SSC · Banking · Railway · UPSC</Text>
+            <Text className="text-indigo-200 text-sm mt-1">Karnataka · KPSC · KEA · Police · SSC · Banking</Text>
           </View>
           <View className="flex-row items-center">
           {user?.isPremium ? (
@@ -102,38 +102,70 @@ export default function HomeScreen() {
       {/* Live Tests */}
       {liveTests.length > 0 && (
         <View className="mx-4 mt-6">
-          <SectionHeader title="🔴 Live Tests" subtitle="Real exam experience" action={
+          <SectionHeader title="Live Tests" subtitle="Compete in real time" action={
             <Link href="/(tabs)/tests?type=live" asChild><TouchableOpacity><Text className="text-indigo-600 text-sm font-semibold">View All</Text></TouchableOpacity></Link>
           } />
           {liveTests.map((test) => (
             <Link key={test._id} href={`/test/${test._id}`} asChild>
-              <TouchableOpacity className="mb-2">
-                <PremiumCard className="p-4 flex-row items-center justify-between">
-                  <View className="flex-1">
-                    <Badge label="LIVE" color="#EF4444" />
-                    <Text className="font-semibold text-slate-900 mt-1">{test.title}</Text>
-                    <Text className="text-slate-400 text-xs mt-0.5">{test.totalQuestions} Qs · {test.durationMinutes} min</Text>
+              <TouchableOpacity className="mb-2.5" activeOpacity={0.9}>
+                <View className="rounded-2xl p-4 flex-row items-center" style={{ backgroundColor: "#4F46E5", shadowColor: "#4F46E5", shadowOpacity: 0.3, shadowRadius: 12, elevation: 4 }}>
+                  <View className="w-12 h-12 rounded-2xl items-center justify-center mr-3" style={{ backgroundColor: "#FFFFFF25" }}>
+                    <Ionicons name="radio" size={22} color="#fff" />
                   </View>
-                  <Ionicons name="chevron-forward" size={20} color="#CBD5E1" />
-                </PremiumCard>
+                  <View className="flex-1">
+                    <View className="flex-row items-center mb-1">
+                      <View className="bg-red-500 px-2 py-0.5 rounded-full flex-row items-center">
+                        <View className="w-1.5 h-1.5 rounded-full bg-white mr-1" />
+                        <Text className="text-white text-[10px] font-black" style={{ letterSpacing: 0.5 }}>LIVE</Text>
+                      </View>
+                    </View>
+                    <Text className="text-white font-bold mt-1" numberOfLines={1}>{test.title}</Text>
+                    <Text className="text-indigo-100 text-xs mt-0.5">{test.totalQuestions} Qs · {test.durationMinutes} min · {test.attemptCount}+ playing</Text>
+                  </View>
+                  <View className="w-9 h-9 rounded-full items-center justify-center ml-2" style={{ backgroundColor: "#FFFFFF2E" }}>
+                    <Ionicons name="arrow-forward" size={18} color="#fff" />
+                  </View>
+                </View>
               </TouchableOpacity>
             </Link>
           ))}
         </View>
       )}
 
-      {/* Popular Exams */}
+      {/* Karnataka Exams */}
+      {categories?.some((c) => c.region === "karnataka") && (
+        <View className="mx-4 mt-6">
+          <SectionHeader title="🏛️ Karnataka Exams" subtitle="KPSC · KEA · Police & more" action={
+            <Link href="/(tabs)/exams" asChild><TouchableOpacity><Text className="text-indigo-600 text-sm font-semibold">View All</Text></TouchableOpacity></Link>
+          } />
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            {categories.filter((c) => c.region === "karnataka").map((cat) => (
+              <Link key={cat._id} href={`/category/${cat.slug}`} asChild>
+                <TouchableOpacity className="mr-3 w-36">
+                  <PremiumCard className="p-4">
+                    <Text className="text-3xl mb-2">{cat.icon}</Text>
+                    <Text className="font-bold text-slate-900 text-sm" numberOfLines={1}>{cat.name.split("—")[0].trim()}</Text>
+                    <Text className="text-slate-400 text-xs mt-1" numberOfLines={2}>{cat.description}</Text>
+                  </PremiumCard>
+                </TouchableOpacity>
+              </Link>
+            ))}
+          </ScrollView>
+        </View>
+      )}
+
+      {/* Popular Exam Bodies */}
       <View className="mx-4 mt-6">
         <SectionHeader title="Popular Exams" action={
           <Link href="/(tabs)/exams" asChild><TouchableOpacity><Text className="text-indigo-600 text-sm font-semibold">View All</Text></TouchableOpacity></Link>
         } />
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           {categories?.filter((c) => c.isPopular).map((cat) => (
-            <Link key={cat._id} href={`/(tabs)/exams?category=${cat.slug}`} asChild>
+            <Link key={cat._id} href={`/category/${cat.slug}`} asChild>
               <TouchableOpacity className="mr-3 w-36">
                 <PremiumCard className="p-4" >
                   <Text className="text-3xl mb-2">{cat.icon}</Text>
-                  <Text className="font-bold text-slate-900 text-sm">{cat.name}</Text>
+                  <Text className="font-bold text-slate-900 text-sm" numberOfLines={1}>{cat.name.split("—")[0].trim()}</Text>
                   <Text className="text-slate-400 text-xs mt-1" numberOfLines={2}>{cat.description}</Text>
                 </PremiumCard>
               </TouchableOpacity>

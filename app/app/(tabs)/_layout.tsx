@@ -2,11 +2,13 @@ import { Tabs, Redirect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../lib/auth";
 import { View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Logo, LogoRow } from "../../components/Logo";
 import { theme } from "../../constants/theme";
 
 export default function TabLayout() {
   const { user, isLoading } = useAuth();
+  const insets = useSafeAreaInsets();
 
   if (isLoading) {
     return (
@@ -23,7 +25,7 @@ export default function TabLayout() {
       screenOptions={{
         tabBarActiveTintColor: "#6366F1",
         tabBarInactiveTintColor: "#9CA3AF",
-        tabBarStyle: { backgroundColor: "#fff", borderTopColor: "#E2E8F0", height: 64, paddingBottom: 10, paddingTop: 4, elevation: 8, shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 8 },
+        tabBarStyle: { backgroundColor: "#fff", borderTopColor: "#E2E8F0", height: 64 + insets.bottom, paddingBottom: insets.bottom + 10, paddingTop: 4, elevation: 8, shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 8 },
         headerStyle: { backgroundColor: "#312E81" },
         headerTintColor: "#fff",
         headerTitleStyle: { fontWeight: "700" },

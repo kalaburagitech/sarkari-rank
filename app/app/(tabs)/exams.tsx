@@ -1,26 +1,56 @@
 import { View, Text, ScrollView, TouchableOpacity, TextInput } from "react-native";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { Link, useLocalSearchParams } from "expo-router";
+import { Link } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useState, useMemo } from "react";
 import { SectionHeader, PremiumCard, Badge, LoadingScreen } from "../../components/ui";
 import { theme } from "../../constants/theme";
 
 export default function ExamsScreen() {
-  const { category } = useLocalSearchParams<{ category?: string }>();
   const [search, setSearch] = useState("");
   const categories = useQuery(api.exams.listCategories, {});
   const exams = useQuery(api.exams.listExams, {});
 
-  const filteredCategories = category ? categories?.filter((c) => c.slug === category) : categories;
+  const examCountByCategory = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const e of exams ?? []) map[e.categoryId] = (map[e.categoryId] ?? 0) + 1;
+    return map;
+  }, [exams]);
 
-  const filteredExams = useMemo(() => {
-    if (!exams || !search) return exams ?? [];
-    return exams.filter((e) => e.name.toLowerCase().includes(search.toLowerCase()));
+  const searchResults = useMemo(() => {
+    if (!exams || !search.trim()) return [];
+    const q = search.toLowerCase();
+    return exams.filter((e) => e.name.toLowerCase().includes(q) || e.description.toLowerCase().includes(q));
   }, [exams, search]);
 
+  const { karnatakaBodies, nationalBodies } = useMemo(() => {
+    const ka = (categories ?? []).filter((c) => c.region === "karnataka");
+    const nat = (categories ?? []).filter((c) => c.region !== "karnataka");
+    return { karnatakaBodies: ka, nationalBodies: nat };
+  }, [categories]);
+
   if (!categories || !exams) return <LoadingScreen message="Loading exams..." />;
+
+  const renderBodyCard = (cat: (typeof categories)[number]) => (
+    <Link key={cat._id} href={`/category/${cat.slug}`} asChild>
+      <TouchableOpacity activeOpacity={0.85}>
+        <PremiumCard className="p-4 mb-3 flex-row items-center">
+          <View style={{ backgroundColor: cat.color + "18" }} className="w-14 h-14 rounded-2xl items-center justify-center mr-3">
+            <Text className="text-2xl">{cat.icon}</Text>
+          </View>
+          <View className="flex-1">
+            <Text className="font-bold text-slate-900 text-base" numberOfLines={1}>{cat.name}</Text>
+            <Text className="text-slate-500 text-xs mt-0.5" numberOfLines={2}>{cat.description}</Text>
+            <View className="flex-row items-center mt-2">
+              <Badge label={`${examCountByCategory[cat._id] ?? 0} exams`} color={cat.color} />
+            </View>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#CBD5E1" />
+        </PremiumCard>
+      </TouchableOpacity>
+    </Link>
+  );
 
   return (
     <View className="flex-1 bg-slate-50">
@@ -28,42 +58,64 @@ export default function ExamsScreen() {
         <View className="bg-slate-50 px-4 pt-3 pb-2">
           <View className="flex-row items-center bg-white rounded-2xl px-4 py-3 border border-slate-100 mb-2">
             <Ionicons name="search" size={18} color="#94A3B8" />
-            <TextInput placeholder="Search exams..." value={search} onChangeText={setSearch}
+            <TextInput placeholder="Search exams (KAS, FDA, PDO, PSI...)" value={search} onChangeText={setSearch}
               className="flex-1 ml-3 text-slate-900 text-sm" placeholderTextColor="#94A3B8" />
+            {search.length > 0 && (
+              <TouchableOpacity onPress={() => setSearch("")}>
+                <Ionicons name="close-circle" size={18} color="#CBD5E1" />
+              </TouchableOpacity>
+            )}
           </View>
-          <Text className="text-slate-500 text-xs px-1">{exams.length} Exams · SSC · Banking · Railway · UPSC</Text>
+          <Text className="text-slate-500 text-xs px-1">
+            {categories.length} bodies · {exams.length} exams · Karnataka + All-India
+          </Text>
         </View>
 
-        <View className="px-4 pb-8">
-          {filteredCategories?.map((cat) => {
-            const catExams = filteredExams.filter((e) => e.categoryId === cat._id);
-            if (catExams.length === 0) return null;
-
-            return (
-              <View key={cat._id} className="mb-6">
-                <SectionHeader title={`${cat.icon} ${cat.name}`} subtitle={`${catExams.length} exams available`} />
-                {catExams.map((exam) => (
+        <View className="px-4 pb-10">
+          {/* Search results */}
+          {search.trim().length > 0 ? (
+            <View className="mt-2">
+              <SectionHeader title="Search Results" subtitle={`${searchResults.length} exam(s) found`} />
+              {searchResults.length === 0 ? (
+                <Text className="text-slate-400 text-sm px-1 py-6 text-center">No exams match "{search}".</Text>
+              ) : (
+                searchResults.map((exam) => (
                   <Link key={exam._id} href={`/exam/${exam.slug}`} asChild>
                     <TouchableOpacity activeOpacity={0.85}>
-                      <PremiumCard className="p-4 mb-3 flex-row items-center">
-                        <View style={{ backgroundColor: theme.primary + "15" }} className="w-12 h-12 rounded-2xl items-center justify-center mr-3">
-                          <Text className="text-xl">{cat.icon}</Text>
+                      <PremiumCard className="p-4 mb-2 flex-row items-center">
+                        <View style={{ backgroundColor: theme.primary + "15" }} className="w-11 h-11 rounded-2xl items-center justify-center mr-3">
+                          <Text className="text-lg">{exam.icon ?? "📘"}</Text>
                         </View>
                         <View className="flex-1">
-                          <Text className="font-bold text-slate-900 text-base">{exam.name}</Text>
-                          <Text className="text-slate-500 text-xs mt-0.5" numberOfLines={2}>{exam.description}</Text>
-                          <View className="flex-row items-center mt-2 gap-2">
-                            <Badge label={`${exam.totalTests} Tests`} color={theme.primary} />
-                          </View>
+                          <Text className="font-bold text-slate-900 text-sm">{exam.name}</Text>
+                          <Text className="text-slate-500 text-xs mt-0.5" numberOfLines={1}>{exam.description}</Text>
                         </View>
-                        <Ionicons name="chevron-forward" size={20} color="#CBD5E1" />
+                        <Ionicons name="chevron-forward" size={18} color="#CBD5E1" />
                       </PremiumCard>
                     </TouchableOpacity>
                   </Link>
-                ))}
-              </View>
-            );
-          })}
+                ))
+              )}
+            </View>
+          ) : (
+            <>
+              {/* Karnataka bodies on top */}
+              {karnatakaBodies.length > 0 && (
+                <View className="mt-3">
+                  <SectionHeader title="🏛️ Karnataka State Exams" subtitle="KPSC · KEA · Police · KPTCL & more" />
+                  {karnatakaBodies.map(renderBodyCard)}
+                </View>
+              )}
+
+              {/* National / All-India bodies */}
+              {nationalBodies.length > 0 && (
+                <View className="mt-4">
+                  <SectionHeader title="🇮🇳 National / All-India Exams" subtitle="SSC · Banking · Railway · UPSC & more" />
+                  {nationalBodies.map(renderBodyCard)}
+                </View>
+              )}
+            </>
+          )}
         </View>
       </ScrollView>
     </View>

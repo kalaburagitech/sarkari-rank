@@ -366,7 +366,7 @@ export const listQuestions = query({
       .collect();
     return questions.sort((a, b) => a.order - b.order).map((q) => {
       if (args.includeAnswers) return q;
-      const { correctOptionId, explanation, ...rest } = q;
+      const { correctOptionId, explanation, explanationKn, ...rest } = q;
       return rest;
     });
   },
@@ -424,6 +424,11 @@ export const bulkCreateQuestions = mutation({
         ),
         correctOptionId: v.string(),
         explanation: v.optional(v.string()),
+        questionTextKn: v.optional(v.string()),
+        optionsKn: v.optional(
+          v.array(v.object({ id: v.string(), text: v.string() }))
+        ),
+        explanationKn: v.optional(v.string()),
         subject: v.optional(v.string()),
         topic: v.optional(v.string()),
         difficulty: v.union(

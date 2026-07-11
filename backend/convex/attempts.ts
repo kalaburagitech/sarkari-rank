@@ -88,6 +88,14 @@ export const submitAnswer = mutation({
     );
 
     await ctx.db.patch(args.attemptId, { answers: updatedAnswers });
+
+    // Return correctness so the client can show instant feedback + explanation.
+    return {
+      isCorrect,
+      correctOptionId: question.correctOptionId,
+      explanation: question.explanation,
+      explanationKn: question.explanationKn,
+    };
   },
 });
 
