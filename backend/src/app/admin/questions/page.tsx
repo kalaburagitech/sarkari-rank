@@ -4,9 +4,10 @@ import { useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { Id } from "@convex/_generated/dataModel";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, FileJson } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader, Button, FormCard, Input, Textarea, Select, LoadingState, EmptyState, Card, Badge } from "@/components/admin/ui";
+import { BulkImportQuestions } from "@/components/admin/BulkImportQuestions";
 
 export default function QuestionsPage() {
   const tests = useQuery(api.exams.listTests, {});
@@ -16,6 +17,7 @@ export default function QuestionsPage() {
   const deleteQuestion = useMutation(api.exams.deleteQuestion);
 
   const [showForm, setShowForm] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     questionText: "", options: [{ id: "a", text: "" }, { id: "b", text: "" }, { id: "c", text: "" }, { id: "d", text: "" }],
@@ -46,7 +48,14 @@ export default function QuestionsPage() {
   return (
     <div>
       <PageHeader title="Question Bank" description="All MCQs stored in Convex database — students see live data in the mobile app"
-        action={<Button onClick={() => setShowForm(!showForm)} disabled={!selectedTestId}><Plus size={16} /> Add Question</Button>} />
+        action={
+          <div className="flex gap-2">
+            <Button variant="secondary" onClick={() => { setShowImport(!showImport); setShowForm(false); }}><FileJson size={16} /> Import JSON</Button>
+            <Button onClick={() => { setShowForm(!showForm); setShowImport(false); }} disabled={!selectedTestId}><Plus size={16} /> Add Question</Button>
+          </div>
+        } />
+
+      {showImport && <BulkImportQuestions onClose={() => setShowImport(false)} onDone={() => {}} />}
 
       <Card className="p-4 mb-6">
         <Select label="Select Test to manage questions" value={selectedTestId} onChange={(e) => { setSelectedTestId(e.target.value); setShowForm(false); }}>

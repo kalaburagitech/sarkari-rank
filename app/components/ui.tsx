@@ -1,5 +1,6 @@
 import { View, Text, TextInput, TouchableOpacity, ActivityIndicator } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { theme } from "../constants/theme";
 import { Logo } from "./Logo";
 
@@ -135,16 +136,17 @@ export function ScreenHeader({
   onBack?: () => void;
   right?: React.ReactNode;
 }) {
+  const insets = useSafeAreaInsets();
   return (
-    <View style={{ backgroundColor: theme.primaryDark }} className="px-5 py-4 flex-row items-center">
+    <View style={{ backgroundColor: theme.primaryDark, paddingTop: insets.top + 10 }} className="px-5 pb-4 flex-row items-center">
       {onBack && (
-        <TouchableOpacity onPress={onBack} className="mr-3 w-10 h-10 rounded-xl bg-white/10 items-center justify-center">
+        <TouchableOpacity onPress={onBack} hitSlop={8} className="mr-3 w-10 h-10 rounded-xl bg-white/10 items-center justify-center">
           <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>
       )}
       <View className="flex-1">
-        <Text className="text-white text-lg font-bold">{title}</Text>
-        {subtitle && <Text className="text-indigo-300 text-xs mt-0.5">{subtitle}</Text>}
+        <Text className="text-white text-lg font-bold" numberOfLines={1}>{title}</Text>
+        {subtitle && <Text className="text-indigo-300 text-xs mt-0.5" numberOfLines={1}>{subtitle}</Text>}
       </View>
       {right}
     </View>

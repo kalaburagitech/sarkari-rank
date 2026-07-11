@@ -27,6 +27,8 @@ export default defineSchema({
     icon: v.string(),
     color: v.string(),
     isPopular: v.boolean(),
+    // "karnataka" bodies sort above "national" ones; existing rows read as national.
+    region: v.optional(v.union(v.literal("karnataka"), v.literal("national"))),
     order: v.number(),
     isActive: v.boolean(),
   })
@@ -43,6 +45,13 @@ export default defineSchema({
     totalTests: v.number(),
     isActive: v.boolean(),
     order: v.number(),
+    // Rich exam metadata (all optional → backward compatible)
+    conductingBody: v.optional(v.string()),
+    officialWebsite: v.optional(v.string()),
+    eligibility: v.optional(v.string()),
+    posts: v.optional(v.array(v.string())),
+    examPattern: v.optional(v.string()),
+    syllabus: v.optional(v.string()),
   })
     .index("by_category", ["categoryId"])
     .index("by_slug", ["slug"]),
@@ -115,6 +124,17 @@ export default defineSchema({
     ),
     correctOptionId: v.string(),
     explanation: v.optional(v.string()),
+    // Kannada mirror fields for bilingual rendering (optional → English-only rows still valid)
+    questionTextKn: v.optional(v.string()),
+    optionsKn: v.optional(
+      v.array(
+        v.object({
+          id: v.string(),
+          text: v.string(),
+        })
+      )
+    ),
+    explanationKn: v.optional(v.string()),
     subject: v.optional(v.string()),
     topic: v.optional(v.string()),
     difficulty: v.union(

@@ -6,6 +6,7 @@ import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { useAuth } from "../../lib/auth";
 import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { PremiumCard, Badge, PrimaryButton, LoadingScreen, EmptyScreen } from "../../components/ui";
 import { TEST_TYPE_CONFIG, theme } from "../../constants/theme";
 
@@ -13,6 +14,7 @@ export default function TestScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const testId = id as Id<"tests">;
 
   const test = useQuery(api.exams.getTest, { id: testId });
@@ -34,6 +36,10 @@ export default function TestScreen() {
   const [timeLeft, setTimeLeft] = useState(0);
   const [started, setStarted] = useState(false);
   const [starting, setStarting] = useState(false);
+  const [lang, setLang] = useState<"en" | "kn">("en");
+  const [revealed, setRevealed] = useState<
+    Record<string, { correctOptionId: string; explanation?: string; explanationKn?: string }>
+  >({});
   const resumedRef = useRef(false);
 
   const isBookmarked = bookmarks?.some((b) => b.type === "test" && b.testId === id);
@@ -132,8 +138,19 @@ export default function TestScreen() {
   const handleSelectOption = async (optionId: string) => {
     const q = questions?.[currentIndex];
     if (!q || !attemptId) return;
+    if (revealed[q._id]) return; // answer locked after first selection
     setSelectedAnswers((prev) => ({ ...prev, [q._id]: optionId }));
-    await submitAnswer({ attemptId, questionId: q._id, selectedOptionId: optionId, timeSpentSeconds: 5 });
+    try {
+      const res = await submitAnswer({ attemptId, questionId: q._id, selectedOptionId: optionId, timeSpentSeconds: 5 });
+      if (res) {
+        setRevealed((prev) => ({
+          ...prev,
+          [q._id]: { correctOptionId: res.correctOptionId, explanation: res.explanation, explanationKn: res.explanationKn },
+        }));
+      }
+    } catch {
+      // keep selection even if the network write fails
+    }
   };
 
   const formatTime = (s: number) => {
@@ -231,23 +248,40 @@ export default function TestScreen() {
   }
 
   const currentQ = questions[currentIndex];
+  const qText = lang === "kn" && (currentQ as any).questionTextKn ? (currentQ as any).questionTextKn : currentQ.questionText;
+  const optKnById: Record<string, string> = {};
+  for (const o of ((currentQ as any).optionsKn ?? []) as { id: string; text: string }[]) optKnById[o.id] = o.text;
+  const rev = revealed[currentQ._id];
+  const selectedId = selectedAnswers[currentQ._id];
+  const explText = rev ? (lang === "kn" && rev.explanationKn ? rev.explanationKn : rev.explanation) : undefined;
 
   return (
     <View className="flex-1 bg-slate-50">
       <View style={{ backgroundColor: theme.primaryDark }} className="px-4 py-3 flex-row justify-between items-center">
         <Text className="text-white font-semibold">Q {currentIndex + 1}/{questions.length}</Text>
-        <View className="flex-row items-center bg-white/10 px-3 py-1 rounded-full">
-          <Ionicons name="time-outline" size={14} color={timeLeft < 300 ? "#FCA5A5" : "#fff"} />
-          <Text className={`ml-1 font-bold text-sm ${timeLeft < 300 ? "text-red-300" : "text-white"}`}>{formatTime(timeLeft)}</Text>
+        <View className="flex-row items-center gap-2">
+          {/* Language toggle */}
+          <View className="flex-row bg-white/10 rounded-full p-0.5">
+            <TouchableOpacity onPress={() => setLang("en")} className={`px-2.5 py-1 rounded-full ${lang === "en" ? "bg-white" : ""}`}>
+              <Text className={`text-xs font-bold ${lang === "en" ? "text-indigo-700" : "text-white"}`}>EN</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setLang("kn")} className={`px-2.5 py-1 rounded-full ${lang === "kn" ? "bg-white" : ""}`}>
+              <Text className={`text-xs font-bold ${lang === "kn" ? "text-indigo-700" : "text-white"}`}>ಕನ್ನಡ</Text>
+            </TouchableOpacity>
+          </View>
+          <View className="flex-row items-center bg-white/10 px-3 py-1 rounded-full">
+            <Ionicons name="time-outline" size={14} color={timeLeft < 300 ? "#FCA5A5" : "#fff"} />
+            <Text className={`ml-1 font-bold text-sm ${timeLeft < 300 ? "text-red-300" : "text-white"}`}>{formatTime(timeLeft)}</Text>
+          </View>
+          <TouchableOpacity onPress={handleSubmit} className="bg-amber-500 px-3 py-1.5 rounded-full">
+            <Text className="text-white font-bold text-xs">Submit</Text>
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity onPress={handleSubmit} className="bg-amber-500 px-3 py-1.5 rounded-full">
-          <Text className="text-white font-bold text-xs">Submit</Text>
-        </TouchableOpacity>
       </View>
 
       <ScrollView className="flex-1 p-4">
         <PremiumCard className="p-5 mb-4">
-          <Text className="text-slate-900 text-base leading-7">{currentQ.questionText}</Text>
+          <Text className="text-slate-900 text-base leading-7">{qText}</Text>
           {currentQ.subject && (
             <View className="flex-row mt-3 gap-2">
               <Badge label={currentQ.subject} color={theme.primary} />
@@ -257,25 +291,73 @@ export default function TestScreen() {
         </PremiumCard>
 
         {currentQ.options.map((opt) => {
-          const isSelected = selectedAnswers[currentQ._id] === opt.id;
+          const isSelected = selectedId === opt.id;
+          const isCorrectOpt = rev && opt.id === rev.correctOptionId;
+          const isWrongPick = rev && isSelected && opt.id !== rev.correctOptionId;
+
+          // Card + circle + text styling depending on reveal state
+          let cardCls = "bg-white border-slate-100";
+          let circleCls = "bg-slate-100";
+          let circleTextCls = "text-slate-600";
+          let textCls = "text-slate-800";
+          if (isCorrectOpt) {
+            cardCls = "bg-emerald-50 border-emerald-500";
+            circleCls = "bg-emerald-600";
+            circleTextCls = "text-white";
+            textCls = "text-emerald-900 font-semibold";
+          } else if (isWrongPick) {
+            cardCls = "bg-red-50 border-red-500";
+            circleCls = "bg-red-600";
+            circleTextCls = "text-white";
+            textCls = "text-red-900 font-semibold";
+          } else if (!rev && isSelected) {
+            cardCls = "bg-indigo-50 border-indigo-500";
+            circleCls = "bg-indigo-600";
+            circleTextCls = "text-white";
+            textCls = "text-indigo-900 font-medium";
+          } else if (rev) {
+            textCls = "text-slate-400";
+          }
+
           return (
             <TouchableOpacity
               key={opt.id}
+              activeOpacity={rev ? 1 : 0.7}
+              disabled={!!rev}
               onPress={() => handleSelectOption(opt.id)}
-              className={`rounded-2xl p-4 mb-2 border-2 ${isSelected ? "bg-indigo-50 border-indigo-500" : "bg-white border-slate-100"}`}
+              className={`rounded-2xl p-4 mb-2 border-2 ${cardCls}`}
             >
               <View className="flex-row items-center">
-                <View className={`w-9 h-9 rounded-xl items-center justify-center mr-3 ${isSelected ? "bg-indigo-600" : "bg-slate-100"}`}>
-                  <Text className={`font-bold text-sm ${isSelected ? "text-white" : "text-slate-600"}`}>{opt.id.toUpperCase()}</Text>
+                <View className={`w-9 h-9 rounded-xl items-center justify-center mr-3 ${circleCls}`}>
+                  <Text className={`font-bold text-sm ${circleTextCls}`}>{opt.id.toUpperCase()}</Text>
                 </View>
-                <Text className={`flex-1 leading-5 ${isSelected ? "text-indigo-900 font-medium" : "text-slate-800"}`}>{opt.text}</Text>
+                <Text className={`flex-1 leading-5 ${textCls}`}>{lang === "kn" && optKnById[opt.id] ? optKnById[opt.id] : opt.text}</Text>
+                {isCorrectOpt && <Ionicons name="checkmark-circle" size={22} color="#059669" />}
+                {isWrongPick && <Ionicons name="close-circle" size={22} color="#DC2626" />}
               </View>
             </TouchableOpacity>
           );
         })}
+
+        {/* Instant feedback banner + explanation */}
+        {rev && (
+          <View className={`rounded-2xl p-4 mt-2 mb-2 ${selectedId === rev.correctOptionId ? "bg-emerald-50 border border-emerald-200" : "bg-red-50 border border-red-200"}`}>
+            <View className="flex-row items-center mb-1">
+              <Ionicons
+                name={selectedId === rev.correctOptionId ? "checkmark-circle" : "close-circle"}
+                size={18}
+                color={selectedId === rev.correctOptionId ? "#059669" : "#DC2626"}
+              />
+              <Text className={`ml-1.5 font-bold text-sm ${selectedId === rev.correctOptionId ? "text-emerald-700" : "text-red-700"}`}>
+                {selectedId === rev.correctOptionId ? (lang === "kn" ? "ಸರಿ ಉತ್ತರ!" : "Correct!") : (lang === "kn" ? "ತಪ್ಪು ಉತ್ತರ" : "Incorrect")}
+              </Text>
+            </View>
+            {explText ? <Text className="text-slate-600 text-sm leading-6">💡 {explText}</Text> : null}
+          </View>
+        )}
       </ScrollView>
 
-      <View className="flex-row justify-between p-4 bg-white border-t border-slate-100">
+      <View className="flex-row justify-between px-4 pt-4 bg-white border-t border-slate-100" style={{ paddingBottom: insets.bottom + 16 }}>
         <TouchableOpacity onPress={() => setCurrentIndex(Math.max(0, currentIndex - 1))} disabled={currentIndex === 0}
           className={`px-5 py-3 rounded-xl ${currentIndex === 0 ? "bg-slate-100" : "bg-slate-200"}`}>
           <Text className="font-semibold text-slate-700">Prev</Text>

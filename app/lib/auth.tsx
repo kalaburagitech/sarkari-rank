@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useMutation, useConvex } from "convex/react";
+import { useMutation, useConvex, useQuery } from "convex/react";
 import { api } from "../convex/_generated/api";
 import { Id } from "../convex/_generated/dataModel";
 
@@ -39,6 +39,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsLoading(false);
     });
   }, []);
+
+  // Keep the logged-in user in sync with the database (premium status, streak,
+  // tests taken) so changes made server-side reflect immediately without re-login.
+  const liveProfile = useQuery(
+    api.users.getProfile,
+    user?._id ? { userId: user._id } : "skip"
+  );
+
+  useEffect(() => {
+    if (!liveProfile) return;
+    const effectivePremium =
+      !!liveProfile.isPremium &&
+      (!liveProfile.premiumExpiresAt || liveProfile.premiumExpiresAt > Date.now());
+    setUser((prev) => {
+      if (!prev || prev._id !== liveProfile._id) return prev;
+      if (
+        prev.isPremium === effectivePremium &&
+        prev.streak === liveProfile.streak &&
+        prev.totalTestsTaken === liveProfile.totalTestsTaken &&
+        prev.name === liveProfile.name &&
+        prev.avatarUrl === liveProfile.avatarUrl
+      ) {
+        return prev; // no change → avoid render loop
+      }
+      const merged = { ...prev, ...liveProfile, isPremium: effectivePremium } as User;
+      AsyncStorage.setItem("user", JSON.stringify(merged)).catch(() => {});
+      return merged;
+    });
+  }, [liveProfile]);
 
   const refreshUser = async () => {
     if (!user) return;

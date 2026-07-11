@@ -13,6 +13,7 @@ export default function RootLayout() {
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="(auth)" />
+          <Stack.Screen name="category/[slug]" options={{ headerShown: false }} />
           <Stack.Screen name="test/[id]" options={{ headerShown: true, title: "Mock Test" }} />
           <Stack.Screen name="exam/[slug]" options={{ headerShown: true, title: "Exam" }} />
           <Stack.Screen name="doubts" options={{ headerShown: false }} />

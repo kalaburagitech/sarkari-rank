@@ -10,7 +10,7 @@ export default {
     splash: {
       image: "./assets/splash-icon.png",
       resizeMode: "contain",
-      backgroundColor: "#312E81",
+      backgroundColor: "#201584",
     },
     ios: {
       supportsTablet: true,
@@ -18,10 +18,8 @@ export default {
     },
     android: {
       adaptiveIcon: {
-        backgroundColor: "#312E81",
+        backgroundColor: "#201584",
         foregroundImage: "./assets/android-icon-foreground.png",
-        backgroundImage: "./assets/android-icon-background.png",
-        monochromeImage: "./assets/android-icon-monochrome.png",
       },
       package: "com.sarkarirank.examprep",
       versionCode: 1,
