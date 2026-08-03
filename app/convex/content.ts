@@ -38,14 +38,18 @@ export const createStudyNote = mutation({
     title: v.string(),
     slug: v.string(),
     content: v.string(),
+    summary: v.optional(v.string()),
     subject: v.optional(v.string()),
     topic: v.optional(v.string()),
     isPremium: v.boolean(),
+    // Publish state — omit/true = published, false = draft.
+    isActive: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
+    const { isActive, ...rest } = args;
     return await ctx.db.insert("studyNotes", {
-      ...args,
-      isActive: true,
+      ...rest,
+      isActive: isActive ?? true,
       createdAt: Date.now(),
     });
   },
@@ -56,6 +60,7 @@ export const updateStudyNote = mutation({
     id: v.id("studyNotes"),
     title: v.optional(v.string()),
     content: v.optional(v.string()),
+    summary: v.optional(v.string()),
     subject: v.optional(v.string()),
     topic: v.optional(v.string()),
     isPremium: v.optional(v.boolean()),
@@ -67,6 +72,30 @@ export const updateStudyNote = mutation({
       Object.entries(updates).filter(([, v]) => v !== undefined)
     );
     await ctx.db.patch(id, filtered);
+  },
+});
+
+export const duplicateStudyNote = mutation({
+  args: { id: v.id("studyNotes") },
+  handler: async (ctx, args) => {
+    const note = await ctx.db.get(args.id);
+    if (!note) throw new Error("Note not found");
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { _id, _creationTime, ...rest } = note;
+    return await ctx.db.insert("studyNotes", {
+      ...rest,
+      title: `${note.title} (Copy)`,
+      slug: `${note.slug}-copy-${Date.now()}`,
+      isActive: false,
+      createdAt: Date.now(),
+    });
+  },
+});
+
+export const deleteStudyNote = mutation({
+  args: { id: v.id("studyNotes") },
+  handler: async (ctx, args) => {
+    await ctx.db.delete(args.id);
   },
 });
 
@@ -116,6 +145,13 @@ export const updateCurrentAffair = mutation({
       Object.entries(updates).filter(([, v]) => v !== undefined)
     );
     await ctx.db.patch(id, filtered);
+  },
+});
+
+export const deleteCurrentAffair = mutation({
+  args: { id: v.id("currentAffairs") },
+  handler: async (ctx, args) => {
+    await ctx.db.delete(args.id);
   },
 });
 

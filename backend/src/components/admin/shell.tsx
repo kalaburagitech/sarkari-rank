@@ -1,33 +1,111 @@
 "use client";
 
+import { Suspense } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   LayoutDashboard, BookOpen, FileQuestion, ClipboardList, Users,
   Newspaper, StickyNote, HelpCircle, Settings, GraduationCap, LogOut, Zap,
+  ListChecks, CalendarClock, Layers,
 } from "lucide-react";
 import { useAdminAuth } from "@/lib/admin-auth";
 import { BrandLogo } from "@/components/BrandLogo";
 import { cn } from "@/lib/utils";
 
-const navItems = [
-  { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/admin/categories", label: "Categories", icon: BookOpen },
-  { href: "/admin/exams", label: "Exams", icon: GraduationCap },
-  { href: "/admin/test-series", label: "Test Series", icon: ClipboardList },
-  { href: "/admin/tests", label: "Tests & Quizzes", icon: FileQuestion },
-  { href: "/admin/questions", label: "Questions", icon: HelpCircle },
-  { href: "/admin/daily-quiz", label: "Daily Quiz", icon: Zap },
-  { href: "/admin/study-notes", label: "Study Notes", icon: StickyNote },
-  { href: "/admin/current-affairs", label: "Current Affairs", icon: Newspaper },
-  { href: "/admin/users", label: "Users", icon: Users },
-  { href: "/admin/doubts", label: "Doubts", icon: HelpCircle },
-  { href: "/admin/settings", label: "Settings", icon: Settings },
+type NavItem = { href: string; label: string; icon: React.ElementType; tab?: string };
+type NavGroup = { section: string | null; items: NavItem[] };
+
+const navGroups: NavGroup[] = [
+  { section: null, items: [{ href: "/admin", label: "Dashboard", icon: LayoutDashboard }] },
+  {
+    section: "Catalog",
+    items: [
+      { href: "/admin/categories", label: "Categories", icon: BookOpen },
+      { href: "/admin/exams", label: "Exams", icon: GraduationCap },
+    ],
+  },
+  {
+    section: "Questions",
+    items: [
+      { href: "/admin/questions?tab=all", label: "All Questions", icon: ListChecks, tab: "all" },
+      { href: "/admin/questions?tab=practice", label: "Practice", icon: BookOpen, tab: "practice" },
+      { href: "/admin/questions?tab=pyp", label: "Previous Year", icon: CalendarClock, tab: "pyp" },
+      { href: "/admin/questions?tab=series", label: "Test Series", icon: Layers, tab: "series" },
+    ],
+  },
+  {
+    section: "Tests",
+    items: [
+      { href: "/admin/test-series", label: "Test Series", icon: ClipboardList },
+      { href: "/admin/tests", label: "Tests & Quizzes", icon: FileQuestion },
+      { href: "/admin/daily-quiz", label: "Daily Quiz", icon: Zap },
+    ],
+  },
+  {
+    section: "Content",
+    items: [
+      { href: "/admin/study-notes", label: "Notes", icon: StickyNote },
+      { href: "/admin/current-affairs", label: "Current Affairs", icon: Newspaper },
+    ],
+  },
+  {
+    section: "People",
+    items: [
+      { href: "/admin/users", label: "Users", icon: Users },
+      { href: "/admin/doubts", label: "Doubts", icon: HelpCircle },
+    ],
+  },
+  { section: null, items: [{ href: "/admin/settings", label: "Settings", icon: Settings }] },
 ];
 
-export function AdminShell({ children }: { children: React.ReactNode }) {
+function SidebarNav() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const currentTab = searchParams.get("tab") ?? "all";
+
+  const isActive = (item: NavItem) => {
+    if (item.tab) {
+      // Questions sub-links share one path; disambiguate by ?tab=
+      return pathname === "/admin/questions" && currentTab === item.tab;
+    }
+    return pathname === item.href;
+  };
+
+  return (
+    <nav className="flex-1 p-3 space-y-3 overflow-y-auto">
+      {navGroups.map((group, gi) => (
+        <div key={gi} className="space-y-0.5">
+          {group.section && (
+            <p className="px-3 pt-2 pb-1 text-[10px] font-bold uppercase tracking-wider text-indigo-300/70">
+              {group.section}
+            </p>
+          )}
+          {group.items.map((item) => {
+            const active = isActive(item);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200",
+                  active
+                    ? "bg-white/20 text-white shadow-lg"
+                    : "text-indigo-200 hover:bg-white/10 hover:text-white"
+                )}
+              >
+                <item.icon size={17} />
+                {item.label}
+              </Link>
+            );
+          })}
+        </div>
+      ))}
+    </nav>
+  );
+}
+
+export function AdminShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { admin, logout } = useAdminAuth();
 
@@ -39,21 +117,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             <BrandLogo size={36} showText subtitle="Admin Control Panel" />
           </motion.div>
         </div>
-        <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
-          {navItems.map((item, i) => {
-            const active = pathname === item.href;
-            return (
-              <motion.div key={item.href} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.03 }}>
-                <Link href={item.href}
-                  className={cn("flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200",
-                    active ? "bg-white/20 text-white shadow-lg" : "text-indigo-200 hover:bg-white/10 hover:text-white")}>
-                  <item.icon size={17} />
-                  {item.label}
-                </Link>
-              </motion.div>
-            );
-          })}
-        </nav>
+        <Suspense fallback={<div className="flex-1" />}>
+          <SidebarNav />
+        </Suspense>
         <div className="p-4 border-t border-white/10">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-sm font-bold">

@@ -3,14 +3,16 @@ import { Stack } from "expo-router";
 import { ConvexProvider } from "convex/react";
 import { convex } from "../lib/convex";
 import { AuthProvider } from "../lib/auth";
+import { ThemeProvider } from "../lib/theme";
 import { StatusBar } from "expo-status-bar";
 
 export default function RootLayout() {
   return (
     <ConvexProvider client={convex}>
-      <AuthProvider>
-        <StatusBar style="light" />
-        <Stack screenOptions={{ headerShown: false }}>
+      <ThemeProvider>
+        <AuthProvider>
+          <StatusBar style="light" />
+          <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="(auth)" />
           <Stack.Screen name="category/[slug]" options={{ headerShown: false }} />
@@ -25,9 +27,10 @@ export default function RootLayout() {
           <Stack.Screen name="current-affairs" options={{ headerShown: false }} />
           <Stack.Screen name="notifications" options={{ headerShown: false }} />
           <Stack.Screen name="leaderboard" options={{ headerShown: false }} />
-          <Stack.Screen name="results/[attemptId]" options={{ headerShown: true, title: "Results" }} />
-        </Stack>
-      </AuthProvider>
+            <Stack.Screen name="results/[attemptId]" options={{ headerShown: true, title: "Results" }} />
+          </Stack>
+        </AuthProvider>
+      </ThemeProvider>
     </ConvexProvider>
   );
 }

@@ -5,11 +5,12 @@ import { api } from "../convex/_generated/api";
 import { useAuth } from "../lib/auth";
 import { useRouter } from "expo-router";
 import { ScreenHeader, PremiumCard, Badge, PrimaryButton, EmptyScreen } from "../components/ui";
-import { theme } from "../constants/theme";
+import { useTheme } from "../lib/theme";
 
 export default function DoubtsScreen() {
   const { user } = useAuth();
   const router = useRouter();
+  const { colors } = useTheme();
   const doubts = useQuery(api.content.listDoubts, user ? { userId: user._id } : "skip");
   const submitDoubt = useMutation(api.content.submitDoubt);
   const [question, setQuestion] = useState("");
@@ -25,17 +26,17 @@ export default function DoubtsScreen() {
   };
 
   return (
-    <View className="flex-1 bg-slate-50">
+    <View className="flex-1 bg-slate-50 dark:bg-ink-bg">
       <ScreenHeader title="Doubt Support" subtitle="Ask anything · Get expert answers" onBack={() => router.back()} />
       <ScrollView className="p-4" showsVerticalScrollIndicator={false}>
         <PremiumCard className="p-4 mb-6">
-          <Text className="font-bold text-slate-900 mb-2">Ask Your Doubt</Text>
+          <Text className="font-bold text-slate-900 dark:text-slate-50 mb-2">Ask Your Doubt</Text>
           <TextInput
             value={question}
             onChangeText={setQuestion}
             placeholder="Type your question here... (e.g. How to solve percentage problems?)"
             multiline
-            className="bg-slate-50 border border-slate-200 rounded-xl p-4 h-28 text-slate-900 text-sm"
+            className="bg-slate-50 dark:bg-ink-bg border border-slate-200 dark:border-slate-700 rounded-xl p-4 h-28 text-slate-900 dark:text-slate-50 text-sm"
             placeholderTextColor="#94A3B8"
           />
           <View className="mt-3">
@@ -43,13 +44,13 @@ export default function DoubtsScreen() {
           </View>
         </PremiumCard>
 
-        <Text className="font-bold text-slate-900 mb-3 px-1">Your Doubts ({doubts?.length ?? 0})</Text>
+        <Text className="font-bold text-slate-900 dark:text-slate-50 mb-3 px-1">Your Doubts ({doubts?.length ?? 0})</Text>
         {doubts?.map((d) => (
           <PremiumCard key={d._id} className="p-4 mb-3">
             <View className="flex-row items-center mb-2">
-              <Badge label={d.status === "answered" ? "Answered" : "Pending"} color={d.status === "answered" ? theme.success : "#F59E0B"} />
+              <Badge label={d.status === "answered" ? "Answered" : "Pending"} color={d.status === "answered" ? colors.success : "#F59E0B"} />
             </View>
-            <Text className="text-slate-900 leading-5">{d.questionText}</Text>
+            <Text className="text-slate-900 dark:text-slate-50 leading-5">{d.questionText}</Text>
             {d.answer && (
               <View className="bg-emerald-50 rounded-xl p-3 mt-3 border border-emerald-100">
                 <Text className="text-emerald-800 text-xs font-bold mb-1">Expert Answer</Text>

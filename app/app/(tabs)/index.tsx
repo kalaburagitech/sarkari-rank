@@ -5,9 +5,10 @@ import { useAuth } from "../../lib/auth";
 import { Link } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { SectionHeader, PremiumCard, Badge, StatBox, LoadingScreen } from "../../components/ui";
-import { theme } from "../../constants/theme";
+import { useTheme } from "../../lib/theme";
 
 export default function HomeScreen() {
+  const { colors } = useTheme();
   const { user } = useAuth();
   const categories = useQuery(api.exams.listCategories, {});
   const exams = useQuery(api.exams.listExams, {});
@@ -24,9 +25,9 @@ export default function HomeScreen() {
   const liveTests = tests.filter((t) => t.type === "live").slice(0, 3);
 
   return (
-    <ScrollView className="flex-1 bg-slate-50" showsVerticalScrollIndicator={false}>
+    <ScrollView className="flex-1 bg-slate-50 dark:bg-ink-bg" showsVerticalScrollIndicator={false}>
       {/* Hero */}
-      <View style={{ backgroundColor: theme.primaryDark }} className="px-5 pt-5 pb-10">
+      <View style={{ backgroundColor: colors.hero }} className="px-5 pt-5 pb-10">
         <View className="flex-row justify-between items-start">
           <View className="flex-1 mr-3">
             <Text className="text-indigo-300 text-sm font-medium">Welcome back 👋</Text>
@@ -61,10 +62,10 @@ export default function HomeScreen() {
 
       {/* Stats card */}
       <PremiumCard className="mx-4 -mt-6 p-1 flex-row">
-        <StatBox icon="document-text" value={user?.totalTestsTaken ?? 0} label="Tests Taken" color={theme.primary} />
-        <View className="w-px bg-slate-100 my-3" />
+        <StatBox icon="document-text" value={user?.totalTestsTaken ?? 0} label="Tests Taken" color={colors.primary} />
+        <View className="w-px bg-slate-100 dark:bg-slate-800 my-3" />
         <StatBox icon="flame" value={`${user?.streak ?? 0}d`} label="Streak" color="#F59E0B" />
-        <View className="w-px bg-slate-100 my-3" />
+        <View className="w-px bg-slate-100 dark:bg-slate-800 my-3" />
         <StatBox icon="trophy" value={analytics?.bestRank ? `#${analytics.bestRank}` : "—"} label="Best Rank" color="#10B981" />
       </PremiumCard>
 
@@ -84,7 +85,7 @@ export default function HomeScreen() {
           <SectionHeader title="📅 Today's Daily Quiz" />
           <Link href={`/test/${dailyQuiz.test._id}`} asChild>
             <TouchableOpacity activeOpacity={0.9}>
-              <View style={{ backgroundColor: theme.primary }} className="rounded-2xl p-5 flex-row items-center justify-between">
+              <View style={{ backgroundColor: colors.primary }} className="rounded-2xl p-5 flex-row items-center justify-between">
                 <View className="flex-1">
                   <Badge label="FREE" color="#fff" />
                   <Text className="text-white font-bold text-base mt-2">{dailyQuiz.test.title}</Text>
@@ -144,8 +145,8 @@ export default function HomeScreen() {
                 <TouchableOpacity className="mr-3 w-36">
                   <PremiumCard className="p-4">
                     <Text className="text-3xl mb-2">{cat.icon}</Text>
-                    <Text className="font-bold text-slate-900 text-sm" numberOfLines={1}>{cat.name.split("—")[0].trim()}</Text>
-                    <Text className="text-slate-400 text-xs mt-1" numberOfLines={2}>{cat.description}</Text>
+                    <Text className="font-bold text-slate-900 dark:text-slate-50 text-sm" numberOfLines={1}>{cat.name.split("—")[0].trim()}</Text>
+                    <Text className="text-slate-400 dark:text-slate-400 text-xs mt-1" numberOfLines={2}>{cat.description}</Text>
                   </PremiumCard>
                 </TouchableOpacity>
               </Link>
@@ -182,8 +183,8 @@ export default function HomeScreen() {
             <TouchableOpacity className="mb-2">
               <PremiumCard className="p-4 flex-row items-center justify-between">
                 <View className="flex-1">
-                  <Text className="font-semibold text-slate-900">{test.title}</Text>
-                  <Text className="text-slate-400 text-xs mt-0.5">{test.totalQuestions} Qs · {test.durationMinutes} min · {test.attemptCount}+ attempts</Text>
+                  <Text className="font-semibold text-slate-900 dark:text-slate-50">{test.title}</Text>
+                  <Text className="text-slate-400 dark:text-slate-400 text-xs mt-0.5">{test.totalQuestions} Qs · {test.durationMinutes} min · {test.attemptCount}+ attempts</Text>
                 </View>
                 <View className="bg-emerald-500 px-3 py-1.5 rounded-xl"><Text className="text-white text-xs font-bold">FREE</Text></View>
               </PremiumCard>
@@ -211,7 +212,7 @@ export default function HomeScreen() {
                   <View style={{ backgroundColor: item.c + "18" }} className="w-10 h-10 rounded-xl items-center justify-center mb-2">
                     <Ionicons name={item.i as any} size={20} color={item.c} />
                   </View>
-                  <Text className="text-xs font-semibold text-slate-700 text-center">{item.t}</Text>
+                  <Text className="text-xs font-semibold text-slate-700 dark:text-slate-200 text-center">{item.t}</Text>
                 </PremiumCard>
               </TouchableOpacity>
             </Link>
@@ -230,10 +231,10 @@ export default function HomeScreen() {
               <TouchableOpacity className="mb-2">
                 <PremiumCard className="p-4">
                   <View className="flex-row justify-between items-start">
-                    <Text className="font-semibold text-slate-900 flex-1 mr-2">{affair.title}</Text>
-                    <Badge label={affair.category} color={theme.primary} />
+                    <Text className="font-semibold text-slate-900 dark:text-slate-50 flex-1 mr-2">{affair.title}</Text>
+                    <Badge label={affair.category} color={colors.primary} />
                   </View>
-                  <Text className="text-slate-500 text-sm mt-1">{affair.summary}</Text>
+                  <Text className="text-slate-500 dark:text-slate-400 text-sm mt-1">{affair.summary}</Text>
                 </PremiumCard>
               </TouchableOpacity>
             </Link>

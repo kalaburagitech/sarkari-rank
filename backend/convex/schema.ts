@@ -96,6 +96,8 @@ export default defineSchema({
     totalMarks: v.number(),
     negativeMarking: v.number(),
     passingMarks: v.optional(v.number()),
+    // Exam year for Previous Year Papers (type = "pyp"). Optional → existing rows valid.
+    year: v.optional(v.number()),
     languages: v.array(v.string()),
     isFree: v.boolean(),
     isPremium: v.boolean(),
@@ -146,6 +148,8 @@ export default defineSchema({
     negativeMarks: v.number(),
     order: v.number(),
     language: v.string(),
+    // Draft/Published status for admin content workflow. Absent → treated as published.
+    status: v.optional(v.union(v.literal("draft"), v.literal("published"))),
   })
     .index("by_test", ["testId"])
     .index("by_test_order", ["testId", "order"]),
@@ -196,6 +200,8 @@ export default defineSchema({
     title: v.string(),
     slug: v.string(),
     content: v.string(),
+    // Short summary shown in listings (optional → existing rows valid).
+    summary: v.optional(v.string()),
     subject: v.optional(v.string()),
     topic: v.optional(v.string()),
     isPremium: v.boolean(),

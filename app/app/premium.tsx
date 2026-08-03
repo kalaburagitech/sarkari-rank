@@ -6,7 +6,7 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { ScreenHeader, PremiumCard, PrimaryButton } from "../components/ui";
 import { LogoRow } from "../components/Logo";
-import { theme } from "../constants/theme";
+import { useTheme } from "../lib/theme";
 
 const PLANS = [
   { id: "monthly" as const, name: "Monthly", price: 99, duration: "1 month", save: null },
@@ -28,6 +28,7 @@ const FEATURES = [
 export default function PremiumScreen() {
   const { user, refreshUser } = useAuth();
   const router = useRouter();
+  const { colors } = useTheme();
   const createSubscription = useMutation(api.content.createSubscription);
 
   const handlePurchase = async (plan: typeof PLANS[number]) => {
@@ -47,11 +48,11 @@ export default function PremiumScreen() {
   };
 
   return (
-    <View className="flex-1 bg-slate-50">
+    <View className="flex-1 bg-slate-50 dark:bg-ink-bg">
       <ScreenHeader title="SarkariRank Pass" subtitle="Unlock your full potential" onBack={() => router.back()} />
 
       <ScrollView className="p-4" showsVerticalScrollIndicator={false}>
-        <View style={{ backgroundColor: theme.primaryDark }} className="rounded-2xl p-5 mb-5">
+        <View style={{ backgroundColor: colors.hero }} className="rounded-2xl p-5 mb-5">
           <LogoRow size={44} subtitle="Premium Exam Preparation" />
           <Text className="text-indigo-200 text-sm mt-4 leading-5">55+ mock tests · Live tests · PYP · Study notes · Analytics</Text>
         </View>
@@ -62,8 +63,8 @@ export default function PremiumScreen() {
               <View className="flex-row justify-between items-start">
                 <View>
                   {plan.popular && <Text className="text-amber-600 text-xs font-black mb-1">⭐ MOST POPULAR</Text>}
-                  <Text className="text-xl font-bold text-slate-900">{plan.name}</Text>
-                  <Text className="text-slate-500 text-sm">{plan.duration}</Text>
+                  <Text className="text-xl font-bold text-slate-900 dark:text-slate-50">{plan.name}</Text>
+                  <Text className="text-slate-500 dark:text-slate-400 text-sm">{plan.duration}</Text>
                 </View>
                 <View className="items-end">
                   <Text className="text-3xl font-black text-indigo-600">₹{plan.price}</Text>
@@ -75,11 +76,11 @@ export default function PremiumScreen() {
         ))}
 
         <PremiumCard className="p-5 mt-2 mb-8">
-          <Text className="font-bold text-slate-900 mb-3">Everything included:</Text>
+          <Text className="font-bold text-slate-900 dark:text-slate-50 mb-3">Everything included:</Text>
           {FEATURES.map((f) => (
             <View key={f} className="flex-row items-center py-1.5">
               <Ionicons name="checkmark-circle" size={18} color="#10B981" />
-              <Text className="text-slate-700 text-sm ml-2">{f}</Text>
+              <Text className="text-slate-700 dark:text-slate-200 text-sm ml-2">{f}</Text>
             </View>
           ))}
         </PremiumCard>

@@ -5,11 +5,12 @@ import { api } from "../../convex/_generated/api";
 import { Ionicons } from "@expo/vector-icons";
 import { useMemo } from "react";
 import { PremiumCard, Badge, LoadingScreen, EmptyScreen, ScreenHeader } from "../../components/ui";
-import { theme } from "../../constants/theme";
+import { useTheme } from "../../lib/theme";
 
 export default function CategoryScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const router = useRouter();
+  const { colors } = useTheme();
   const categories = useQuery(api.exams.listCategories, {});
   const allExams = useQuery(api.exams.listExams, {});
 
@@ -27,7 +28,7 @@ export default function CategoryScreen() {
   if (!category) return <LoadingScreen message="Body not found" />;
 
   return (
-    <View className="flex-1 bg-slate-50">
+    <View className="flex-1 bg-slate-50 dark:bg-ink-bg">
       <ScreenHeader
         title={category.name}
         subtitle={`${exams.length} exam${exams.length === 1 ? "" : "s"} available`}
@@ -35,7 +36,7 @@ export default function CategoryScreen() {
       />
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
-        <View style={{ backgroundColor: theme.primaryDark }} className="px-5 pb-5">
+        <View style={{ backgroundColor: colors.hero }} className="px-5 pb-5">
           <View className="flex-row items-center">
             <View style={{ backgroundColor: "#ffffff22" }} className="w-12 h-12 rounded-2xl items-center justify-center mr-3">
               <Text className="text-2xl">{category.icon}</Text>
@@ -57,13 +58,13 @@ export default function CategoryScreen() {
                         <Text className="text-xl">{exam.icon ?? category.icon}</Text>
                       </View>
                       <View className="flex-1">
-                        <Text className="font-bold text-slate-900 text-base">{exam.name}</Text>
-                        <Text className="text-slate-500 text-xs mt-0.5" numberOfLines={2}>{exam.description}</Text>
+                        <Text className="font-bold text-slate-900 dark:text-slate-50 text-base">{exam.name}</Text>
+                        <Text className="text-slate-500 dark:text-slate-400 text-xs mt-0.5" numberOfLines={2}>{exam.description}</Text>
                       </View>
                       <Ionicons name="chevron-forward" size={20} color="#CBD5E1" />
                     </View>
                     <View className="flex-row items-center mt-3 gap-2 flex-wrap">
-                      <Badge label={`${exam.totalTests} Tests`} color={theme.primary} />
+                      <Badge label={`${exam.totalTests} Tests`} color={colors.primary} />
                       {exam.posts && exam.posts.length > 0 && (
                         <Badge label={`${exam.posts.length} post types`} color="#10B981" />
                       )}

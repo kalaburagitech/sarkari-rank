@@ -7,12 +7,14 @@ import { Id } from "../../convex/_generated/dataModel";
 import { useAuth } from "../../lib/auth";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { PremiumCard, Badge, PrimaryButton, LoadingScreen, EmptyScreen } from "../../components/ui";
-import { TEST_TYPE_CONFIG, theme } from "../../constants/theme";
+import { PremiumCard, Badge, PrimaryButton, LoadingScreen, EmptyScreen, AnswerOptionCard } from "../../components/ui";
+import { TEST_TYPE_CONFIG } from "../../constants/theme";
+import { useTheme } from "../../lib/theme";
 
 export default function TestScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
+  const { colors } = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const testId = id as Id<"tests">;
@@ -171,16 +173,16 @@ export default function TestScreen() {
 
   if (!started) {
     return (
-      <ScrollView className="flex-1 bg-slate-50" contentContainerStyle={{ padding: 20, paddingBottom: 40 }}>
+      <ScrollView className="flex-1 bg-slate-50 dark:bg-ink-bg" contentContainerStyle={{ padding: 20, paddingBottom: 40 }}>
         <PremiumCard className="p-6">
           <View className="flex-row items-start justify-between mb-2">
             <Badge label={typeCfg.label} color={typeCfg.color} />
             <TouchableOpacity onPress={handleToggleBookmark}>
-              <Ionicons name={isBookmarked ? "bookmark" : "bookmark-outline"} size={24} color={isBookmarked ? theme.primary : "#94A3B8"} />
+              <Ionicons name={isBookmarked ? "bookmark" : "bookmark-outline"} size={24} color={isBookmarked ? colors.primary : "#94A3B8"} />
             </TouchableOpacity>
           </View>
-          <Text className="text-2xl font-bold text-slate-900 mt-2">{test.title}</Text>
-          <Text className="text-slate-500 mt-2 leading-5">{test.description}</Text>
+          <Text className="text-2xl font-bold text-slate-900 dark:text-slate-50 mt-2">{test.title}</Text>
+          <Text className="text-slate-500 dark:text-slate-400 mt-2 leading-5">{test.description}</Text>
 
           <View className="flex-row flex-wrap gap-2 mt-5">
             {[
@@ -189,10 +191,10 @@ export default function TestScreen() {
               { icon: "star", label: "Marks", value: test.totalMarks },
               { icon: "remove-circle", label: "Negative", value: `-${test.negativeMarking}` },
             ].map((item) => (
-              <View key={item.label} className="bg-slate-50 rounded-xl p-3 flex-1 min-w-[44%] items-center">
-                <Ionicons name={item.icon as any} size={18} color={theme.primary} />
-                <Text className="font-bold text-slate-900 mt-1">{item.value}</Text>
-                <Text className="text-slate-400 text-xs">{item.label}</Text>
+              <View key={item.label} className="bg-slate-50 dark:bg-ink-soft rounded-xl p-3 flex-1 min-w-[44%] items-center">
+                <Ionicons name={item.icon as any} size={18} color={colors.primary} />
+                <Text className="font-bold text-slate-900 dark:text-slate-50 mt-1">{item.value}</Text>
+                <Text className="text-slate-400 dark:text-slate-500 text-xs">{item.label}</Text>
               </View>
             ))}
           </View>
@@ -223,8 +225,8 @@ export default function TestScreen() {
 
           {locked ? (
             <View className="mt-6">
-              <View className="bg-indigo-50 rounded-xl p-4 mb-3 flex-row items-center">
-                <Ionicons name="lock-closed" size={20} color={theme.primary} />
+              <View className="bg-indigo-50 dark:bg-primary-950 rounded-xl p-4 mb-3 flex-row items-center">
+                <Ionicons name="lock-closed" size={20} color={colors.primary} />
                 <Text className="text-indigo-800 text-sm ml-2 flex-1">Premium test — unlock with SarkariRank Pass</Text>
               </View>
               <PrimaryButton title="Get Premium Pass · ₹499/yr" onPress={() => router.push("/premium")} variant="gold" />
@@ -256,8 +258,8 @@ export default function TestScreen() {
   const explText = rev ? (lang === "kn" && rev.explanationKn ? rev.explanationKn : rev.explanation) : undefined;
 
   return (
-    <View className="flex-1 bg-slate-50">
-      <View style={{ backgroundColor: theme.primaryDark }} className="px-4 py-3 flex-row justify-between items-center">
+    <View className="flex-1 bg-slate-50 dark:bg-ink-bg">
+      <View style={{ backgroundColor: colors.hero }} className="px-4 py-3 flex-row justify-between items-center">
         <Text className="text-white font-semibold">Q {currentIndex + 1}/{questions.length}</Text>
         <View className="flex-row items-center gap-2">
           {/* Language toggle */}
@@ -281,61 +283,35 @@ export default function TestScreen() {
 
       <ScrollView className="flex-1 p-4">
         <PremiumCard className="p-5 mb-4">
-          <Text className="text-slate-900 text-base leading-7">{qText}</Text>
+          <Text className="text-slate-900 dark:text-slate-50 text-base leading-7">{qText}</Text>
           {currentQ.subject && (
             <View className="flex-row mt-3 gap-2">
-              <Badge label={currentQ.subject} color={theme.primary} />
-              {currentQ.difficulty && <Badge label={currentQ.difficulty} color="#64748B" />}
+              <Badge label={currentQ.subject} color={colors.primary} />
+              {currentQ.difficulty && <Badge label={currentQ.difficulty} color={colors.textMuted} />}
             </View>
           )}
         </PremiumCard>
 
         {currentQ.options.map((opt) => {
           const isSelected = selectedId === opt.id;
-          const isCorrectOpt = rev && opt.id === rev.correctOptionId;
-          const isWrongPick = rev && isSelected && opt.id !== rev.correctOptionId;
-
-          // Card + circle + text styling depending on reveal state
-          let cardCls = "bg-white border-slate-100";
-          let circleCls = "bg-slate-100";
-          let circleTextCls = "text-slate-600";
-          let textCls = "text-slate-800";
-          if (isCorrectOpt) {
-            cardCls = "bg-emerald-50 border-emerald-500";
-            circleCls = "bg-emerald-600";
-            circleTextCls = "text-white";
-            textCls = "text-emerald-900 font-semibold";
-          } else if (isWrongPick) {
-            cardCls = "bg-red-50 border-red-500";
-            circleCls = "bg-red-600";
-            circleTextCls = "text-white";
-            textCls = "text-red-900 font-semibold";
-          } else if (!rev && isSelected) {
-            cardCls = "bg-indigo-50 border-indigo-500";
-            circleCls = "bg-indigo-600";
-            circleTextCls = "text-white";
-            textCls = "text-indigo-900 font-medium";
-          } else if (rev) {
-            textCls = "text-slate-400";
-          }
-
+          const state: "idle" | "selected" | "correct" | "wrong" = rev
+            ? opt.id === rev.correctOptionId
+              ? "correct"
+              : isSelected
+              ? "wrong"
+              : "idle"
+            : isSelected
+            ? "selected"
+            : "idle";
           return (
-            <TouchableOpacity
+            <AnswerOptionCard
               key={opt.id}
-              activeOpacity={rev ? 1 : 0.7}
+              optionId={opt.id}
+              text={lang === "kn" && optKnById[opt.id] ? optKnById[opt.id] : opt.text}
+              state={state}
               disabled={!!rev}
               onPress={() => handleSelectOption(opt.id)}
-              className={`rounded-2xl p-4 mb-2 border-2 ${cardCls}`}
-            >
-              <View className="flex-row items-center">
-                <View className={`w-9 h-9 rounded-xl items-center justify-center mr-3 ${circleCls}`}>
-                  <Text className={`font-bold text-sm ${circleTextCls}`}>{opt.id.toUpperCase()}</Text>
-                </View>
-                <Text className={`flex-1 leading-5 ${textCls}`}>{lang === "kn" && optKnById[opt.id] ? optKnById[opt.id] : opt.text}</Text>
-                {isCorrectOpt && <Ionicons name="checkmark-circle" size={22} color="#059669" />}
-                {isWrongPick && <Ionicons name="close-circle" size={22} color="#DC2626" />}
-              </View>
-            </TouchableOpacity>
+            />
           );
         })}
 
@@ -352,22 +328,22 @@ export default function TestScreen() {
                 {selectedId === rev.correctOptionId ? (lang === "kn" ? "ಸರಿ ಉತ್ತರ!" : "Correct!") : (lang === "kn" ? "ತಪ್ಪು ಉತ್ತರ" : "Incorrect")}
               </Text>
             </View>
-            {explText ? <Text className="text-slate-600 text-sm leading-6">💡 {explText}</Text> : null}
+            {explText ? <Text className="text-slate-600 dark:text-slate-300 text-sm leading-6">💡 {explText}</Text> : null}
           </View>
         )}
       </ScrollView>
 
-      <View className="flex-row justify-between px-4 pt-4 bg-white border-t border-slate-100" style={{ paddingBottom: insets.bottom + 16 }}>
+      <View className="flex-row justify-between px-4 pt-4 bg-white dark:bg-ink-card border-t border-slate-100 dark:border-slate-800" style={{ paddingBottom: insets.bottom + 16 }}>
         <TouchableOpacity onPress={() => setCurrentIndex(Math.max(0, currentIndex - 1))} disabled={currentIndex === 0}
-          className={`px-5 py-3 rounded-xl ${currentIndex === 0 ? "bg-slate-100" : "bg-slate-200"}`}>
-          <Text className="font-semibold text-slate-700">Prev</Text>
+          className={`px-5 py-3 rounded-xl ${currentIndex === 0 ? "bg-slate-100 dark:bg-slate-800" : "bg-slate-200 dark:bg-slate-700"}`}>
+          <Text className="font-semibold text-slate-700 dark:text-slate-200">Prev</Text>
         </TouchableOpacity>
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-1 mx-2">
           {questions.map((q, idx) => (
             <TouchableOpacity key={q._id} onPress={() => setCurrentIndex(idx)}
-              className={`w-8 h-8 rounded-lg items-center justify-center mr-1 ${idx === currentIndex ? "bg-indigo-600" : selectedAnswers[q._id] ? "bg-emerald-500" : "bg-slate-200"}`}>
-              <Text className={`text-xs font-bold ${idx === currentIndex || selectedAnswers[q._id] ? "text-white" : "text-slate-600"}`}>{idx + 1}</Text>
+              className={`w-8 h-8 rounded-lg items-center justify-center mr-1 ${idx === currentIndex ? "bg-indigo-600" : selectedAnswers[q._id] ? "bg-emerald-500" : "bg-slate-200 dark:bg-slate-700"}`}>
+              <Text className={`text-xs font-bold ${idx === currentIndex || selectedAnswers[q._id] ? "text-white" : "text-slate-600 dark:text-slate-300"}`}>{idx + 1}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>

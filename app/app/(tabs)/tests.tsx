@@ -5,9 +5,11 @@ import { Link, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useState, useMemo } from "react";
 import { SectionHeader, PremiumCard, Badge, LoadingScreen, FilterChip } from "../../components/ui";
-import { TEST_TYPE_CONFIG, theme } from "../../constants/theme";
+import { TEST_TYPE_CONFIG } from "../../constants/theme";
+import { useTheme } from "../../lib/theme";
 
 export default function TestsScreen() {
+  const { colors } = useTheme();
   const { type: paramType } = useLocalSearchParams();
   const [filter, setFilter] = useState<string>((paramType as string) ?? "all");
   const [search, setSearch] = useState("");
@@ -25,14 +27,14 @@ export default function TestsScreen() {
   if (tests === undefined) return <LoadingScreen message="Loading tests from server..." />;
 
   return (
-    <View className="flex-1 bg-slate-50">
+    <View className="flex-1 bg-slate-50 dark:bg-ink-bg">
       <ScrollView stickyHeaderIndices={[0]} showsVerticalScrollIndicator={false}>
         {/* Search bar */}
-        <View className="bg-slate-50 px-4 pt-3 pb-2">
-          <View className="flex-row items-center bg-white rounded-2xl px-4 py-3 border border-slate-100 mb-3" style={{ shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 8 }}>
+        <View className="bg-slate-50 dark:bg-ink-bg px-4 pt-3 pb-2">
+          <View className="flex-row items-center bg-white dark:bg-ink-card rounded-2xl px-4 py-3 border border-slate-100 dark:border-slate-800 mb-3" style={{ shadowColor: "#000", shadowOpacity: 0.04, shadowRadius: 8 }}>
             <Ionicons name="search" size={18} color="#94A3B8" />
             <TextInput placeholder="Search tests..." value={search} onChangeText={setSearch}
-              className="flex-1 ml-3 text-slate-900 text-sm" placeholderTextColor="#94A3B8" />
+              className="flex-1 ml-3 text-slate-900 dark:text-slate-50 text-sm" placeholderTextColor="#94A3B8" />
           </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-2">
             {[{ id: "all", label: "All" }, ...Object.entries(TEST_TYPE_CONFIG).map(([id, c]) => ({ id, label: c.label }))].map((f) => (
@@ -54,14 +56,14 @@ export default function TestsScreen() {
                       <View className="flex-1 mr-3">
                         <View className="flex-row items-center gap-2 mb-2 flex-wrap">
                           <Badge label={cfg.label} color={cfg.color} />
-                          {test.isFree ? <Badge label="FREE" color={theme.success} /> : <Badge label="PREMIUM" color={theme.accent} />}
+                          {test.isFree ? <Badge label="FREE" color={colors.success} /> : <Badge label="PREMIUM" color={colors.accent} />}
                         </View>
-                        <Text className="font-bold text-slate-900 text-base leading-5">{test.title}</Text>
+                        <Text className="font-bold text-slate-900 dark:text-slate-50 text-base leading-5">{test.title}</Text>
                         <View className="flex-row gap-3 mt-2 flex-wrap">
-                          <Text className="text-slate-400 text-xs">📝 {test.totalQuestions} Qs</Text>
-                          <Text className="text-slate-400 text-xs">⏱ {test.durationMinutes} min</Text>
-                          <Text className="text-slate-400 text-xs">⭐ {test.totalMarks} marks</Text>
-                          <Text className="text-slate-400 text-xs">👥 {test.attemptCount}+ attempts</Text>
+                          <Text className="text-slate-400 dark:text-slate-400 text-xs">📝 {test.totalQuestions} Qs</Text>
+                          <Text className="text-slate-400 dark:text-slate-400 text-xs">⏱ {test.durationMinutes} min</Text>
+                          <Text className="text-slate-400 dark:text-slate-400 text-xs">⭐ {test.totalMarks} marks</Text>
+                          <Text className="text-slate-400 dark:text-slate-400 text-xs">👥 {test.attemptCount}+ attempts</Text>
                         </View>
                       </View>
                       <View style={{ backgroundColor: cfg.color }} className="w-12 h-12 rounded-2xl items-center justify-center">
@@ -76,7 +78,7 @@ export default function TestsScreen() {
 
           {filtered.length === 0 && (
             <View className="items-center py-12">
-              <Text className="text-slate-400">No tests found. Ask admin to load production data.</Text>
+              <Text className="text-slate-400 dark:text-slate-400">No tests found. Ask admin to load production data.</Text>
             </View>
           )}
         </View>

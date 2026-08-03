@@ -7,12 +7,13 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { ScreenHeader, PremiumCard, LoadingScreen } from "../components/ui";
 import { useAuth } from "../lib/auth";
-import { theme } from "../constants/theme";
+import { useTheme } from "../lib/theme";
 
 const MEDAL = ["#F59E0B", "#94A3B8", "#B45309"]; // gold, silver, bronze
 
 export default function LeaderboardScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
   const { user } = useAuth();
   const tests = useQuery(api.exams.listTests, {});
   const [selectedTestId, setSelectedTestId] = useState<Id<"tests"> | null>(null);
@@ -33,7 +34,7 @@ export default function LeaderboardScreen() {
   const isMe = (name: string) => !!user && name === user.name;
 
   return (
-    <View className="flex-1 bg-slate-50">
+    <View className="flex-1 bg-slate-50 dark:bg-ink-bg">
       <ScreenHeader
         title="All India Leaderboard"
         subtitle={activeTest?.title ?? "Select a test"}
@@ -42,7 +43,7 @@ export default function LeaderboardScreen() {
       />
 
       {/* Test selector */}
-      <View className="bg-white border-b border-slate-100">
+      <View className="bg-white dark:bg-ink-card border-b border-slate-100 dark:border-slate-800">
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 12, paddingVertical: 10 }}>
           {mockTests.map((t) => {
             const active = activeTestId === t._id;
@@ -50,9 +51,9 @@ export default function LeaderboardScreen() {
               <TouchableOpacity
                 key={t._id}
                 onPress={() => setSelectedTestId(t._id)}
-                className={`px-4 py-2 rounded-full mr-2 ${active ? "bg-indigo-600" : "bg-slate-100"}`}
+                className={`px-4 py-2 rounded-full mr-2 ${active ? "bg-indigo-600" : "bg-slate-100 dark:bg-slate-800"}`}
               >
-                <Text className={`text-xs font-semibold ${active ? "text-white" : "text-slate-600"}`} numberOfLines={1}>
+                <Text className={`text-xs font-semibold ${active ? "text-white" : "text-slate-600 dark:text-slate-400"}`} numberOfLines={1}>
                   {t.title.length > 22 ? t.title.slice(0, 20) + "…" : t.title}
                 </Text>
               </TouchableOpacity>
@@ -65,10 +66,10 @@ export default function LeaderboardScreen() {
         {(!leaderboard || leaderboard.length === 0) ? (
           <View className="items-center py-20">
             <View className="w-20 h-20 rounded-full bg-indigo-50 items-center justify-center mb-4">
-              <Ionicons name="podium-outline" size={40} color={theme.primary} />
+              <Ionicons name="podium-outline" size={40} color={colors.primary} />
             </View>
-            <Text className="text-slate-500 text-center font-medium">No entries yet</Text>
-            <Text className="text-slate-400 text-center text-sm mt-1">Be the first to attempt this test and top the chart!</Text>
+            <Text className="text-slate-500 dark:text-slate-400 text-center font-medium">No entries yet</Text>
+            <Text className="text-slate-400 dark:text-slate-400 text-center text-sm mt-1">Be the first to attempt this test and top the chart!</Text>
           </View>
         ) : (
           <>
@@ -87,8 +88,8 @@ export default function LeaderboardScreen() {
                       >
                         <Text className="font-black text-lg" style={{ color: MEDAL[slot] }}>{entry.userName.charAt(0).toUpperCase()}</Text>
                       </View>
-                      <Text className="font-bold text-slate-900 text-xs text-center" numberOfLines={1}>{isMe(entry.userName) ? "You" : entry.userName}</Text>
-                      <Text className="text-slate-400 text-[11px] mb-1">{entry.score} marks</Text>
+                      <Text className="font-bold text-slate-900 dark:text-slate-50 text-xs text-center" numberOfLines={1}>{isMe(entry.userName) ? "You" : entry.userName}</Text>
+                      <Text className="text-slate-400 dark:text-slate-400 text-[11px] mb-1">{entry.score} marks</Text>
                       <View className="w-full rounded-t-xl items-center justify-start pt-2" style={{ height: h, backgroundColor: MEDAL[slot] + "18" }}>
                         <View className="w-7 h-7 rounded-full items-center justify-center" style={{ backgroundColor: MEDAL[slot] }}>
                           <Ionicons name="medal" size={16} color="#fff" />
@@ -107,18 +108,18 @@ export default function LeaderboardScreen() {
                 key={`${entry.rank}-${entry.userName}`}
                 className={`p-3.5 mb-2 flex-row items-center ${isMe(entry.userName) ? "border-indigo-400 bg-indigo-50" : ""}`}
               >
-                <View className="w-9 h-9 rounded-xl bg-slate-100 items-center justify-center mr-3">
-                  <Text className="font-bold text-slate-600 text-sm">#{entry.rank}</Text>
+                <View className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 items-center justify-center mr-3">
+                  <Text className="font-bold text-slate-600 dark:text-slate-400 text-sm">#{entry.rank}</Text>
                 </View>
                 <View className="flex-1">
-                  <Text className="font-bold text-slate-900" numberOfLines={1}>
+                  <Text className="font-bold text-slate-900 dark:text-slate-50" numberOfLines={1}>
                     {isMe(entry.userName) ? `${entry.userName} (You)` : entry.userName}
                   </Text>
-                  <Text className="text-slate-400 text-xs mt-0.5">⏱ {fmtTime(entry.timeTakenSeconds)}</Text>
+                  <Text className="text-slate-400 dark:text-slate-400 text-xs mt-0.5">⏱ {fmtTime(entry.timeTakenSeconds)}</Text>
                 </View>
                 <View className="items-end">
                   <Text className="font-black text-indigo-600 text-lg">{entry.score}</Text>
-                  <Text className="text-slate-400 text-[11px]">marks</Text>
+                  <Text className="text-slate-400 dark:text-slate-400 text-[11px]">marks</Text>
                 </View>
               </PremiumCard>
             ))}

@@ -5,7 +5,7 @@ import { Link, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { InputField, PrimaryButton, PremiumCard } from "../../components/ui";
 import { Logo } from "../../components/Logo";
-import { theme } from "../../constants/theme";
+import { useTheme } from "../../lib/theme";
 
 export default function RegisterScreen() {
   const [name, setName] = useState("");
@@ -14,6 +14,7 @@ export default function RegisterScreen() {
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
   const router = useRouter();
+  const { colors } = useTheme();
 
   const handleRegister = async () => {
     if (!name || !email || !password) return;
@@ -24,7 +25,7 @@ export default function RegisterScreen() {
   };
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} className="flex-1" style={{ backgroundColor: theme.primaryDark }}>
+    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} className="flex-1" style={{ backgroundColor: colors.hero }}>
       <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: "center" }} className="px-6 py-10">
         <View className="items-center mb-6">
           <Logo size={72} showText subtitle="Start free · No credit card required" />

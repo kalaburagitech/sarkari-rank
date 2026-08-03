@@ -5,9 +5,10 @@ import { Link } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useState, useMemo } from "react";
 import { SectionHeader, PremiumCard, Badge, LoadingScreen } from "../../components/ui";
-import { theme } from "../../constants/theme";
+import { useTheme } from "../../lib/theme";
 
 export default function ExamsScreen() {
+  const { colors } = useTheme();
   const [search, setSearch] = useState("");
   const categories = useQuery(api.exams.listCategories, {});
   const exams = useQuery(api.exams.listExams, {});
@@ -40,8 +41,8 @@ export default function ExamsScreen() {
             <Text className="text-2xl">{cat.icon}</Text>
           </View>
           <View className="flex-1">
-            <Text className="font-bold text-slate-900 text-base" numberOfLines={1}>{cat.name}</Text>
-            <Text className="text-slate-500 text-xs mt-0.5" numberOfLines={2}>{cat.description}</Text>
+            <Text className="font-bold text-slate-900 dark:text-slate-50 text-base" numberOfLines={1}>{cat.name}</Text>
+            <Text className="text-slate-500 dark:text-slate-400 text-xs mt-0.5" numberOfLines={2}>{cat.description}</Text>
             <View className="flex-row items-center mt-2">
               <Badge label={`${examCountByCategory[cat._id] ?? 0} exams`} color={cat.color} />
             </View>
@@ -53,20 +54,20 @@ export default function ExamsScreen() {
   );
 
   return (
-    <View className="flex-1 bg-slate-50">
+    <View className="flex-1 bg-slate-50 dark:bg-ink-bg">
       <ScrollView stickyHeaderIndices={[0]} showsVerticalScrollIndicator={false}>
-        <View className="bg-slate-50 px-4 pt-3 pb-2">
-          <View className="flex-row items-center bg-white rounded-2xl px-4 py-3 border border-slate-100 mb-2">
+        <View className="bg-slate-50 dark:bg-ink-bg px-4 pt-3 pb-2">
+          <View className="flex-row items-center bg-white dark:bg-ink-card rounded-2xl px-4 py-3 border border-slate-100 dark:border-slate-800 mb-2">
             <Ionicons name="search" size={18} color="#94A3B8" />
             <TextInput placeholder="Search exams (KAS, FDA, PDO, PSI...)" value={search} onChangeText={setSearch}
-              className="flex-1 ml-3 text-slate-900 text-sm" placeholderTextColor="#94A3B8" />
+              className="flex-1 ml-3 text-slate-900 dark:text-slate-50 text-sm" placeholderTextColor="#94A3B8" />
             {search.length > 0 && (
               <TouchableOpacity onPress={() => setSearch("")}>
                 <Ionicons name="close-circle" size={18} color="#CBD5E1" />
               </TouchableOpacity>
             )}
           </View>
-          <Text className="text-slate-500 text-xs px-1">
+          <Text className="text-slate-500 dark:text-slate-400 text-xs px-1">
             {categories.length} bodies · {exams.length} exams · Karnataka + All-India
           </Text>
         </View>
@@ -77,18 +78,18 @@ export default function ExamsScreen() {
             <View className="mt-2">
               <SectionHeader title="Search Results" subtitle={`${searchResults.length} exam(s) found`} />
               {searchResults.length === 0 ? (
-                <Text className="text-slate-400 text-sm px-1 py-6 text-center">No exams match "{search}".</Text>
+                <Text className="text-slate-400 dark:text-slate-400 text-sm px-1 py-6 text-center">No exams match "{search}".</Text>
               ) : (
                 searchResults.map((exam) => (
                   <Link key={exam._id} href={`/exam/${exam.slug}`} asChild>
                     <TouchableOpacity activeOpacity={0.85}>
                       <PremiumCard className="p-4 mb-2 flex-row items-center">
-                        <View style={{ backgroundColor: theme.primary + "15" }} className="w-11 h-11 rounded-2xl items-center justify-center mr-3">
+                        <View style={{ backgroundColor: colors.primary + "15" }} className="w-11 h-11 rounded-2xl items-center justify-center mr-3">
                           <Text className="text-lg">{exam.icon ?? "📘"}</Text>
                         </View>
                         <View className="flex-1">
-                          <Text className="font-bold text-slate-900 text-sm">{exam.name}</Text>
-                          <Text className="text-slate-500 text-xs mt-0.5" numberOfLines={1}>{exam.description}</Text>
+                          <Text className="font-bold text-slate-900 dark:text-slate-50 text-sm">{exam.name}</Text>
+                          <Text className="text-slate-500 dark:text-slate-400 text-xs mt-0.5" numberOfLines={1}>{exam.description}</Text>
                         </View>
                         <Ionicons name="chevron-forward" size={18} color="#CBD5E1" />
                       </PremiumCard>

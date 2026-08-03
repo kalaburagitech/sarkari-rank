@@ -5,7 +5,7 @@ import { Link, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { InputField, PrimaryButton, PremiumCard } from "../../components/ui";
 import { Logo } from "../../components/Logo";
-import { theme } from "../../constants/theme";
+import { useTheme } from "../../lib/theme";
 
 export default function LoginScreen() {
   const [email, setEmail] = useState("");
@@ -13,6 +13,7 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const router = useRouter();
+  const { colors } = useTheme();
 
   const handleLogin = async () => {
     if (!email || !password) return;
@@ -23,7 +24,7 @@ export default function LoginScreen() {
   };
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} className="flex-1" style={{ backgroundColor: theme.primaryDark }}>
+    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} className="flex-1" style={{ backgroundColor: colors.hero }}>
       <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: "center" }} className="px-6 py-10">
         <View className="items-center mb-8">
           <Logo size={80} showText subtitle="India&apos;s #1 Govt Exam Prep Platform" />
