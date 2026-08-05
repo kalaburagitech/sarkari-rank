@@ -28,8 +28,10 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
   const loginMutation = useMutation(api.users.login);
 
   useEffect(() => {
+    // One-time hydration of the persisted session from localStorage on mount.
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (stored) setAdmin(JSON.parse(stored));
     } catch {}
     setIsLoading(false);
@@ -44,7 +46,7 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
       setAdmin(adminUser);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(adminUser));
       return { ok: true };
-    } catch (e) {
+    } catch {
       return { ok: false, error: "Connection failed. Check Convex URL." };
     }
   };

@@ -10,12 +10,30 @@ import { Button, Input, Textarea, Select, Card } from "@/components/admin/ui";
 
 const OPT_IDS = ["a", "b", "c", "d", "e", "f"];
 
+// Minimal sample — only these 3 fields are required. Everything else
+// (subject, difficulty, marks, negative marks, language) comes from the
+// "Defaults" you set above, so you never have to repeat them per question.
 const SAMPLE_JSON = `[
   {
     "question": "Who is known as the Father of the Indian Constitution?",
     "options": ["Mahatma Gandhi", "Dr. B.R. Ambedkar", "Jawaharlal Nehru", "Sardar Patel"],
+    "answer": "B"
+  },
+  {
+    "question": "What is the capital of India?",
+    "options": ["Mumbai", "New Delhi", "Kolkata", "Chennai"],
     "answer": "B",
-    "explanation": "Dr. B.R. Ambedkar chaired the Drafting Committee of the Constitution.",
+    "explanation": "New Delhi has been the capital since 1911."
+  }
+]`;
+
+// Full example (all optional fields) — shown only in the format reference.
+const FULL_SAMPLE_JSON = `[
+  {
+    "question": "Who is known as the Father of the Indian Constitution?",
+    "options": ["Mahatma Gandhi", "Dr. B.R. Ambedkar", "Jawaharlal Nehru", "Sardar Patel"],
+    "answer": "B",
+    "explanation": "Dr. B.R. Ambedkar chaired the Drafting Committee.",
     "subject": "Indian Polity",
     "difficulty": "easy",
     "marks": 1,
@@ -289,7 +307,12 @@ export function BulkImportQuestions({ onClose, onDone }: { onClose: () => void; 
       )}
 
       {/* Step 2: defaults */}
-      <p className="text-xs font-bold text-indigo-500 uppercase tracking-wide mt-5 mb-2">Step 2 · Defaults (used when a question omits the field)</p>
+      <p className="text-xs font-bold text-indigo-500 uppercase tracking-wide mt-5 mb-1">Step 2 · Default values (optional)</p>
+      <p className="text-xs text-slate-500 mb-2">
+        Set Subject, Difficulty, Marks &amp; Negative <b>once</b> here — they apply to every imported
+        question automatically. You do <b>not</b> need to repeat them in the JSON (add them per-question only
+        if you want to override these defaults).
+      </p>
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-1">
         <Input label="Subject" value={def.subject} onChange={(e) => setDef({ ...def, subject: e.target.value })} placeholder="e.g. Karnataka GK" />
         <Select label="Language" value={def.language} onChange={(e) => setDef({ ...def, language: e.target.value })}>
@@ -303,7 +326,7 @@ export function BulkImportQuestions({ onClose, onDone }: { onClose: () => void; 
       </div>
 
       {/* Step 3: JSON */}
-      <div className="flex items-center justify-between mt-5 mb-2">
+      <div className="flex items-center justify-between mt-5 mb-1">
         <p className="text-xs font-bold text-indigo-500 uppercase tracking-wide">Step 3 · Paste JSON or upload a .json file</p>
         <div className="flex gap-2">
           <Button size="sm" variant="secondary" onClick={() => { navigator.clipboard?.writeText(SAMPLE_JSON); toast.success("Sample copied"); }}><Copy size={14} /> Copy sample</Button>
@@ -312,6 +335,10 @@ export function BulkImportQuestions({ onClose, onDone }: { onClose: () => void; 
             onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ""; }} />
         </div>
       </div>
+      <p className="text-xs text-slate-500 mb-2">
+        Each question needs only <b>question</b>, <b>options</b> and <b>answer</b>. Subject, difficulty, marks &amp;
+        negative marks are taken from Step 2 above.
+      </p>
       <Textarea rows={9} value={raw} onChange={(e) => { setRaw(e.target.value); setPreview(null); }}
         placeholder={SAMPLE_JSON} className="font-mono text-xs" />
 
@@ -347,13 +374,13 @@ export function BulkImportQuestions({ onClose, onDone }: { onClose: () => void; 
       </div>
 
       <details className="mt-4 text-xs text-slate-500">
-        <summary className="cursor-pointer font-semibold text-slate-600">JSON format reference</summary>
-        <pre className="mt-2 bg-slate-900 text-slate-100 rounded-xl p-4 overflow-x-auto">{SAMPLE_JSON}</pre>
+        <summary className="cursor-pointer font-semibold text-slate-600">JSON format reference (with all optional fields)</summary>
+        <pre className="mt-2 bg-slate-900 text-slate-100 rounded-xl p-4 overflow-x-auto">{FULL_SAMPLE_JSON}</pre>
         <ul className="list-disc ml-5 mt-2 space-y-1">
-          <li><b>question</b> (required) — the question text. Aliases: questionText, q.</li>
-          <li><b>options</b> (required) — array of 2–6 strings (or objects with id/text). Aliases: opts, choices.</li>
-          <li><b>answer</b> (required) — the correct option as a letter (A/B/C/D), a number (1-based), or the exact option text.</li>
-          <li><b>explanation</b>, <b>subject</b>, <b>difficulty</b> (easy/medium/hard), <b>marks</b>, <b>negativeMarks</b>, <b>topic</b> — optional (fall back to the Step-2 defaults).</li>
+          <li><b>question</b> <span className="text-red-500 font-semibold">(required)</span> — the question text. Aliases: questionText, q.</li>
+          <li><b>options</b> <span className="text-red-500 font-semibold">(required)</span> — array of 2–6 strings (or objects with id/text). Aliases: opts, choices.</li>
+          <li><b>answer</b> <span className="text-red-500 font-semibold">(required)</span> — the correct option as a letter (A/B/C/D), a number (1-based), or the exact option text.</li>
+          <li><b>explanation</b>, <b>subject</b>, <b>difficulty</b> (easy/medium/hard), <b>marks</b>, <b>negativeMarks</b>, <b>topic</b> — <b className="text-emerald-600">optional</b>; leave them out and they use the Step-2 defaults above.</li>
           <li><b>questionKn</b>, <b>optionsKn</b>, <b>explanationKn</b> — optional Kannada translations for bilingual tests.</li>
         </ul>
       </details>

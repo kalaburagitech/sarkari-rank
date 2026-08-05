@@ -85,3 +85,17 @@ input:focus, select:focus, textarea:focus {
   border-color: #4f46e5;
   box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
 }
+
+/* ─── Markdown preview (admin notes editor) ─────────────────── */
+.md-preview { color: #1e293b; font-size: 14px; line-height: 1.7; }
+.md-preview h1 { font-size: 22px; font-weight: 800; margin: 18px 0 8px; color: #0f172a; }
+.md-preview h2 { font-size: 19px; font-weight: 800; margin: 16px 0 8px; color: #0f172a; }
+.md-preview h3 { font-size: 16px; font-weight: 700; margin: 14px 0 6px; color: #0f172a; }
+.md-preview p { margin: 0 0 12px; }
+.md-preview ul, .md-preview ol { margin: 0 0 12px; padding-left: 22px; }
+.md-preview li { margin-bottom: 5px; }
+.md-preview blockquote { margin: 0 0 12px; padding: 8px 14px; border-left: 3px solid #6366f1; background: #f1f5f9; border-radius: 6px; color: #475569; font-style: italic; }
+.md-preview code { font-family: ui-monospace, Menlo, monospace; background: #eef2ff; color: #4338ca; padding: 1px 5px; border-radius: 4px; font-size: 12.5px; }
+.md-preview a { color: #4f46e5; text-decoration: underline; }
+.md-preview hr { border: none; border-top: 1px solid #e2e8f0; margin: 16px 0; }
+.md-preview strong { font-weight: 700; }
