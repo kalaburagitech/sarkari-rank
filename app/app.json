@@ -2,7 +2,7 @@
   "expo": {
     "name": "SarkariRank - Govt Exam Prep",
     "slug": "sarkari-rank-govt-exam-prep",
-    "version": "1.0.0",
+    "version": "1.0.3",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -21,7 +21,8 @@
         "backgroundColor": "#201584",
         "foregroundImage": "./assets/android-icon-foreground.png"
       },
-      "package": "com.sarkarirank.examprep"
+      "package": "com.sarkarirank.app",
+      "versionCode": 4
     },
     "web": {
       "bundler": "metro",

@@ -218,6 +218,10 @@ export default defineSchema({
     content: v.string(),
     summary: v.string(),
     category: v.string(),
+    // Original source link + publisher (Play "Misleading Claims" compliance —
+    // government/news info must link to its source). Optional → old rows valid.
+    sourceUrl: v.optional(v.string()),
+    sourceName: v.optional(v.string()),
     date: v.number(),
     isActive: v.boolean(),
     createdAt: v.number(),

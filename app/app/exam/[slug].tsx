@@ -1,11 +1,11 @@
 import { View, Text, ScrollView, TouchableOpacity } from "react-native";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Link } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
-import { SectionHeader, PremiumCard, Badge, LoadingScreen } from "../../components/ui";
+import { SectionHeader, PremiumCard, Badge, LoadingScreen, SourceLink, DisclaimerBanner } from "../../components/ui";
 import { TEST_TYPE_CONFIG } from "../../constants/theme";
 import { useTheme } from "../../lib/theme";
 
@@ -27,6 +27,7 @@ function CollapsibleInfo({ icon, title, body, color }: { icon: string; title: st
 
 export default function ExamDetailScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
+  const router = useRouter();
   const { colors } = useTheme();
   const exam = useQuery(api.exams.getExam, { slug });
   const tests = useQuery(api.exams.listTests, exam ? { examId: exam._id } : "skip");
@@ -52,16 +53,29 @@ export default function ExamDetailScreen() {
         <View className="px-4 mt-5">
           <SectionHeader title="About this Exam" subtitle="Pattern · Eligibility · Syllabus" />
 
+          <View className="mb-2">
+            <DisclaimerBanner onPress={() => router.push("/disclaimer")} />
+          </View>
+
           {exam.conductingBody && (
-            <PremiumCard className="p-4 mb-2 flex-row items-center">
-              <View style={{ backgroundColor: colors.primary + "18" }} className="w-9 h-9 rounded-xl items-center justify-center mr-3">
-                <Ionicons name="business" size={18} color={colors.primary} />
+            <PremiumCard className="p-4 mb-2">
+              <View className="flex-row items-center">
+                <View style={{ backgroundColor: colors.primary + "18" }} className="w-9 h-9 rounded-xl items-center justify-center mr-3">
+                  <Ionicons name="business" size={18} color={colors.primary} />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-slate-400 dark:text-slate-400 text-xs">Conducting Body</Text>
+                  <Text className="text-slate-900 dark:text-slate-50 font-semibold text-sm">{exam.conductingBody}</Text>
+                </View>
               </View>
-              <View className="flex-1">
-                <Text className="text-slate-400 dark:text-slate-400 text-xs">Conducting Body</Text>
-                <Text className="text-slate-900 dark:text-slate-50 font-semibold text-sm">{exam.conductingBody}</Text>
-                {exam.officialWebsite && <Text className="text-indigo-500 text-xs mt-0.5">{exam.officialWebsite}</Text>}
-              </View>
+              {exam.officialWebsite && (
+                <View className="mt-3">
+                  <SourceLink
+                    label={`Official website · ${exam.officialWebsite.replace(/^https?:\/\//, "")}`}
+                    url={exam.officialWebsite.startsWith("http") ? exam.officialWebsite : `https://${exam.officialWebsite}`}
+                  />
+                </View>
+              )}
             </PremiumCard>
           )}
 
@@ -116,8 +130,9 @@ export default function ExamDetailScreen() {
         const byYear = new Map<number, typeof pyp>();
         for (const t of pyp) {
           const y = t.year ?? 0;
-          if (!byYear.has(y)) byYear.set(y, []);
-          byYear.get(y)!.push(t);
+          const list = byYear.get(y);
+          if (list) list.push(t);
+          else byYear.set(y, [t]);
         }
         const years = [...byYear.keys()].sort((a, b) => b - a);
         return (
@@ -128,7 +143,7 @@ export default function ExamDetailScreen() {
                 <Text className="text-xs font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500 mb-1.5 ml-1">
                   {y ? y : "Undated"}
                 </Text>
-                {byYear.get(y)!.map((test) => (
+                {(byYear.get(y) ?? []).map((test) => (
                   <Link key={test._id} href={`/test/${test._id}`} asChild>
                     <TouchableOpacity activeOpacity={0.85}>
                       <PremiumCard className="p-4 mb-2 flex-row items-center">

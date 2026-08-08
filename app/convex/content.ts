@@ -119,6 +119,8 @@ export const createCurrentAffair = mutation({
     content: v.string(),
     summary: v.string(),
     category: v.string(),
+    sourceUrl: v.optional(v.string()),
+    sourceName: v.optional(v.string()),
     date: v.number(),
   },
   handler: async (ctx, args) => {
@@ -137,6 +139,8 @@ export const updateCurrentAffair = mutation({
     content: v.optional(v.string()),
     summary: v.optional(v.string()),
     category: v.optional(v.string()),
+    sourceUrl: v.optional(v.string()),
+    sourceName: v.optional(v.string()),
     isActive: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {

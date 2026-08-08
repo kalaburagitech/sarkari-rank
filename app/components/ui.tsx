@@ -1,7 +1,8 @@
-import { View, Text, TextInput, TouchableOpacity, ActivityIndicator } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, Linking } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../lib/theme";
+import { DISCLAIMER_SHORT } from "../constants/legal";
 import { Logo } from "./Logo";
 
 export function SectionHeader({ title, subtitle, action }: { title: string; subtitle?: string; action?: React.ReactNode }) {
@@ -157,6 +158,43 @@ export function ScreenHeader({
       </View>
       {right}
     </View>
+  );
+}
+
+/** Small, always-visible "not a government entity" disclaimer. Tap → details. */
+export function DisclaimerBanner({ onPress }: { onPress?: () => void }) {
+  const { colors } = useTheme();
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={onPress ? 0.7 : 1}
+      disabled={!onPress}
+      className="flex-row items-center bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/60 rounded-xl px-3 py-2"
+    >
+      <Ionicons name="information-circle" size={16} color={colors.warning} />
+      <Text className="flex-1 text-amber-800 dark:text-amber-300 text-xs ml-2 leading-4">
+        {DISCLAIMER_SHORT}
+      </Text>
+      {onPress && <Ionicons name="chevron-forward" size={14} color={colors.warning} />}
+    </TouchableOpacity>
+  );
+}
+
+/** Tappable external source link (opens the original/official URL). */
+export function SourceLink({ label, url }: { label?: string; url: string }) {
+  const { colors } = useTheme();
+  return (
+    <TouchableOpacity
+      onPress={() => Linking.openURL(url)}
+      activeOpacity={0.8}
+      className="flex-row items-center bg-primary-50 dark:bg-primary-950 rounded-xl px-3 py-2.5"
+    >
+      <Ionicons name="open-outline" size={16} color={colors.primary} />
+      <Text style={{ color: colors.primary }} className="flex-1 font-semibold text-sm ml-2" numberOfLines={1}>
+        {label ?? url}
+      </Text>
+      <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+    </TouchableOpacity>
   );
 }
 

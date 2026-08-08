@@ -4,11 +4,13 @@ import { api } from "../../convex/_generated/api";
 import { useAuth } from "../../lib/auth";
 import { Link } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { SectionHeader, PremiumCard, Badge, StatBox, LoadingScreen } from "../../components/ui";
+import { SectionHeader, PremiumCard, Badge, StatBox, LoadingScreen, DisclaimerBanner } from "../../components/ui";
+import { useRouter } from "expo-router";
 import { useTheme } from "../../lib/theme";
 
 export default function HomeScreen() {
   const { colors } = useTheme();
+  const router = useRouter();
   const { user } = useAuth();
   const categories = useQuery(api.exams.listCategories, {});
   const exams = useQuery(api.exams.listExams, {});
@@ -199,7 +201,7 @@ export default function HomeScreen() {
         <View className="flex-row flex-wrap gap-3">
           {[
             { t: "Mock Tests", i: "clipboard", c: "#4F46E5", h: "/(tabs)/tests?type=mock" },
-            { t: "PYP Papers", i: "archive", c: "#F59E0B", h: "/(tabs)/tests?type=pyp" },
+            { t: "PYP Papers", i: "archive", c: "#F59E0B", h: "/previous-year-papers" },
             { t: "Study Notes", i: "book", c: "#8B5CF6", h: "/study-notes" },
             { t: "Current Affairs", i: "newspaper", c: "#059669", h: "/current-affairs" },
             { t: "Leaderboard", i: "podium", c: "#EC4899", h: "/leaderboard" },
@@ -241,6 +243,11 @@ export default function HomeScreen() {
           ))}
         </View>
       )}
+
+      {/* Compliance footer */}
+      <View className="mx-4 mt-2 mb-8">
+        <DisclaimerBanner onPress={() => router.push("/disclaimer")} />
+      </View>
     </ScrollView>
   );
 }

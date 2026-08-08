@@ -98,6 +98,12 @@ export const createExam = mutation({
     description: v.string(),
     icon: v.optional(v.string()),
     order: v.number(),
+    conductingBody: v.optional(v.string()),
+    officialWebsite: v.optional(v.string()),
+    eligibility: v.optional(v.string()),
+    posts: v.optional(v.array(v.string())),
+    examPattern: v.optional(v.string()),
+    syllabus: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     return await ctx.db.insert("exams", {
@@ -111,11 +117,18 @@ export const createExam = mutation({
 export const updateExam = mutation({
   args: {
     id: v.id("exams"),
+    categoryId: v.optional(v.id("examCategories")),
     name: v.optional(v.string()),
     description: v.optional(v.string()),
     icon: v.optional(v.string()),
     isActive: v.optional(v.boolean()),
     order: v.optional(v.number()),
+    conductingBody: v.optional(v.string()),
+    officialWebsite: v.optional(v.string()),
+    eligibility: v.optional(v.string()),
+    posts: v.optional(v.array(v.string())),
+    examPattern: v.optional(v.string()),
+    syllabus: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const { id, ...updates } = args;
@@ -591,6 +604,33 @@ export const deleteQuestion = mutation({
         });
       }
     }
+  },
+});
+
+// Delete many questions in one call (admin multi-select). Decrements each
+// parent test's question count in a single patch per test.
+export const bulkDeleteQuestions = mutation({
+  args: { ids: v.array(v.id("questions")) },
+  handler: async (ctx, args) => {
+    const removedPerTest = new Map<Id<"tests">, number>();
+    for (const id of args.ids) {
+      const question = await ctx.db.get(id);
+      if (!question) continue;
+      await ctx.db.delete(id);
+      removedPerTest.set(
+        question.testId,
+        (removedPerTest.get(question.testId) ?? 0) + 1
+      );
+    }
+    for (const [testId, count] of removedPerTest) {
+      const test = await ctx.db.get(testId);
+      if (test) {
+        await ctx.db.patch(testId, {
+          totalQuestions: Math.max(0, test.totalQuestions - count),
+        });
+      }
+    }
+    return { deleted: args.ids.length };
   },
 });
 

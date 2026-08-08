@@ -11,16 +11,22 @@ export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const { login } = useAuth();
   const router = useRouter();
   const { colors } = useTheme();
 
   const handleLogin = async () => {
-    if (!email || !password) return;
+    setError("");
+    if (!email.trim() || !password) {
+      setError("Please enter your email and password.");
+      return;
+    }
     setLoading(true);
-    const success = await login(email, password);
+    const res = await login(email, password);
     setLoading(false);
-    if (success) router.replace("/(tabs)");
+    if (res.ok) router.replace("/(tabs)");
+    else setError(res.error ?? "Login failed. Please try again.");
   };
 
   return (
@@ -41,8 +47,15 @@ export default function LoginScreen() {
           <Text className="text-xl font-bold text-slate-900 mb-1">Welcome Back 👋</Text>
           <Text className="text-slate-500 text-sm mb-6">Login to continue your preparation journey</Text>
 
-          <InputField label="Email Address" value={email} onChangeText={setEmail} placeholder="your@email.com" keyboardType="email-address" icon="mail-outline" />
-          <InputField label="Password" value={password} onChangeText={setPassword} placeholder="Enter password" secureTextEntry icon="lock-closed-outline" />
+          <InputField label="Email Address" value={email} onChangeText={(t) => { setEmail(t); if (error) setError(""); }} placeholder="your@email.com" keyboardType="email-address" icon="mail-outline" />
+          <InputField label="Password" value={password} onChangeText={(t) => { setPassword(t); if (error) setError(""); }} placeholder="Enter password" secureTextEntry icon="lock-closed-outline" />
+
+          {error ? (
+            <View className="flex-row items-center bg-red-50 dark:bg-red-950/40 border border-red-100 dark:border-red-900 rounded-xl px-3 py-2.5 mb-3">
+              <Ionicons name="alert-circle" size={16} color="#EF4444" />
+              <Text className="text-red-600 dark:text-red-400 text-sm ml-2 flex-1">{error}</Text>
+            </View>
+          ) : null}
 
           <PrimaryButton title="Login to SarkariRank" onPress={handleLogin} loading={loading} />
 
