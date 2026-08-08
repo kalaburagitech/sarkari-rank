@@ -2,7 +2,7 @@ import { View, Text, ScrollView } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { ScreenHeader, PremiumCard, Badge, LoadingScreen } from "../../components/ui";
+import { ScreenHeader, PremiumCard, Badge, LoadingScreen, SourceLink, DisclaimerBanner } from "../../components/ui";
 import { useTheme } from "../../lib/theme";
 
 export default function CurrentAffairScreen() {
@@ -28,7 +28,26 @@ export default function CurrentAffairScreen() {
             <Text className="text-indigo-900 dark:text-indigo-200 font-semibold leading-6">{article?.summary}</Text>
           </View>
           <Text className="text-slate-700 dark:text-slate-300 text-base leading-7 mt-4">{article?.content}</Text>
+
+          {/* Source link (Play policy: government/news info must link to its source) */}
+          {article?.sourceUrl ? (
+            <View className="mt-5">
+              <Text className="text-xs font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500 mb-1.5">
+                Source{article.sourceName ? ` · ${article.sourceName}` : ""}
+              </Text>
+              <SourceLink label="Read full article at source" url={article.sourceUrl} />
+            </View>
+          ) : null}
         </PremiumCard>
+
+        <Text className="text-slate-400 dark:text-slate-500 text-xs leading-5 mt-4 px-1">
+          Current affairs are aggregated from public news sources for educational use.
+          Please refer to the original source and official websites for authoritative
+          information.
+        </Text>
+        <View className="mt-3">
+          <DisclaimerBanner onPress={() => router.push("/disclaimer")} />
+        </View>
       </ScrollView>
     </View>
   );

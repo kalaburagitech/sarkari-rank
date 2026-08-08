@@ -3,21 +3,33 @@ import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Link, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { SectionHeader, PremiumCard, Badge, LoadingScreen, FilterChip } from "../../components/ui";
 import { TEST_TYPE_CONFIG } from "../../constants/theme";
 import { useTheme } from "../../lib/theme";
 
+// Previous Year Papers live on their own screen (/previous-year-papers).
+// This tab is strictly Tests & Quizzes, so "pyp" is never shown here.
+const isQuizType = (type: string) => type !== "pyp";
+
 export default function TestsScreen() {
   const { colors } = useTheme();
   const { type: paramType } = useLocalSearchParams();
-  const [filter, setFilter] = useState<string>((paramType as string) ?? "all");
+  const [filter, setFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
   const tests = useQuery(api.exams.listTests, {});
+
+  // Keep the active filter in sync with the incoming URL param (deep links,
+  // "View All" links). Ignore "pyp" — those belong to the dedicated screen.
+  useEffect(() => {
+    const t = typeof paramType === "string" ? paramType : undefined;
+    setFilter(t && t !== "pyp" && TEST_TYPE_CONFIG[t] ? t : "all");
+  }, [paramType]);
 
   const filtered = useMemo(() => {
     if (!tests) return [];
     return tests.filter((t) => {
+      if (!isQuizType(t.type)) return false;
       const matchType = filter === "all" || t.type === filter;
       const matchSearch = !search || t.title.toLowerCase().includes(search.toLowerCase());
       return matchType && matchSearch;
@@ -37,14 +49,14 @@ export default function TestsScreen() {
               className="flex-1 ml-3 text-slate-900 dark:text-slate-50 text-sm" placeholderTextColor="#94A3B8" />
           </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-2">
-            {[{ id: "all", label: "All" }, ...Object.entries(TEST_TYPE_CONFIG).map(([id, c]) => ({ id, label: c.label }))].map((f) => (
+            {[{ id: "all", label: "All" }, ...Object.entries(TEST_TYPE_CONFIG).filter(([id]) => id !== "pyp").map(([id, c]) => ({ id, label: c.label }))].map((f) => (
               <FilterChip key={f.id} label={f.label} active={filter === f.id} onPress={() => setFilter(f.id)} />
             ))}
           </ScrollView>
         </View>
 
         <View className="px-4 pb-8">
-          <SectionHeader title={`${filtered.length} Tests Available`} subtitle="Mock · Live · PYP · Chapter · Daily Quiz" />
+          <SectionHeader title={`${filtered.length} Tests Available`} subtitle="Mock · Live · Chapter · Daily Quiz · Practice" />
 
           {filtered.map((test) => {
             const cfg = TEST_TYPE_CONFIG[test.type] ?? TEST_TYPE_CONFIG.mock;

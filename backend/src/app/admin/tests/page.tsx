@@ -4,17 +4,25 @@ import { useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { Id } from "@convex/_generated/dataModel";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader, Button, FormCard, Input, Textarea, Select, LoadingState, EmptyState, Card, Badge } from "@/components/admin/ui";
+import { ActionMenu, ConfirmDialog, Modal } from "@/components/admin/ui-extras";
 import { slugify } from "@/lib/utils";
 
 const TEST_TYPES = ["mock", "live", "chapter", "subject", "pyp", "daily", "practice"] as const;
+
+type EditForm = {
+  _id: string; title: string; description: string; year: string;
+  durationMinutes: number; totalMarks: number; negativeMarking: number;
+  isFree: boolean; isPremium: boolean; isActive: boolean;
+};
 
 export default function TestsPage() {
   const exams = useQuery(api.exams.listExams, {});
   const tests = useQuery(api.exams.listTests, { includeInactive: true });
   const createTest = useMutation(api.exams.createTest);
+  const updateTest = useMutation(api.exams.updateTest);
   const deleteTest = useMutation(api.exams.deleteTest);
 
   const [showForm, setShowForm] = useState(false);
@@ -23,6 +31,9 @@ export default function TestsPage() {
     examId: "", title: "", description: "", type: "mock" as typeof TEST_TYPES[number],
     durationMinutes: 60, totalMarks: 100, negativeMarking: 0.25, languages: ["English", "Hindi"], isFree: true, isPremium: false,
   });
+
+  const [editRow, setEditRow] = useState<EditForm | null>(null);
+  const [deleteRow, setDeleteRow] = useState<{ _id: string; title: string } | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,6 +44,23 @@ export default function TestsPage() {
         durationMinutes: form.durationMinutes, totalMarks: form.totalMarks, negativeMarking: form.negativeMarking, languages: form.languages, isFree: form.isFree, isPremium: form.isPremium });
       toast.success(`Test "${form.title}" created! Add questions next.`);
       setShowForm(false);
+    } catch (err) { toast.error((err as Error).message); }
+    setSaving(false);
+  };
+
+  const saveEdit = async () => {
+    if (!editRow) return;
+    setSaving(true);
+    try {
+      await updateTest({
+        id: editRow._id as Id<"tests">,
+        title: editRow.title, description: editRow.description,
+        year: editRow.year ? parseInt(editRow.year) : undefined,
+        durationMinutes: editRow.durationMinutes, totalMarks: editRow.totalMarks, negativeMarking: editRow.negativeMarking,
+        isFree: editRow.isFree, isPremium: editRow.isPremium, isActive: editRow.isActive,
+      });
+      toast.success("Test updated");
+      setEditRow(null);
     } catch (err) { toast.error((err as Error).message); }
     setSaving(false);
   };
@@ -49,7 +77,7 @@ export default function TestsPage() {
 
       {showForm && (
         <FormCard title="Create New Test" onSubmit={handleSubmit}>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Select label="Exam *" value={form.examId} onChange={(e) => setForm({ ...form, examId: e.target.value })} required>
               <option value="">Select Exam</option>
               {exams?.map((e) => <option key={e._id} value={e._id}>{e.name}</option>)}
@@ -57,10 +85,10 @@ export default function TestsPage() {
             <Select label="Test Type *" value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value as typeof form.type })}>
               {TEST_TYPES.map((t) => <option key={t} value={t}>{t.toUpperCase()}</option>)}
             </Select>
-            <div className="col-span-2"><Input label="Test Title *" placeholder="SSC CGL Mock Test 1" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required /></div>
-            <Input label="Duration (min)" type="number" value={form.durationMinutes} onChange={(e) => setForm({ ...form, durationMinutes: parseInt(e.target.value) })} />
-            <Input label="Total Marks" type="number" value={form.totalMarks} onChange={(e) => setForm({ ...form, totalMarks: parseInt(e.target.value) })} />
-            <Input label="Negative Marking" type="number" step="0.25" value={form.negativeMarking} onChange={(e) => setForm({ ...form, negativeMarking: parseFloat(e.target.value) })} />
+            <div className="sm:col-span-2"><Input label="Test Title *" placeholder="SSC CGL Mock Test 1" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required /></div>
+            <Input label="Duration (min)" type="number" value={form.durationMinutes} onChange={(e) => setForm({ ...form, durationMinutes: parseInt(e.target.value) || 0 })} />
+            <Input label="Total Marks" type="number" value={form.totalMarks} onChange={(e) => setForm({ ...form, totalMarks: parseInt(e.target.value) || 0 })} />
+            <Input label="Negative Marking" type="number" step="0.25" value={form.negativeMarking} onChange={(e) => setForm({ ...form, negativeMarking: parseFloat(e.target.value) || 0 })} />
           </div>
           <div className="flex gap-4">
             <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.isFree} onChange={(e) => setForm({ ...form, isFree: e.target.checked })} /> Free</label>
@@ -78,19 +106,66 @@ export default function TestsPage() {
           {tests.map((test) => (
             <Card key={test._id} className="p-5 flex items-center justify-between hover:shadow-md transition-shadow">
               <div>
-                <div className="flex items-center gap-2 mb-1">
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
                   <Badge color={typeColors[test.type] as any}>{test.type.toUpperCase()}</Badge>
                   {test.isFree ? <Badge color="green">FREE</Badge> : <Badge color="amber">PREMIUM</Badge>}
+                  {!test.isActive && <Badge color="red">Inactive</Badge>}
                 </div>
                 <h3 className="font-semibold text-slate-900">{test.title}</h3>
                 <p className="text-sm text-slate-500 mt-1">{getExamName(test.examId)} · {test.totalQuestions} Qs · {test.durationMinutes} min · {test.totalMarks} marks</p>
               </div>
-              <button onClick={async () => { if (confirm("Deactivate?")) { await deleteTest({ id: test._id }); toast.success("Deactivated"); } }}
-                className="p-2 hover:bg-red-50 rounded-lg text-red-500"><Trash2 size={16} /></button>
+              <ActionMenu items={[
+                { label: "Edit", icon: Pencil, onClick: () => setEditRow({
+                    _id: test._id, title: test.title, description: test.description ?? "",
+                    year: test.year ? String(test.year) : "", durationMinutes: test.durationMinutes,
+                    totalMarks: test.totalMarks, negativeMarking: test.negativeMarking,
+                    isFree: test.isFree, isPremium: test.isPremium, isActive: test.isActive,
+                  }) },
+                { label: test.isActive ? "Deactivate" : "Activate", icon: Trash2, danger: test.isActive, onClick: () => test.isActive ? setDeleteRow({ _id: test._id, title: test.title }) : updateTest({ id: test._id, isActive: true }).then(() => toast.success("Activated")) },
+              ]} />
             </Card>
           ))}
         </div>
       )}
+
+      {editRow && (
+        <Modal open={!!editRow} onOpenChange={(o) => !o && setEditRow(null)} title="Edit Test" wide>
+          <div className="space-y-4">
+            <Input label="Test Title" value={editRow.title} onChange={(e) => setEditRow({ ...editRow, title: e.target.value })} />
+            <Textarea label="Description" value={editRow.description} onChange={(e) => setEditRow({ ...editRow, description: e.target.value })} rows={2} />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Input label="Year (for PYP)" type="number" placeholder="2024" value={editRow.year} onChange={(e) => setEditRow({ ...editRow, year: e.target.value })} />
+              <Input label="Duration (min)" type="number" value={editRow.durationMinutes} onChange={(e) => setEditRow({ ...editRow, durationMinutes: parseInt(e.target.value) || 0 })} />
+              <Input label="Total Marks" type="number" value={editRow.totalMarks} onChange={(e) => setEditRow({ ...editRow, totalMarks: parseInt(e.target.value) || 0 })} />
+              <Input label="Negative Marking" type="number" step="0.25" value={editRow.negativeMarking} onChange={(e) => setEditRow({ ...editRow, negativeMarking: parseFloat(e.target.value) || 0 })} />
+            </div>
+            <div className="flex flex-wrap gap-4">
+              <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={editRow.isFree} onChange={(e) => setEditRow({ ...editRow, isFree: e.target.checked })} /> Free</label>
+              <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={editRow.isPremium} onChange={(e) => setEditRow({ ...editRow, isPremium: e.target.checked })} /> Premium</label>
+              <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={editRow.isActive} onChange={(e) => setEditRow({ ...editRow, isActive: e.target.checked })} /> Active</label>
+            </div>
+            <div className="flex gap-3">
+              <Button onClick={saveEdit} disabled={saving}>{saving ? "Saving..." : "Save Changes"}</Button>
+              <Button variant="secondary" onClick={() => setEditRow(null)}>Cancel</Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      <ConfirmDialog
+        open={!!deleteRow}
+        onOpenChange={(o) => !o && setDeleteRow(null)}
+        title={`Deactivate "${deleteRow?.title}"?`}
+        description="The test will be hidden from the app. You can re-activate it later by editing it."
+        confirmLabel="Deactivate"
+        danger
+        onConfirm={async () => {
+          if (!deleteRow) return;
+          await deleteTest({ id: deleteRow._id as Id<"tests"> });
+          toast.success("Test deactivated");
+          setDeleteRow(null);
+        }}
+      />
     </div>
   );
 }

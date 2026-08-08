@@ -15,11 +15,13 @@ type User = {
   totalTestsTaken: number;
 };
 
+type AuthResult = { ok: boolean; error?: string };
+
 type AuthContextType = {
   user: User | null;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<boolean>;
-  register: (name: string, email: string, password: string) => Promise<boolean>;
+  login: (email: string, password: string) => Promise<AuthResult>;
+  register: (name: string, email: string, password: string) => Promise<AuthResult>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 };
@@ -82,24 +84,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string): Promise<AuthResult> => {
     try {
-      const result = await loginMutation({ email, passwordHash: password });
-      if (!result) return false;
+      const result = await loginMutation({ email: email.trim(), passwordHash: password });
+      if (!result) return { ok: false, error: "Incorrect email or password. Please try again." };
       setUser(result as User);
       await AsyncStorage.setItem("user", JSON.stringify(result));
-      return true;
+      return { ok: true };
     } catch {
-      return false;
+      return { ok: false, error: "Couldn't reach the server. Check your internet connection." };
     }
   };
 
-  const register = async (name: string, email: string, password: string) => {
+  const register = async (name: string, email: string, password: string): Promise<AuthResult> => {
     try {
-      await registerMutation({ email, name, passwordHash: password });
+      await registerMutation({ email: email.trim(), name, passwordHash: password });
       return await login(email, password);
-    } catch {
-      return false;
+    } catch (e) {
+      const msg = (e as Error)?.message ?? "";
+      if (msg.toLowerCase().includes("already registered")) {
+        return { ok: false, error: "This email is already registered. Please log in instead." };
+      }
+      return { ok: false, error: "Couldn't create your account. Please try again." };
     }
   };
 

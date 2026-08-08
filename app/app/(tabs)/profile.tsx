@@ -35,6 +35,7 @@ export default function ProfileScreen() {
     { icon: "notifications", label: "Notifications", color: "#6366F1", href: "/notifications", badge: unread },
     { icon: "chatbubble", label: "Doubt Support", color: "#EC4899", href: "/doubts" },
     { icon: "card", label: "Premium Pass", color: "#EF4444", href: "/premium" },
+    { icon: "information-circle", label: "About & Disclaimer", color: "#64748B", href: "/disclaimer" },
   ];
 
   return (

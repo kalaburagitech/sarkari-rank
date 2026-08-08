@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { Id } from "@convex/_generated/dataModel";
@@ -62,8 +62,30 @@ export function QuestionListTable({
   const [viewRow, setViewRow] = useState<Row | null>(null);
   const [deleteRow, setDeleteRow] = useState<Row | null>(null);
 
+  // Multi-select bulk delete.
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkConfirm, setBulkConfirm] = useState(false);
+
   const duplicateQuestion = useMutation(api.exams.duplicateQuestion);
   const deleteQuestion = useMutation(api.exams.deleteQuestion);
+  const bulkDeleteQuestions = useMutation(api.exams.bulkDeleteQuestions);
+
+  // Drop stale ids whenever the visible rows change (filter/tab/exam switch),
+  // so a selection can never carry over deleted or filtered-out questions.
+  useEffect(() => {
+    setSelected(new Set());
+  }, [rows]);
+
+  const toggle = (id: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  const allSelected = rows.length > 0 && rows.every((r) => selected.has(r._id));
+  const toggleAll = () =>
+    setSelected(allSelected ? new Set() : new Set(rows.map((r) => r._id)));
 
   if (rows.length === 0) {
     return <EmptyState message={emptyMessage} action={emptyAction} />;
@@ -71,10 +93,35 @@ export function QuestionListTable({
 
   return (
     <>
+      {selected.size > 0 && (
+        <div className="sticky top-0 z-10 mb-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-indigo-100 bg-indigo-50 px-4 py-2.5">
+          <span className="text-sm font-medium text-indigo-900">
+            {selected.size} selected
+          </span>
+          <div className="flex gap-2">
+            <Button size="sm" variant="secondary" onClick={() => setSelected(new Set())}>
+              Clear
+            </Button>
+            <Button size="sm" variant="danger" onClick={() => setBulkConfirm(true)}>
+              <Trash2 size={14} /> Delete {selected.size}
+            </Button>
+          </div>
+        </div>
+      )}
+
       <TableWrap>
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left text-xs uppercase tracking-wide text-slate-400 border-b border-slate-100">
+              <th className="px-4 py-3 w-8">
+                <input
+                  type="checkbox"
+                  className="accent-indigo-600 w-4 h-4 align-middle"
+                  checked={allSelected}
+                  onChange={toggleAll}
+                  aria-label="Select all questions"
+                />
+              </th>
               <th className="px-4 py-3 w-8">#</th>
               <th className="px-4 py-3">Question</th>
               {!hideExam && <th className="px-4 py-3">Exam</th>}
@@ -89,8 +136,23 @@ export function QuestionListTable({
             {rows.map((r, i) => (
               <tr
                 key={r._id}
-                className="border-b border-slate-50 hover:bg-slate-50/60 transition-colors"
+                className={
+                  "border-b border-slate-50 transition-colors " +
+                  (selected.has(r._id) ? "bg-indigo-50/60" : "hover:bg-slate-50/60")
+                }
               >
+                <td className="px-4 py-3">
+                  <input
+                    type="checkbox"
+                    className="accent-indigo-600 w-4 h-4 align-middle"
+                    checked={selected.has(r._id)}
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      toggle(r._id);
+                    }}
+                    aria-label="Select question"
+                  />
+                </td>
                 <td className="px-4 py-3 text-slate-400">{i + 1}</td>
                 <td className="px-4 py-3 max-w-xs">
                   <button
@@ -250,6 +312,24 @@ export function QuestionListTable({
           await deleteQuestion({ id: deleteRow._id as Id<"questions"> });
           toast.success("Question deleted");
           setDeleteRow(null);
+        }}
+      />
+
+      {/* Bulk delete */}
+      <ConfirmDialog
+        open={bulkConfirm}
+        onOpenChange={setBulkConfirm}
+        title={`Delete ${selected.size} question${selected.size > 1 ? "s" : ""}?`}
+        description="This permanently removes the selected questions. This action cannot be undone."
+        confirmLabel="Delete All"
+        danger
+        onConfirm={async () => {
+          if (selected.size === 0) return;
+          await bulkDeleteQuestions({
+            ids: [...selected] as Id<"questions">[],
+          });
+          toast.success(`Deleted ${selected.size} questions`);
+          setSelected(new Set());
         }}
       />
     </>

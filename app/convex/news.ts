@@ -74,6 +74,8 @@ type ParsedItem = {
   content: string;
   category: string;
   date: number;
+  sourceUrl?: string;
+  sourceName?: string;
 };
 
 function parseFeed(xml: string, category: string): ParsedItem[] {
@@ -83,18 +85,27 @@ function parseFeed(xml: string, category: string): ParsedItem[] {
     const rawTitle = tag(block, "title");
     if (!rawTitle) continue;
     let title = stripTags(rawTitle);
-    // Google News titles are "Headline - Source"; keep headline only.
+    // Google News titles are "Headline - Source"; keep headline, capture source.
+    let sourceName: string | undefined;
     const dash = title.lastIndexOf(" - ");
-    if (dash > 30) title = title.slice(0, dash).trim();
+    if (dash > 30) {
+      sourceName = title.slice(dash + 3).trim();
+      title = title.slice(0, dash).trim();
+    }
     if (!title) continue;
+
+    // Original article link — required for Play "Misleading Claims" compliance.
+    const sourceUrl = tag(block, "link")
+      ? stripTags(tag(block, "link")!).trim()
+      : undefined;
 
     const rawDesc = tag(block, "description") ?? "";
     let desc = stripTags(rawDesc);
-    // Google News descriptions repeat the headline then the source — drop the
-    // duplicated headline so the summary reads as a clean source/snippet.
     if (desc.toLowerCase().startsWith(title.toLowerCase())) {
       desc = desc.slice(title.length).replace(/^[\s\-–—·|]+/, "").trim();
     }
+    if (!sourceName && desc) sourceName = desc.slice(0, 60);
+
     const pub = tag(block, "pubDate");
     const date = pub ? new Date(pub).getTime() || Date.now() : Date.now();
 
@@ -105,6 +116,8 @@ function parseFeed(xml: string, category: string): ParsedItem[] {
       content: desc || title,
       category,
       date,
+      sourceUrl,
+      sourceName,
     });
   }
   return items;
@@ -119,19 +132,32 @@ export const insertAffair = internalMutation({
     content: v.string(),
     category: v.string(),
     date: v.number(),
+    sourceUrl: v.optional(v.string()),
+    sourceName: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const existing = await ctx.db
       .query("currentAffairs")
       .withIndex("by_slug", (q) => q.eq("slug", args.slug))
       .first();
-    if (existing) return false;
+    if (existing) {
+      // Backfill the source link on rows imported before this field existed.
+      if (!existing.sourceUrl && args.sourceUrl) {
+        await ctx.db.patch(existing._id, {
+          sourceUrl: args.sourceUrl,
+          sourceName: args.sourceName,
+        });
+      }
+      return false;
+    }
     await ctx.db.insert("currentAffairs", {
       title: args.title,
       slug: args.slug,
       content: args.content,
       summary: args.summary,
       category: args.category,
+      sourceUrl: args.sourceUrl,
+      sourceName: args.sourceName,
       date: args.date,
       isActive: true,
       createdAt: Date.now(),

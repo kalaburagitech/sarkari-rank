@@ -25,9 +25,11 @@ export default function RootLayout() {
           <Stack.Screen name="current-affair/[slug]" options={{ headerShown: false }} />
           <Stack.Screen name="study-notes" options={{ headerShown: false }} />
           <Stack.Screen name="current-affairs" options={{ headerShown: false }} />
+          <Stack.Screen name="previous-year-papers" options={{ headerShown: false }} />
           <Stack.Screen name="notifications" options={{ headerShown: false }} />
           <Stack.Screen name="leaderboard" options={{ headerShown: false }} />
             <Stack.Screen name="results/[attemptId]" options={{ headerShown: true, title: "Results" }} />
+            <Stack.Screen name="disclaimer" options={{ headerShown: false }} />
           </Stack>
         </AuthProvider>
       </ThemeProvider>

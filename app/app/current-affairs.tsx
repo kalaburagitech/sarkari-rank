@@ -4,7 +4,7 @@ import { useQuery, useAction } from "convex/react";
 import { api } from "../convex/_generated/api";
 import { useRouter, Link } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { ScreenHeader, PremiumCard, Badge, LoadingScreen, EmptyScreen, FilterChip } from "../components/ui";
+import { ScreenHeader, PremiumCard, Badge, LoadingScreen, EmptyScreen, FilterChip, DisclaimerBanner } from "../components/ui";
 import { useTheme } from "../lib/theme";
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -113,6 +113,13 @@ export default function CurrentAffairsScreen() {
         contentContainerStyle={{ paddingTop: 8, paddingBottom: 32 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} />}
       >
+        <View className="mb-3">
+          <DisclaimerBanner onPress={() => router.push("/disclaimer")} />
+          <Text className="text-slate-400 dark:text-slate-500 text-[11px] mt-1.5 px-1 leading-4">
+            Aggregated from public news sources · tap an item, then “Read at source” for the original.
+          </Text>
+        </View>
+
         {filtered.length === 0 && (
           <EmptyScreen icon="newspaper-outline" message="No current affairs yet. Pull down to fetch the latest." />
         )}

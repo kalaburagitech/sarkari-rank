@@ -5,7 +5,7 @@ import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { Id } from "@convex/_generated/dataModel";
 import { toast } from "sonner";
-import { BookOpen, CalendarClock, Layers, AlertCircle } from "lucide-react";
+import { BookOpen, CalendarClock, Layers, AlertCircle, Plus, X } from "lucide-react";
 import { Button, Input, Textarea, Select } from "@/components/admin/ui";
 import { cn } from "@/lib/utils";
 
@@ -61,11 +61,27 @@ const TYPE_CHOICES: {
   },
 ];
 
-const emptyOptions = (): Opt[] => [
-  { id: "a", text: "" },
-  { id: "b", text: "" },
-  { id: "c", text: "" },
-  { id: "d", text: "" },
+// Positional letter ids. Options can be 2–6; ids are assigned by position and
+// NOT renumbered on removal, so `correctOptionId` stays valid for surviving rows.
+const OPTION_IDS = ["a", "b", "c", "d", "e", "f"];
+const MIN_OPTIONS = 2;
+const MAX_OPTIONS = 6;
+
+const emptyOptions = (): Opt[] =>
+  OPTION_IDS.slice(0, 4).map((id) => ({ id, text: "" }));
+
+const LANGUAGES = [
+  "English",
+  "Hindi",
+  "Kannada",
+  "Tamil",
+  "Telugu",
+  "Marathi",
+  "Bengali",
+  "Gujarati",
+  "Malayalam",
+  "Punjabi",
+  "Urdu",
 ];
 
 export function QuestionForm({
@@ -133,6 +149,20 @@ export function QuestionForm({
     setOptions(next);
   };
 
+  const addOption = () => {
+    if (options.length >= MAX_OPTIONS) return;
+    setOptions([...options, { id: OPTION_IDS[options.length], text: "" }]);
+  };
+
+  const removeOption = (idx: number) => {
+    if (options.length <= MIN_OPTIONS) return;
+    const removed = options[idx];
+    const next = options.filter((_, i) => i !== idx);
+    setOptions(next);
+    // If the option marked correct was removed, fall back to the first remaining.
+    if (correctOptionId === removed.id) setCorrectOptionId(next[0].id);
+  };
+
   function validate(): string[] {
     const e: string[] = [];
     if (mode === "add" && !locked) {
@@ -150,6 +180,7 @@ export function QuestionForm({
       }
     }
     if (!questionText.trim()) e.push("Question text is required.");
+    if (options.length < MIN_OPTIONS) e.push("Add at least two answer options.");
     options.forEach((o) => {
       if (!o.text.trim()) e.push(`Option ${o.id.toUpperCase()} cannot be empty.`);
     });
@@ -389,18 +420,19 @@ export function QuestionForm({
 
           <div className="space-y-2">
             <p className="text-sm font-medium text-slate-700">
-              Answer Options — select the correct one
+              Answer Options — select the correct one{" "}
+              <span className="text-slate-400 font-normal">({MIN_OPTIONS}–{MAX_OPTIONS} options)</span>
             </p>
             {options.map((opt, idx) => (
               <div key={opt.id} className="flex items-center gap-3">
                 <input
                   type="radio"
                   name="correct"
-                  className="accent-indigo-600 w-4 h-4"
+                  className="accent-indigo-600 w-4 h-4 shrink-0"
                   checked={correctOptionId === opt.id}
                   onChange={() => setCorrectOptionId(opt.id)}
                 />
-                <span className="font-bold text-sm w-5 text-slate-600">
+                <span className="font-bold text-sm w-5 text-slate-600 shrink-0">
                   {opt.id.toUpperCase()}.
                 </span>
                 <Input
@@ -415,8 +447,22 @@ export function QuestionForm({
                     correctOptionId === opt.id && "border-emerald-300 bg-emerald-50"
                   )}
                 />
+                <button
+                  type="button"
+                  onClick={() => removeOption(idx)}
+                  disabled={options.length <= MIN_OPTIONS}
+                  aria-label={`Remove option ${opt.id.toUpperCase()}`}
+                  className="p-2 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
+                >
+                  <X size={16} />
+                </button>
               </div>
             ))}
+            {options.length < MAX_OPTIONS && (
+              <Button variant="ghost" size="sm" onClick={addOption}>
+                <Plus size={15} /> Add Option
+              </Button>
+            )}
           </div>
 
           <Textarea
@@ -454,7 +500,7 @@ export function QuestionForm({
               value={language}
               onChange={(e) => setLanguage(e.target.value)}
             >
-              {["English", "Hindi", "Kannada"].map((l) => (
+              {LANGUAGES.map((l) => (
                 <option key={l} value={l}>
                   {l}
                 </option>

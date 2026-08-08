@@ -3,10 +3,15 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { Plus, Trash2, ToggleLeft, ToggleRight } from "lucide-react";
+import { Id } from "@convex/_generated/dataModel";
+import { Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader, Button, FormCard, Input, Textarea, LoadingState, EmptyState, TableWrap, Badge } from "@/components/admin/ui";
+import { ActionMenu, ConfirmDialog, Modal } from "@/components/admin/ui-extras";
 import { slugify } from "@/lib/utils";
+
+type CatForm = { name: string; description: string; icon: string; color: string; isPopular: boolean; order: number; isActive: boolean };
+const emptyForm: CatForm = { name: "", description: "", icon: "📋", color: "#3B82F6", isPopular: false, order: 1, isActive: true };
 
 export default function CategoriesPage() {
   const categories = useQuery(api.exams.listCategories, { includeInactive: true });
@@ -16,30 +21,40 @@ export default function CategoriesPage() {
 
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ name: "", description: "", icon: "📋", color: "#3B82F6", isPopular: false, order: 1 });
+  const [form, setForm] = useState<CatForm>(emptyForm);
+
+  const [editRow, setEditRow] = useState<{ _id: string } & CatForm | null>(null);
+  const [deleteRow, setDeleteRow] = useState<{ _id: string; name: string } | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name.trim()) { toast.error("Name is required"); return; }
     setSaving(true);
     try {
-      await createCategory({ ...form, slug: slugify(form.name) });
+      await createCategory({
+        name: form.name, description: form.description, icon: form.icon,
+        color: form.color, isPopular: form.isPopular, order: form.order, slug: slugify(form.name),
+      });
       toast.success(`Category "${form.name}" created!`);
       setShowForm(false);
-      setForm({ name: "", description: "", icon: "📋", color: "#3B82F6", isPopular: false, order: 1 });
+      setForm(emptyForm);
     } catch (err) { toast.error((err as Error).message); }
     setSaving(false);
   };
 
-  const toggleActive = async (id: any, isActive: boolean) => {
-    await updateCategory({ id, isActive: !isActive });
-    toast.success(isActive ? "Category deactivated" : "Category activated");
-  };
-
-  const handleDelete = async (id: any, name: string) => {
-    if (!confirm(`Deactivate "${name}"?`)) return;
-    await deleteCategory({ id });
-    toast.success("Category deactivated");
+  const saveEdit = async () => {
+    if (!editRow) return;
+    setSaving(true);
+    try {
+      await updateCategory({
+        id: editRow._id as Id<"examCategories">,
+        name: editRow.name, description: editRow.description, icon: editRow.icon,
+        color: editRow.color, isPopular: editRow.isPopular, order: editRow.order, isActive: editRow.isActive,
+      });
+      toast.success("Category updated");
+      setEditRow(null);
+    } catch (err) { toast.error((err as Error).message); }
+    setSaving(false);
   };
 
   if (categories === undefined) return <LoadingState />;
@@ -51,12 +66,12 @@ export default function CategoriesPage() {
 
       {showForm && (
         <FormCard title="Create New Category" onSubmit={handleSubmit}>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input label="Category Name *" placeholder="e.g. SSC Exams" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
             <Input label="Icon (emoji)" value={form.icon} onChange={(e) => setForm({ ...form, icon: e.target.value })} />
-            <div className="col-span-2"><Textarea label="Description *" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} required /></div>
+            <div className="sm:col-span-2"><Textarea label="Description *" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} required /></div>
             <Input label="Color" type="color" value={form.color} onChange={(e) => setForm({ ...form, color: e.target.value })} />
-            <Input label="Display Order" type="number" value={form.order} onChange={(e) => setForm({ ...form, order: parseInt(e.target.value) })} />
+            <Input label="Display Order" type="number" value={form.order} onChange={(e) => setForm({ ...form, order: parseInt(e.target.value) || 0 })} />
           </div>
           <label className="flex items-center gap-2 text-sm text-slate-700">
             <input type="checkbox" checked={form.isPopular} onChange={(e) => setForm({ ...form, isPopular: e.target.checked })} className="rounded" />
@@ -75,8 +90,8 @@ export default function CategoriesPage() {
         <TableWrap>
           <table className="w-full text-sm">
             <thead className="bg-slate-50 border-b border-slate-100">
-              <tr>{["Category", "Slug", "Popular", "Status", "Actions"].map((h) => (
-                <th key={h} className="text-left p-4 font-semibold text-slate-600">{h}</th>
+              <tr>{["Category", "Slug", "Popular", "Status", ""].map((h, i) => (
+                <th key={i} className="text-left p-4 font-semibold text-slate-600">{h}</th>
               ))}</tr>
             </thead>
             <tbody>
@@ -87,12 +102,10 @@ export default function CategoriesPage() {
                   <td className="p-4">{cat.isPopular ? <Badge color="amber">Popular</Badge> : "—"}</td>
                   <td className="p-4"><Badge color={cat.isActive ? "green" : "red"}>{cat.isActive ? "Active" : "Inactive"}</Badge></td>
                   <td className="p-4">
-                    <div className="flex gap-2">
-                      <button onClick={() => toggleActive(cat._id, cat.isActive)} className="p-2 hover:bg-slate-100 rounded-lg transition-colors" title="Toggle active">
-                        {cat.isActive ? <ToggleRight size={18} className="text-emerald-500" /> : <ToggleLeft size={18} className="text-slate-400" />}
-                      </button>
-                      <button onClick={() => handleDelete(cat._id, cat.name)} className="p-2 hover:bg-red-50 rounded-lg text-red-500 transition-colors"><Trash2 size={16} /></button>
-                    </div>
+                    <ActionMenu items={[
+                      { label: "Edit", icon: Pencil, onClick: () => setEditRow({ _id: cat._id, name: cat.name, description: cat.description, icon: cat.icon ?? "📋", color: cat.color ?? "#3B82F6", isPopular: !!cat.isPopular, order: cat.order ?? 1, isActive: cat.isActive }) },
+                      { label: cat.isActive ? "Deactivate" : "Activate", icon: Trash2, danger: cat.isActive, onClick: () => cat.isActive ? setDeleteRow({ _id: cat._id, name: cat.name }) : updateCategory({ id: cat._id, isActive: true }).then(() => toast.success("Activated")) },
+                    ]} />
                   </td>
                 </tr>
               ))}
@@ -100,6 +113,43 @@ export default function CategoriesPage() {
           </table>
         </TableWrap>
       )}
+
+      {editRow && (
+        <Modal open={!!editRow} onOpenChange={(o) => !o && setEditRow(null)} title="Edit Category" wide>
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Input label="Category Name" value={editRow.name} onChange={(e) => setEditRow({ ...editRow, name: e.target.value })} />
+              <Input label="Icon (emoji)" value={editRow.icon} onChange={(e) => setEditRow({ ...editRow, icon: e.target.value })} />
+              <div className="sm:col-span-2"><Textarea label="Description" value={editRow.description} onChange={(e) => setEditRow({ ...editRow, description: e.target.value })} rows={2} /></div>
+              <Input label="Color" type="color" value={editRow.color} onChange={(e) => setEditRow({ ...editRow, color: e.target.value })} />
+              <Input label="Display Order" type="number" value={editRow.order} onChange={(e) => setEditRow({ ...editRow, order: parseInt(e.target.value) || 0 })} />
+            </div>
+            <div className="flex flex-wrap gap-4">
+              <label className="flex items-center gap-2 text-sm text-slate-700"><input type="checkbox" checked={editRow.isPopular} onChange={(e) => setEditRow({ ...editRow, isPopular: e.target.checked })} /> Popular</label>
+              <label className="flex items-center gap-2 text-sm text-slate-700"><input type="checkbox" checked={editRow.isActive} onChange={(e) => setEditRow({ ...editRow, isActive: e.target.checked })} /> Active</label>
+            </div>
+            <div className="flex gap-3">
+              <Button onClick={saveEdit} disabled={saving}>{saving ? "Saving..." : "Save Changes"}</Button>
+              <Button variant="secondary" onClick={() => setEditRow(null)}>Cancel</Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      <ConfirmDialog
+        open={!!deleteRow}
+        onOpenChange={(o) => !o && setDeleteRow(null)}
+        title={`Deactivate "${deleteRow?.name}"?`}
+        description="The category will be hidden from the app. You can re-activate it later by editing it."
+        confirmLabel="Deactivate"
+        danger
+        onConfirm={async () => {
+          if (!deleteRow) return;
+          await deleteCategory({ id: deleteRow._id as Id<"examCategories"> });
+          toast.success("Category deactivated");
+          setDeleteRow(null);
+        }}
+      />
     </div>
   );
 }
