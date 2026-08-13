@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SarkariRank · Bulk Question Import</title>
+<style>
+  :root {
+    --indigo:#4f46e5; --indigo-d:#4338ca; --slate-50:#f8fafc; --slate-100:#f1f5f9;
+    --slate-200:#e2e8f0; --slate-400:#94a3b8; --slate-500:#64748b; --slate-700:#334155;
+    --slate-900:#0f172a; --green:#059669; --green-bg:#ecfdf5; --amber:#b45309; --amber-bg:#fffbeb;
+    --red:#dc2626; --red-bg:#fef2f2;
+  }
+  * { box-sizing:border-box; }
+  body {
+    margin:0; background:var(--slate-100); color:var(--slate-900);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.5; padding:24px 16px;
+  }
+  .wrap { max-width:920px; margin:0 auto; }
+  .card { background:#fff; border:1px solid var(--slate-200); border-radius:18px; padding:24px; box-shadow:0 1px 3px rgba(0,0,0,.05); }
+  h1 { font-size:22px; margin:0 0 4px; }
+  .sub { color:var(--slate-500); font-size:14px; margin:0 0 20px; }
+  .step { font-size:11px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--indigo); margin:22px 0 8px; }
+  label { display:block; font-size:13px; font-weight:600; color:var(--slate-700); margin-bottom:5px; }
+  .grid { display:grid; gap:12px; }
+  .g2 { grid-template-columns:1fr 1fr; } .g3 { grid-template-columns:1fr 1fr 1fr; } .g5 { grid-template-columns:repeat(5,1fr); }
+  @media (max-width:640px){ .g2,.g3,.g5 { grid-template-columns:1fr; } }
+  input,select,textarea {
+    width:100%; border:1px solid var(--slate-200); border-radius:11px; padding:9px 12px;
+    font-size:14px; color:var(--slate-900); background:#fff; font-family:inherit;
+  }
+  input:focus,select:focus,textarea:focus { outline:2px solid #c7d2fe; border-color:var(--indigo); }
+  textarea { resize:vertical; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12.5px; }
+  .btn { display:inline-flex; align-items:center; gap:6px; border:0; border-radius:11px; padding:10px 18px;
+    font-size:14px; font-weight:700; cursor:pointer; transition:.15s; font-family:inherit; }
+  .btn:disabled { opacity:.5; cursor:not-allowed; }
+  .btn-primary { background:linear-gradient(90deg,var(--indigo),#7c3aed); color:#fff; }
+  .btn-primary:hover:not(:disabled){ background:linear-gradient(90deg,var(--indigo-d),#6d28d9); }
+  .btn-sec { background:#fff; border:1px solid var(--slate-200); color:var(--slate-700); }
+  .btn-sec:hover:not(:disabled){ background:var(--slate-50); }
+  .row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-top:16px; }
+  .hint { font-size:12.5px; color:var(--slate-500); margin:6px 0 0; }
+  .note { background:var(--green-bg); border:1px solid #a7f3d0; color:var(--green); border-radius:12px; padding:10px 14px; font-size:14px; margin-top:12px; }
+  .err { background:var(--amber-bg); border:1px solid #fde68a; color:var(--amber); border-radius:12px; padding:10px 14px; font-size:14px; margin-top:12px; }
+  .err ul { margin:6px 0 0; padding-left:20px; max-height:180px; overflow:auto; }
+  .fail { background:var(--red-bg); border:1px solid #fecaca; color:var(--red); }
+  pre { background:#0f172a; color:#e2e8f0; border-radius:12px; padding:16px; overflow:auto; font-size:12px; }
+  details { margin-top:16px; font-size:13px; color:var(--slate-500); }
+  summary { cursor:pointer; font-weight:700; color:var(--slate-700); }
+  .toolbar { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; }
+  .badge { font-size:11px; font-weight:700; padding:2px 8px; border-radius:99px; background:var(--slate-100); color:var(--slate-500); }
+  .hidden { display:none; }
+  code { background:var(--slate-100); padding:1px 5px; border-radius:5px; font-size:12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <h1>📥 Bulk Question Import</h1>
+    <p class="sub">Paste your questions as JSON, click <b>Validate</b>, then <b>Import</b> to save them all to a test. <span id="conn" class="badge">connecting…</span></p>
+
+    <!-- Advanced: backend URL -->
+    <details>
+      <summary>Backend connection</summary>
+      <div style="margin-top:10px">
+        <label>Convex deployment URL</label>
+        <input id="backend" value="https://silent-jackal-490.convex.cloud" />
+        <p class="hint">Change this only if your app points at a different Convex deployment. Click “Reload data” after changing.</p>
+        <button class="btn btn-sec" style="margin-top:8px" onclick="loadData()">↻ Reload data</button>
+      </div>
+    </details>
+
+    <!-- Step 1 -->
+    <p class="step">Step 1 · Where do these questions belong?</p>
+    <div class="grid g3">
+      <div>
+        <label>Exam *</label>
+        <select id="exam"><option value="">— Select exam —</option></select>
+      </div>
+      <div>
+        <label>Target test</label>
+        <select id="mode">
+          <option value="existing">Add to existing test</option>
+          <option value="new">Create a new test</option>
+        </select>
+      </div>
+      <div id="existingWrap">
+        <label>Existing test *</label>
+        <select id="test"><option value="">— Select test —</option></select>
+      </div>
+    </div>
+    <div id="newWrap" class="grid g3 hidden" style="margin-top:12px">
+      <div><label>New test title *</label><input id="newTitle" placeholder="e.g. FDA Mock Test 2" /></div>
+      <div><label>Type</label>
+        <select id="newType">
+          <option>mock</option><option>pyp</option><option>subject</option><option>chapter</option>
+          <option>practice</option><option>live</option><option>daily</option>
+        </select>
+      </div>
+      <div><label>Duration (min)</label><input id="newDur" type="number" value="60" /></div>
+    </div>
+    <p id="testInfo" class="hint"></p>
+
+    <!-- Step 2 -->
+    <p class="step">Step 2 · Default values (optional)</p>
+    <p class="hint" style="margin-bottom:8px">Set these <b>once</b> — they apply to every question unless a question overrides them in its JSON.</p>
+    <div class="grid g5">
+      <div><label>Subject</label><input id="dSubject" placeholder="e.g. Karnataka GK" /></div>
+      <div><label>Language</label><select id="dLang"><option>English</option><option>Kannada</option><option>Hindi</option></select></div>
+      <div><label>Difficulty</label><select id="dDiff"><option value="easy">Easy</option><option value="medium" selected>Medium</option><option value="hard">Hard</option></select></div>
+      <div><label>Marks</label><input id="dMarks" type="number" value="1" /></div>
+      <div><label>Negative</label><input id="dNeg" type="number" step="0.25" value="0.25" /></div>
+    </div>
+
+    <!-- Step 3 -->
+    <div class="toolbar" style="margin-top:22px">
+      <p class="step" style="margin:0">Step 3 · Paste JSON</p>
+      <div style="display:flex; gap:8px">
+        <button class="btn btn-sec" onclick="loadSample()">Load sample</button>
+        <button class="btn btn-sec" onclick="document.getElementById('file').click()">Upload .json</button>
+        <input id="file" type="file" accept="application/json,.json" class="hidden" />
+      </div>
+    </div>
+    <p class="hint" style="margin-bottom:8px">Each question needs only <code>question</code>, <code>options</code> and <code>answer</code>. The rest come from Step 2.</p>
+    <textarea id="json" rows="11" placeholder='[
+  { "question": "Capital of India?", "options": ["Mumbai","New Delhi","Kolkata","Chennai"], "answer": "B" }
+]'></textarea>
+
+    <div id="result"></div>
+
+    <div class="row">
+      <button class="btn btn-sec" id="btnValidate" onclick="validate()">✓ Validate</button>
+      <button class="btn btn-primary" id="btnImport" onclick="doImport()" disabled>⬆ Import Questions</button>
+      <span id="session" class="hint" style="margin-left:auto"></span>
+    </div>
+
+    <!-- Format reference -->
+    <details>
+      <summary>JSON format reference (all fields)</summary>
+      <pre>[
+  {
+    "question": "Who is known as the Father of the Indian Constitution?",
+    "options": ["Mahatma Gandhi", "Dr. B.R. Ambedkar", "Jawaharlal Nehru", "Sardar Patel"],
+    "answer": "B",
+    "explanation": "Dr. B.R. Ambedkar chaired the Drafting Committee.",
+    "subject": "Indian Polity",
+    "difficulty": "easy",
+    "marks": 1,
+    "negativeMarks": 0.25,
+    "questionKn": "ಸಂವಿಧಾನದ ಪಿತಾಮಹ ಯಾರು?",
+    "optionsKn": ["ಮಹಾತ್ಮ ಗಾಂಧಿ", "ಡಾ. ಬಿ.ಆರ್. ಅಂಬೇಡ್ಕರ್", "ಜವಾಹರಲಾಲ್ ನೆಹರು", "ಸರ್ದಾರ್ ಪಟೇಲ್"],
+    "explanationKn": "ಡಾ. ಅಂಬೇಡ್ಕರ್ ಕರಡು ಸಮಿತಿಯ ಅಧ್ಯಕ್ಷರಾಗಿದ್ದರು."
+  }
+]</pre>
+      <ul>
+        <li><b>question</b> <span style="color:var(--red)">(required)</span> — the question text. Aliases: questionText, q, text.</li>
+        <li><b>options</b> <span style="color:var(--red)">(required)</span> — array of 2–6 strings. Aliases: opts, choices.</li>
+        <li><b>answer</b> <span style="color:var(--red)">(required)</span> — correct option as a letter (A/B/C…), a number (1-based), or the exact option text. Aliases: correct, ans.</li>
+        <li><b>explanation, subject, topic, difficulty</b> (easy/medium/hard), <b>marks, negativeMarks, language</b> — <b style="color:var(--green)">optional</b>; fall back to Step-2 defaults.</li>
+        <li><b>questionKn, optionsKn, explanationKn</b> — optional Kannada translations for bilingual tests.</li>
+      </ul>
+    </details>
+  </div>
+</div>
+
+<script>
+"use strict";
+const OPT_IDS = ["a","b","c","d","e","f"];
+let EXAMS = [], TESTS = [], parsed = null, sessionCount = 0;
+
+const $ = (id) => document.getElementById(id);
+const backendUrl = () => $("backend").value.trim().replace(/\/$/, "");
+
+async function convex(kind, path, args) {
+  const res = await fetch(`${backendUrl()}/api/${kind}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ path, args, format: "json" }),
+  });
+  const data = await res.json();
+  if (data.status === "success") return data.value;
+  throw new Error(data.errorMessage || "Backend error");
+}
+
+async function loadData() {
+  $("conn").textContent = "connecting…";
+  $("conn").style.background = "var(--slate-100)"; $("conn").style.color = "var(--slate-500)";
+  try {
+    EXAMS = await convex("query", "exams:listExams", {});
+    TESTS = await convex("query", "exams:listTests", {});
+    const ex = $("exam");
+    ex.innerHTML = '<option value="">— Select exam —</option>' +
+      EXAMS.map((e) => `<option value="${e._id}">${escapeHtml(e.name)}</option>`).join("");
+    $("conn").textContent = `connected · ${EXAMS.length} exams`;
+    $("conn").style.background = "var(--green-bg)"; $("conn").style.color = "var(--green)";
+    refreshTests();
+  } catch (e) {
+    $("conn").textContent = "connection failed";
+    $("conn").style.background = "var(--red-bg)"; $("conn").style.color = "var(--red)";
+    showResult(`<div class="err fail">Could not reach the backend: ${escapeHtml(e.message)}. Check the deployment URL under “Backend connection”.</div>`);
+  }
+}
+
+function refreshTests() {
+  const examId = $("exam").value;
+  const list = TESTS.filter((t) => !examId || t.examId === examId);
+  $("test").innerHTML = '<option value="">— Select test —</option>' +
+    list.map((t) => `<option value="${t._id}">${escapeHtml(t.title)} (${t.totalQuestions} Qs)</option>`).join("");
+  updateTestInfo();
+}
+
+function updateTestInfo() {
+  const t = TESTS.find((x) => x._id === $("test").value);
+  $("testInfo").innerHTML = (t && $("mode").value === "existing")
+    ? `<b>${escapeHtml(t.title)}</b> has <b style="color:var(--indigo)">${t.totalQuestions}</b> question(s). New ones are appended after them — safe to import in batches.`
+    : "";
+}
+
+// ── Parsing / normalization (mirrors the admin BulkImportQuestions logic) ──
+function pick(obj, keys) {
+  for (const k of keys) if (obj[k] !== undefined && obj[k] !== null && obj[k] !== "") return obj[k];
+  return undefined;
+}
+function normalizeOptions(raw) {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((o, i) => {
+    const id = OPT_IDS[i] ?? String(i);
+    if (typeof o === "string") return { id, text: o.trim() };
+    if (o && typeof o === "object") return { id: o.id ?? id, text: String(o.text ?? o.value ?? "").trim() };
+    return { id, text: String(o) };
+  });
+}
+function resolveAnswer(raw, options) {
+  if (raw === undefined || raw === null) return null;
+  const s = String(raw).trim();
+  if (!s) return null;
+  if (/^[a-zA-Z]$/.test(s)) { const idx = s.toLowerCase().charCodeAt(0) - 97; if (options[idx]) return options[idx].id; }
+  if (/^\d+$/.test(s)) { const n = parseInt(s, 10); if (options[n-1]) return options[n-1].id; if (options[n]) return options[n].id; }
+  const byId = options.find((o) => o.id.toLowerCase() === s.toLowerCase()); if (byId) return byId.id;
+  const byText = options.find((o) => o.text.toLowerCase() === s.toLowerCase()); if (byText) return byText.id;
+  return null;
+}
+function defaults() {
+  return {
+    subject: $("dSubject").value.trim(), language: $("dLang").value,
+    marks: parseFloat($("dMarks").value) || 1, negativeMarks: parseFloat($("dNeg").value) || 0,
+    difficulty: $("dDiff").value,
+  };
+}
+function parse() {
+  const def = defaults();
+  const errors = [];
+  let data;
+  try { data = JSON.parse($("json").value); }
+  catch (e) { return { ok: [], errors: [`Invalid JSON: ${e.message}`] }; }
+  const arr = Array.isArray(data) ? data : (Array.isArray(data?.questions) ? data.questions : []);
+  if (!arr.length) return { ok: [], errors: ['No questions found. Provide a JSON array (or an object with a "questions" array).'] };
+
+  const selTest = TESTS.find((t) => t._id === $("test").value);
+  const startOrder = ($("mode").value === "existing" ? (selTest?.totalQuestions ?? 0) : 0);
+  const ok = [];
+  arr.forEach((item, i) => {
+    const n = i + 1;
+    if (!item || typeof item !== "object") { errors.push(`Q${n}: not an object`); return; }
+    const q = item;
+    const text = String(pick(q, ["question","questionText","q","text"]) ?? "").trim();
+    if (!text) { errors.push(`Q${n}: missing "question"`); return; }
+    const options = normalizeOptions(pick(q, ["options","opts","choices"]));
+    if (options.length < 2) { errors.push(`Q${n}: needs at least 2 options`); return; }
+    if (options.some((o) => !o.text)) { errors.push(`Q${n}: an option is empty`); return; }
+    const correctOptionId = resolveAnswer(pick(q, ["answer","correct","correctOption","correctAnswer","ans"]), options);
+    if (!correctOptionId) { errors.push(`Q${n}: "answer" does not match any option`); return; }
+    const rawDiff = String(pick(q, ["difficulty","diff","level"]) ?? def.difficulty).toLowerCase();
+    const difficulty = (rawDiff === "easy" || rawDiff === "hard") ? rawDiff : "medium";
+    const optsKnRaw = pick(q, ["optionsKn","opts_kn","kannadaOptions"]);
+    const optionsKn = optsKnRaw ? normalizeOptions(optsKnRaw).map((o, idx) => ({ id: options[idx]?.id ?? o.id, text: o.text })) : undefined;
+    ok.push({
+      questionText: text, options, correctOptionId,
+      explanation: (pick(q, ["explanation","exp","solution"]) ?? "").toString().trim() || undefined,
+      questionTextKn: (pick(q, ["questionKn","questionTextKn","qKn"]) ?? "").toString().trim() || undefined,
+      optionsKn: optionsKn && optionsKn.length ? optionsKn : undefined,
+      explanationKn: (pick(q, ["explanationKn","expKn"]) ?? "").toString().trim() || undefined,
+      subject: (pick(q, ["subject","sub"]) ?? def.subject).toString().trim() || undefined,
+      topic: (pick(q, ["topic"]) ?? "").toString().trim() || undefined,
+      difficulty,
+      marks: Number(pick(q, ["marks","mark"]) ?? def.marks) || def.marks,
+      negativeMarks: Number(pick(q, ["negativeMarks","negative","neg"]) ?? def.negativeMarks),
+      order: startOrder + ok.length + 1,
+      language: (pick(q, ["language","lang"]) ?? def.language).toString(),
+    });
+  });
+  return { ok, errors };
+}
+
+function validate() {
+  parsed = parse();
+  let html = "";
+  if (parsed.ok.length) html += `<div class="note">✓ ${parsed.ok.length} question(s) ready to import.</div>`;
+  if (parsed.errors.length) {
+    html += `<div class="err">⚠ ${parsed.errors.length} issue(s):<ul>` +
+      parsed.errors.slice(0, 30).map((e) => `<li>${escapeHtml(e)}</li>`).join("") + `</ul></div>`;
+  }
+  showResult(html);
+  $("btnImport").disabled = !parsed.ok.length;
+}
+
+async function doImport() {
+  if (!parsed || !parsed.ok.length) { validate(); if (!parsed.ok.length) return; }
+  const examId = $("exam").value;
+  const mode = $("mode").value;
+  if (!examId) { alert("Select an exam first."); return; }
+  const def = defaults();
+  $("btnImport").disabled = true; $("btnImport").textContent = "Importing…";
+  try {
+    let targetTestId = $("test").value;
+    if (mode === "new") {
+      const title = $("newTitle").value.trim();
+      if (!title) { alert("Enter a new test title."); throw new Error("no title");}
+      const totalMarks = parsed.ok.reduce((s, q) => s + q.marks, 0);
+      targetTestId = await convex("mutation", "exams:createTest", {
+        examId, title, slug: slugify(title),
+        description: `${title} — imported via HTML importer`,
+        type: $("newType").value, durationMinutes: parseInt($("newDur").value) || 60,
+        totalMarks, negativeMarking: def.negativeMarks, languages: [def.language],
+        isFree: true, isPremium: false,
+      });
+    }
+    if (!targetTestId) { alert("Select a target test."); throw new Error("no test"); }
+    await convex("mutation", "exams:bulkCreateQuestions", { testId: targetTestId, questions: parsed.ok });
+    const n = parsed.ok.length;
+    sessionCount += n;
+    $("session").textContent = `✓ Added ${sessionCount} question(s) this session`;
+    showResult(`<div class="note">✅ Imported ${n} question(s) successfully! Paste the next batch to keep adding to the same test.</div>`);
+    $("json").value = ""; parsed = null;
+    await loadData();            // refresh test counts
+    if (mode === "new") { $("mode").value = "existing"; toggleMode(); refreshTests(); $("test").value = targetTestId; }
+    $("newTitle").value = "";
+  } catch (e) {
+    if (!["no title","no test"].includes(e.message))
+      showResult(`<div class="err fail">Import failed: ${escapeHtml(e.message)}</div>`);
+  } finally {
+    $("btnImport").textContent = "⬆ Import Questions";
+    $("btnImport").disabled = false;
+  }
+}
+
+function toggleMode() {
+  const isNew = $("mode").value === "new";
+  $("newWrap").classList.toggle("hidden", !isNew);
+  $("existingWrap").classList.toggle("hidden", isNew);
+  updateTestInfo();
+}
+function loadSample() {
+  $("json").value = JSON.stringify([
+    { question: "Who is known as the Father of the Indian Constitution?",
+      options: ["Mahatma Gandhi","Dr. B.R. Ambedkar","Jawaharlal Nehru","Sardar Patel"], answer: "B" },
+    { question: "What is the capital of India?",
+      options: ["Mumbai","New Delhi","Kolkata","Chennai"], answer: "B",
+      explanation: "New Delhi has been the capital since 1911." }
+  ], null, 2);
+}
+function slugify(t) {
+  return t.toLowerCase().replace(/[^\w\s-]/g,"").replace(/\s+/g,"-").replace(/-+/g,"-").trim() || ("test-" + Date.now());
+}
+function escapeHtml(s) { return String(s).replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c])); }
+function showResult(html) { $("result").innerHTML = html; }
+
+$("exam").addEventListener("change", refreshTests);
+$("test").addEventListener("change", updateTestInfo);
+$("mode").addEventListener("change", toggleMode);
+$("file").addEventListener("change", (e) => {
+  const f = e.target.files[0]; if (!f) return;
+  const r = new FileReader(); r.onload = () => { $("json").value = String(r.result || ""); parsed = null; }; r.readAsText(f); e.target.value = "";
+});
+loadData();
+</script>
+</body>
+</html>

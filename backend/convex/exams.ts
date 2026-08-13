@@ -2,6 +2,7 @@ import { mutation, query } from "./_generated/server";
 import type { MutationCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { v } from "convex/values";
+import { paginationOptsValidator } from "convex/server";
 
 // ─── Exam Categories ─────────────────────────────────────────
 
@@ -277,17 +278,14 @@ export const listTests = query({
     }
     const activeTests = tests.filter((t) => args.includeInactive || t.isActive);
 
-    return await Promise.all(
-      activeTests.map(async (test) => {
-        const questionCount = (
-          await ctx.db
-            .query("questions")
-            .withIndex("by_test", (q) => q.eq("testId", test._id))
-            .collect()
-        ).length;
-        return { ...test, totalQuestions: questionCount, liveQuestionCount: questionCount };
-      })
-    );
+    // Use the stored `totalQuestions` (kept in sync by the create/import/delete
+    // mutations) instead of scanning every question document per test. That scan
+    // read thousands of full docs on every call and was the main source of
+    // database bandwidth.
+    return activeTests.map((test) => ({
+      ...test,
+      liveQuestionCount: test.totalQuestions,
+    }));
   },
 });
 
@@ -297,16 +295,8 @@ export const getTest = query({
     const test = await ctx.db.get(args.id);
     if (!test) return null;
 
-    const questions = await ctx.db
-      .query("questions")
-      .withIndex("by_test", (q) => q.eq("testId", args.id))
-      .collect();
-
-    return {
-      ...test,
-      totalQuestions: questions.length,
-      liveQuestionCount: questions.length,
-    };
+    // Stored count — avoids reading every question doc just to size the test.
+    return { ...test, liveQuestionCount: test.totalQuestions };
   },
 });
 
@@ -901,5 +891,51 @@ export const listQuestionsRich = query({
     // Newest first, then by order.
     rows.sort((a, b) => b._creationTime - a._creationTime);
     return rows;
+  },
+});
+
+// ─── Paginated questions for the admin list (cost-efficient) ───
+// Reads only one page (default ~50) of questions per fetch instead of the
+// whole table. Optionally scopes to a single test via the by_test index.
+// Each page's rows are enriched with exam/test context (bounded to page size).
+export const listQuestionsPaginated = query({
+  args: {
+    paginationOpts: paginationOptsValidator,
+    testId: v.optional(v.id("tests")),
+  },
+  handler: async (ctx, args) => {
+    const base = args.testId
+      ? ctx.db
+          .query("questions")
+          .withIndex("by_test", (q) => q.eq("testId", args.testId!))
+          .order("desc")
+      : ctx.db.query("questions").order("desc");
+    const result = await base.paginate(args.paginationOpts);
+
+    // Enrich just this page. Exams table is tiny; tests are point-read per page.
+    const exams = await ctx.db.query("exams").collect();
+    const examById = new Map(exams.map((e) => [e._id, e]));
+    const testIds = [...new Set(result.page.map((q) => q.testId))];
+    const testEntries = await Promise.all(
+      testIds.map(async (id) => [id, await ctx.db.get(id)] as const)
+    );
+    const testById = new Map(testEntries);
+
+    const page = result.page.map((q) => {
+      const test = testById.get(q.testId);
+      const exam = test ? examById.get(test.examId) : undefined;
+      return {
+        ...q,
+        examId: test?.examId ?? "",
+        examName: exam?.name ?? "—",
+        testId: q.testId,
+        testTitle: test?.title ?? "—",
+        testType: test?.type ?? "practice",
+        year: test?.year,
+        status: q.status ?? "published",
+      };
+    });
+
+    return { ...result, page };
   },
 });

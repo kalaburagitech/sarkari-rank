@@ -104,11 +104,15 @@ export const deleteStudyNote = mutation({
 export const listCurrentAffairs = query({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, args) => {
-    const items = await ctx.db.query("currentAffairs").collect();
-    return items
-      .filter((i) => i.isActive)
-      .sort((a, b) => b.date - a.date)
-      .slice(0, args.limit ?? 20);
+    const limit = args.limit ?? 20;
+    // Read only ~limit newest active rows (creation order ≈ publish date)
+    // instead of collecting the entire, ever-growing table on every call.
+    const items = await ctx.db
+      .query("currentAffairs")
+      .order("desc")
+      .filter((q) => q.eq(q.field("isActive"), true))
+      .take(limit);
+    return items.sort((a, b) => b.date - a.date);
   },
 });
 

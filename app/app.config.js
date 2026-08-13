@@ -2,7 +2,7 @@ export default {
   expo: {
     name: "SarkariRank - Govt Exam Prep",
     slug: "sarkari-rank-govt-exam-prep",
-    version: "1.0.4",
+    version: "1.0.5",
     orientation: "portrait",
     icon: "./assets/icon.png",
     userInterfaceStyle: "light",
@@ -22,7 +22,7 @@ export default {
         foregroundImage: "./assets/android-icon-foreground.png",
       },
       package: "com.sarkarirank.app",
-      versionCode: 5,
+      versionCode: 6,
     },
     web: {
       bundler: "metro",
@@ -34,7 +34,7 @@ export default {
       typedRoutes: true,
     },
     extra: {
-      convexUrl: process.env.EXPO_PUBLIC_CONVEX_URL ?? "https://hardy-leopard-835.convex.cloud",
+      convexUrl: process.env.EXPO_PUBLIC_CONVEX_URL ?? "https://silent-jackal-490.convex.cloud",
     },
   },
 };

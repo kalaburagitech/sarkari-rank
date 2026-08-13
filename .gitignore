@@ -18,3 +18,7 @@ dist/
 
 # Secrets - never commit deploy keys
 *.pem
+
+# DB snapshots / migration dumps (contain user PII) — keep out of git
+data/
+*.zip

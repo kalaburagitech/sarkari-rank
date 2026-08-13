@@ -7,7 +7,7 @@ import { Id } from "@convex/_generated/dataModel";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader, Button, FormCard, Input, Textarea, Select, LoadingState, EmptyState, Card, Badge } from "@/components/admin/ui";
-import { ActionMenu, ConfirmDialog, Modal } from "@/components/admin/ui-extras";
+import { ActionMenu, ConfirmDialog, Modal, usePagination, Pagination } from "@/components/admin/ui-extras";
 import { slugify } from "@/lib/utils";
 
 const TEST_TYPES = ["mock", "live", "chapter", "subject", "pyp", "daily", "practice"] as const;
@@ -34,6 +34,7 @@ export default function TestsPage() {
 
   const [editRow, setEditRow] = useState<EditForm | null>(null);
   const [deleteRow, setDeleteRow] = useState<{ _id: string; title: string } | null>(null);
+  const pager = usePagination(tests ?? [], 12);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -103,7 +104,7 @@ export default function TestsPage() {
 
       {tests.length === 0 ? <EmptyState message="No tests yet. Create your first test above." /> : (
         <div className="grid gap-3">
-          {tests.map((test) => (
+          {pager.pageItems.map((test) => (
             <Card key={test._id} className="p-5 flex items-center justify-between hover:shadow-md transition-shadow">
               <div>
                 <div className="flex items-center gap-2 mb-1 flex-wrap">
@@ -125,6 +126,7 @@ export default function TestsPage() {
               ]} />
             </Card>
           ))}
+          <Pagination page={pager.page} totalPages={pager.totalPages} onChange={pager.setPage} from={pager.from} to={pager.to} total={pager.total} label="tests" />
         </div>
       )}
 

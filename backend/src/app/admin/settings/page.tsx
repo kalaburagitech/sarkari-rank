@@ -10,7 +10,7 @@ export default function SettingsPage() {
       <div className="grid gap-4 max-w-2xl">
         {[
           { label: "App Name", value: "SarkariRank - Govt Exam Prep" },
-          { label: "Convex URL", value: "hardy-leopard-835.convex.cloud" },
+          { label: "Convex URL", value: "silent-jackal-490.convex.cloud" },
           { label: "Premium Pass Price", value: "₹499/year" },
           { label: "Supported Languages", value: "English, Hindi, Bengali, Tamil, Telugu, Marathi, Gujarati, Kannada" },
           { label: "Admin Email", value: "admin@sarkarirank.com" },

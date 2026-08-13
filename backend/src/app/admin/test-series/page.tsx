@@ -7,7 +7,7 @@ import { Id } from "@convex/_generated/dataModel";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader, Button, FormCard, Input, Textarea, Select, LoadingState, EmptyState, Card, Badge } from "@/components/admin/ui";
-import { ActionMenu, ConfirmDialog, Modal } from "@/components/admin/ui-extras";
+import { ActionMenu, ConfirmDialog, Modal, usePagination, Pagination } from "@/components/admin/ui-extras";
 import { slugify } from "@/lib/utils";
 
 type EditForm = {
@@ -29,6 +29,7 @@ export default function TestSeriesPage() {
 
   const [editRow, setEditRow] = useState<EditForm | null>(null);
   const [deleteRow, setDeleteRow] = useState<{ _id: string; title: string } | null>(null);
+  const pager = usePagination(series ?? [], 12);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,7 +87,7 @@ export default function TestSeriesPage() {
 
       {series.length === 0 ? <EmptyState message="No test series yet." /> : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {series.map((s) => (
+          {pager.pageItems.map((s) => (
             <Card key={s._id} className="p-5 hover:shadow-md transition-shadow">
               <div className="flex items-start justify-between gap-2">
                 <h3 className="font-semibold text-slate-900">{s.title}</h3>
@@ -107,6 +108,9 @@ export default function TestSeriesPage() {
               </div>
             </Card>
           ))}
+          <div className="md:col-span-2">
+            <Pagination page={pager.page} totalPages={pager.totalPages} onChange={pager.setPage} from={pager.from} to={pager.to} total={pager.total} label="series" />
+          </div>
         </div>
       )}
 
