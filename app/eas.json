@@ -10,7 +10,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_CONVEX_URL": "https://hardy-leopard-835.convex.cloud"
+        "EXPO_PUBLIC_CONVEX_URL": "https://silent-jackal-490.convex.cloud"
       }
     },
     "production": {
@@ -18,7 +18,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_CONVEX_URL": "https://hardy-leopard-835.convex.cloud"
+        "EXPO_PUBLIC_CONVEX_URL": "https://silent-jackal-490.convex.cloud"
       }
     }
   }

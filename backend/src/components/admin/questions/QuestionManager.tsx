@@ -2,9 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useQuery } from "convex/react";
+import { useQuery, usePaginatedQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
-import { Id } from "@convex/_generated/dataModel";
 import {
   Plus,
   FileJson,
@@ -76,9 +75,22 @@ export function QuestionManager() {
 
   const exams = useQuery(api.exams.listExams, {});
   const seriesList = useQuery(api.exams.listTestSeries, { includeInactive: true });
-  const rows = useQuery(api.exams.listQuestionsRich, {
-    examId: examId ? (examId as Id<"exams">) : undefined,
-  }) as Row[] | undefined;
+  // Paginated: reads ~50 questions per page instead of the whole table.
+  // Exam/subject/difficulty/status/search are applied client-side over the
+  // pages loaded so far — click "Load more" to pull in additional pages.
+  const {
+    results: rows,
+    status,
+    loadMore,
+  } = usePaginatedQuery(
+    api.exams.listQuestionsPaginated,
+    {},
+    { initialNumItems: 50 }
+  ) as unknown as {
+    results: Row[];
+    status: "LoadingFirstPage" | "CanLoadMore" | "LoadingMore" | "Exhausted";
+    loadMore: (n: number) => void;
+  };
 
   const subjects = useMemo(() => {
     const s = new Set<string>();
@@ -88,6 +100,7 @@ export function QuestionManager() {
 
   const filtered = useMemo(() => {
     let list = rows ?? [];
+    if (examId) list = list.filter((r) => r.examId === examId);
     if (tab !== "all")
       list = list.filter((r) => contentTypeLabel(r.testType) === TAB_LABEL[tab]);
     if (subjectF) list = list.filter((r) => r.subject === subjectF);
@@ -243,28 +256,44 @@ export function QuestionManager() {
             </div>
           </Card>
 
-          {rows === undefined ? (
+          {status === "LoadingFirstPage" ? (
             <LoadingState message="Loading questions…" />
           ) : (
-            <QuestionListTable
-              rows={filtered}
-              exams={examList}
-              seriesList={seriesForForm}
-              emptyMessage={
-                rows.length === 0
-                  ? "No questions added yet."
-                  : "No questions match your filters."
-              }
-              emptyAction={
-                <Button onClick={() => setAdding(true)}>
-                  <Plus size={16} /> Add{" "}
-                  {tab === "all"
-                    ? "First"
-                    : TAB_LABEL[tab as Exclude<Tab, "all">]}{" "}
-                  Question
-                </Button>
-              }
-            />
+            <>
+              <QuestionListTable
+                rows={filtered}
+                exams={examList}
+                seriesList={seriesForForm}
+                emptyMessage={
+                  rows.length === 0
+                    ? "No questions added yet."
+                    : "No questions match your filters (in the loaded pages — Load more to search deeper)."
+                }
+                emptyAction={
+                  <Button onClick={() => setAdding(true)}>
+                    <Plus size={16} /> Add{" "}
+                    {tab === "all"
+                      ? "First"
+                      : TAB_LABEL[tab as Exclude<Tab, "all">]}{" "}
+                    Question
+                  </Button>
+                }
+              />
+              <div className="flex items-center justify-center gap-4 mt-4">
+                <span className="text-xs text-slate-400">
+                  Loaded {rows.length} question{rows.length === 1 ? "" : "s"}
+                  {status !== "Exhausted" ? " · filters apply to loaded pages" : ""}
+                </span>
+                {status === "CanLoadMore" && (
+                  <Button variant="secondary" onClick={() => loadMore(50)}>
+                    Load 50 more
+                  </Button>
+                )}
+                {status === "LoadingMore" && (
+                  <span className="text-xs text-slate-400">Loading…</span>
+                )}
+              </div>
+            </>
           )}
         </>
       )}

@@ -7,7 +7,7 @@ import { Id } from "@convex/_generated/dataModel";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader, Button, FormCard, Input, Textarea, Select, LoadingState, EmptyState, TableWrap, Badge } from "@/components/admin/ui";
-import { ActionMenu, ConfirmDialog, Modal } from "@/components/admin/ui-extras";
+import { ActionMenu, ConfirmDialog, Modal, usePagination, Pagination } from "@/components/admin/ui-extras";
 import { slugify } from "@/lib/utils";
 
 type ExamForm = {
@@ -36,6 +36,7 @@ export default function ExamsPage() {
 
   const [editRow, setEditRow] = useState<({ _id: string } & ExamForm) | null>(null);
   const [deleteRow, setDeleteRow] = useState<{ _id: string; name: string } | null>(null);
+  const pager = usePagination(exams ?? [], 20);
 
   const buildFields = (f: ExamForm) => ({
     name: f.name, description: f.description, order: f.order,
@@ -121,7 +122,7 @@ export default function ExamsPage() {
           <table className="w-full text-sm">
             <thead className="bg-slate-50 border-b"><tr>{["Exam", "Category", "Tests", "Status", ""].map((h, i) => <th key={i} className="text-left p-4 font-semibold text-slate-600">{h}</th>)}</tr></thead>
             <tbody>
-              {exams.map((exam) => (
+              {pager.pageItems.map((exam) => (
                 <tr key={exam._id} className="border-b border-slate-50 hover:bg-indigo-50/30">
                   <td className="p-4 font-medium text-slate-900">{exam.name}</td>
                   <td className="p-4 text-slate-500">{getCategoryName(exam.categoryId)}</td>
@@ -142,6 +143,9 @@ export default function ExamsPage() {
               ))}
             </tbody>
           </table>
+          <div className="px-4 pb-3">
+            <Pagination page={pager.page} totalPages={pager.totalPages} onChange={pager.setPage} from={pager.from} to={pager.to} total={pager.total} label="exams" />
+          </div>
         </TableWrap>
       )}
 

@@ -7,7 +7,7 @@ import { Id } from "@convex/_generated/dataModel";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader, Button, FormCard, Input, Textarea, LoadingState, EmptyState, TableWrap, Badge } from "@/components/admin/ui";
-import { ActionMenu, ConfirmDialog, Modal } from "@/components/admin/ui-extras";
+import { ActionMenu, ConfirmDialog, Modal, usePagination, Pagination } from "@/components/admin/ui-extras";
 import { slugify } from "@/lib/utils";
 
 type CatForm = { name: string; description: string; icon: string; color: string; isPopular: boolean; order: number; isActive: boolean };
@@ -25,6 +25,7 @@ export default function CategoriesPage() {
 
   const [editRow, setEditRow] = useState<{ _id: string } & CatForm | null>(null);
   const [deleteRow, setDeleteRow] = useState<{ _id: string; name: string } | null>(null);
+  const pager = usePagination(categories ?? [], 20);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,7 +96,7 @@ export default function CategoriesPage() {
               ))}</tr>
             </thead>
             <tbody>
-              {categories.map((cat) => (
+              {pager.pageItems.map((cat) => (
                 <tr key={cat._id} className="border-b border-slate-50 hover:bg-indigo-50/30 transition-colors">
                   <td className="p-4"><span className="mr-2 text-lg">{cat.icon}</span><span className="font-medium">{cat.name}</span></td>
                   <td className="p-4 text-slate-400 font-mono text-xs">{cat.slug}</td>
@@ -111,6 +112,9 @@ export default function CategoriesPage() {
               ))}
             </tbody>
           </table>
+          <div className="px-4 pb-3">
+            <Pagination page={pager.page} totalPages={pager.totalPages} onChange={pager.setPage} from={pager.from} to={pager.to} total={pager.total} label="categories" />
+          </div>
         </TableWrap>
       )}
 

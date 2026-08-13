@@ -7,7 +7,7 @@ import { Id } from "@convex/_generated/dataModel";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader, Button, FormCard, Input, Textarea, LoadingState, EmptyState, Card, Badge } from "@/components/admin/ui";
-import { ActionMenu, ConfirmDialog, Modal } from "@/components/admin/ui-extras";
+import { ActionMenu, ConfirmDialog, Modal, usePagination, Pagination } from "@/components/admin/ui-extras";
 import { slugify } from "@/lib/utils";
 
 type EditForm = {
@@ -27,6 +27,7 @@ export default function CurrentAffairsPage() {
 
   const [editRow, setEditRow] = useState<EditForm | null>(null);
   const [deleteRow, setDeleteRow] = useState<{ _id: string; title: string } | null>(null);
+  const pager = usePagination(affairs ?? [], 15);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -79,7 +80,7 @@ export default function CurrentAffairsPage() {
 
       {affairs.length === 0 ? <EmptyState message="No articles yet." /> : (
         <div className="space-y-3">
-          {affairs.map((a) => (
+          {pager.pageItems.map((a) => (
             <Card key={a._id} className="p-5 flex justify-between gap-3">
               <div className="min-w-0">
                 <h3 className="font-semibold text-slate-900">{a.title}</h3>
@@ -98,6 +99,7 @@ export default function CurrentAffairsPage() {
               </div>
             </Card>
           ))}
+          <Pagination page={pager.page} totalPages={pager.totalPages} onChange={pager.setPage} from={pager.from} to={pager.to} total={pager.total} label="articles" />
         </div>
       )}
 

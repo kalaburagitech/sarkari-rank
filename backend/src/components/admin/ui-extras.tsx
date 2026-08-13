@@ -1,8 +1,9 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import * as Dialog from "@radix-ui/react-dialog";
-import { MoreVertical, Search, ChevronRight, AlertTriangle } from "lucide-react";
+import { MoreVertical, Search, ChevronRight, ChevronLeft, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/admin/ui";
 
@@ -269,6 +270,114 @@ export function QuestionTypeBadge({ type }: { type: string }) {
     >
       {meta.label}
     </span>
+  );
+}
+
+// ─── Client-side pagination (for small admin lists) ─────────────
+// These tables are small, so we slice locally rather than adding a
+// server round-trip. Returns the current page's slice + controls.
+export function usePagination<T>(items: T[], pageSize = 20) {
+  const [page, setPage] = useState(1);
+  const total = items.length;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  // Clamp when the list shrinks (e.g. after a delete) so we never strand
+  // the user on an empty page.
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
+  const current = Math.min(page, totalPages);
+  const start = (current - 1) * pageSize;
+  return {
+    page: current,
+    setPage,
+    totalPages,
+    total,
+    pageItems: items.slice(start, start + pageSize),
+    from: total === 0 ? 0 : start + 1,
+    to: Math.min(start + pageSize, total),
+  };
+}
+
+export function Pagination({
+  page,
+  totalPages,
+  onChange,
+  from,
+  to,
+  total,
+  label = "items",
+}: {
+  page: number;
+  totalPages: number;
+  onChange: (p: number) => void;
+  from: number;
+  to: number;
+  total: number;
+  label?: string;
+}) {
+  if (total === 0) return null;
+  // Compact window of page numbers around the current page.
+  const span = 2;
+  const startP = Math.max(1, page - span);
+  const endP = Math.min(totalPages, page + span);
+  const nums: number[] = [];
+  for (let i = startP; i <= endP; i++) nums.push(i);
+
+  const PageBtn = ({ p, active }: { p: number; active?: boolean }) => (
+    <button
+      onClick={() => onChange(p)}
+      className={cn(
+        "min-w-[32px] h-8 px-2 rounded-lg text-sm font-medium transition-colors",
+        active
+          ? "bg-indigo-600 text-white"
+          : "text-slate-600 hover:bg-slate-100"
+      )}
+    >
+      {p}
+    </button>
+  );
+
+  return (
+    <div className="flex items-center justify-between gap-3 mt-4 flex-wrap">
+      <span className="text-xs text-slate-400">
+        Showing {from}–{to} of {total} {label}
+      </span>
+      {totalPages > 1 && (
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => onChange(page - 1)}
+            disabled={page <= 1}
+            className="h-8 px-2 rounded-lg text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:hover:bg-transparent flex items-center"
+            aria-label="Previous page"
+          >
+            <ChevronLeft size={16} />
+          </button>
+          {startP > 1 && (
+            <>
+              <PageBtn p={1} />
+              {startP > 2 && <span className="px-1 text-slate-400">…</span>}
+            </>
+          )}
+          {nums.map((n) => (
+            <PageBtn key={n} p={n} active={n === page} />
+          ))}
+          {endP < totalPages && (
+            <>
+              {endP < totalPages - 1 && <span className="px-1 text-slate-400">…</span>}
+              <PageBtn p={totalPages} />
+            </>
+          )}
+          <button
+            onClick={() => onChange(page + 1)}
+            disabled={page >= totalPages}
+            className="h-8 px-2 rounded-lg text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:hover:bg-transparent flex items-center"
+            aria-label="Next page"
+          >
+            <ChevronRight size={16} />
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
 
