@@ -5,10 +5,15 @@ import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { Id } from "@convex/_generated/dataModel";
 import { toast } from "sonner";
-import { AlertCircle, Bold, Italic, Heading2, Heading3, List, ListOrdered, Quote, Eye, Pencil } from "lucide-react";
+import { AlertCircle, Bold, Italic, Heading2, Heading3, List, ListOrdered, Quote, Eye, Pencil, UploadCloud, FileText, X } from "lucide-react";
 import { Button, Input, Select } from "@/components/admin/ui";
 import { markdownToHtml } from "@/lib/markdown";
 import { slugify } from "@/lib/utils";
+
+const NOTE_LANGUAGES = [
+  "English", "Kannada", "Hindi", "Tamil", "Telugu",
+  "Marathi", "Bengali", "Gujarati", "Malayalam", "Punjabi", "Urdu",
+];
 
 type ExamOpt = { _id: string; name: string };
 
@@ -16,10 +21,13 @@ export type NoteTarget = {
   _id: string;
   examId: string;
   title: string;
-  content: string;
+  content?: string;
   summary?: string;
   subject?: string;
   topic?: string;
+  language?: string;
+  pdfStorageId?: string;
+  pdfUrl?: string | null;
   isPremium: boolean;
   isActive: boolean;
 };
@@ -39,18 +47,53 @@ export function NoteForm({
 }) {
   const createNote = useMutation(api.content.createStudyNote);
   const updateNote = useMutation(api.content.updateStudyNote);
+  const generateUploadUrl = useMutation(api.content.generateNoteUploadUrl);
 
   const [examId, setExamId] = useState(editTarget?.examId ?? preset?.examId ?? "");
   const [subject, setSubject] = useState(editTarget?.subject ?? preset?.subject ?? "");
   const [chapter, setChapter] = useState(editTarget?.topic ?? preset?.topic ?? "");
+  const [language, setLanguage] = useState(editTarget?.language ?? "English");
   const [title, setTitle] = useState(editTarget?.title ?? "");
   const [summary, setSummary] = useState(editTarget?.summary ?? "");
   const [content, setContent] = useState(editTarget?.content ?? "");
   const [isPremium, setIsPremium] = useState(editTarget?.isPremium ?? false);
+  const [pdfStorageId, setPdfStorageId] = useState<string | undefined>(editTarget?.pdfStorageId);
+  const [pdfName, setPdfName] = useState<string>(editTarget?.pdfStorageId ? "PDF attached" : "");
+  const [uploading, setUploading] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [preview, setPreview] = useState(false);
   const contentRef = useRef<HTMLTextAreaElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  async function handlePdf(file: File) {
+    if (file.type !== "application/pdf") {
+      toast.error("Please choose a PDF file");
+      return;
+    }
+    if (file.size > 25 * 1024 * 1024) {
+      toast.error("PDF is larger than 25 MB");
+      return;
+    }
+    setUploading(true);
+    try {
+      const uploadUrl = await generateUploadUrl({});
+      const res = await fetch(uploadUrl, {
+        method: "POST",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+      const json = await res.json();
+      if (!res.ok || !json.storageId) throw new Error("Upload failed");
+      setPdfStorageId(json.storageId as string);
+      setPdfName(file.name);
+      toast.success("PDF uploaded");
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setUploading(false);
+    }
+  }
 
   // Wrap the current selection with markdown markers (bold/italic/code…).
   function wrap(before: string, after: string, placeholder: string) {
@@ -93,7 +136,9 @@ export function NoteForm({
     const e: string[] = [];
     if (!examId) e.push("Please select an Exam.");
     if (!title.trim()) e.push("Title is required.");
-    if (!content.trim()) e.push("Content is required.");
+    // A note needs either written content or an uploaded PDF.
+    if (!content.trim() && !pdfStorageId)
+      e.push("Add written content or upload a PDF.");
     return e;
   }
 
@@ -112,10 +157,12 @@ export function NoteForm({
         await updateNote({
           id: editTarget._id as Id<"studyNotes">,
           title: title.trim(),
-          content: content.trim(),
+          content: content.trim() || undefined,
           summary: summary.trim() || undefined,
           subject: subject.trim() || undefined,
           topic: chapter.trim() || undefined,
+          language,
+          pdfStorageId: pdfStorageId ? (pdfStorageId as Id<"_storage">) : undefined,
           isPremium,
           isActive: publish,
         });
@@ -127,19 +174,23 @@ export function NoteForm({
         examId: examId as Id<"exams">,
         title: title.trim(),
         slug: `${slugify(title)}-${Date.now()}`,
-        content: content.trim(),
+        content: content.trim() || undefined,
         summary: summary.trim() || undefined,
         subject: subject.trim() || undefined,
         topic: chapter.trim() || undefined,
+        language,
+        pdfStorageId: pdfStorageId ? (pdfStorageId as Id<"_storage">) : undefined,
         isPremium,
         isActive: publish,
       });
       toast.success(publish ? "Note published" : "Saved as draft");
       if (addAnother) {
-        // Keep exam/subject/chapter, clear the note body.
+        // Keep exam/subject/chapter/language, clear the note body + PDF.
         setTitle("");
         setSummary("");
         setContent("");
+        setPdfStorageId(undefined);
+        setPdfName("");
         setErrors([]);
       } else {
         onClose();
@@ -153,7 +204,7 @@ export function NoteForm({
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <Select
           label="Exam *"
           value={examId}
@@ -165,6 +216,11 @@ export function NoteForm({
             <option key={e._id} value={e._id}>
               {e.name}
             </option>
+          ))}
+        </Select>
+        <Select label="Language" value={language} onChange={(e) => setLanguage(e.target.value)}>
+          {NOTE_LANGUAGES.map((l) => (
+            <option key={l} value={l}>{l}</option>
           ))}
         </Select>
         <Input
@@ -179,6 +235,40 @@ export function NoteForm({
           value={chapter}
           onChange={(e) => setChapter(e.target.value)}
         />
+      </div>
+      <p className="text-xs text-slate-500 -mt-1">
+        Tip: to offer the same chapter in multiple languages, add one note per language
+        with the <b>same Subject + Chapter</b> and a different <b>Language</b>.
+      </p>
+
+      {/* PDF upload (Convex file storage) */}
+      <div>
+        <label className="block text-sm font-medium text-slate-700 mb-1.5">
+          Chapter PDF <span className="text-slate-400 font-normal">· optional — students read it in-app</span>
+        </label>
+        <input
+          ref={fileRef}
+          type="file"
+          accept="application/pdf,.pdf"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) handlePdf(f);
+            e.target.value = "";
+          }}
+        />
+        {pdfStorageId ? (
+          <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5">
+            <FileText size={18} className="text-emerald-600" />
+            <span className="flex-1 text-sm font-medium text-emerald-800 truncate">{pdfName || "PDF attached"}</span>
+            <button type="button" onClick={() => fileRef.current?.click()} className="text-xs font-semibold text-indigo-600 hover:underline">Replace</button>
+            <button type="button" onClick={() => { setPdfStorageId(undefined); setPdfName(""); }} className="p-1 rounded-lg text-slate-400 hover:bg-white hover:text-red-600" aria-label="Remove PDF"><X size={16} /></button>
+          </div>
+        ) : (
+          <Button variant="secondary" onClick={() => fileRef.current?.click()} disabled={uploading}>
+            <UploadCloud size={16} /> {uploading ? "Uploading…" : "Upload PDF"}
+          </Button>
+        )}
       </div>
 
       <Input
@@ -196,7 +286,7 @@ export function NoteForm({
       {/* Rich content editor (Markdown) */}
       <div>
         <div className="flex items-center justify-between mb-1.5">
-          <label className="block text-sm font-medium text-slate-700">Content * <span className="text-slate-400 font-normal">· formatting supported</span></label>
+          <label className="block text-sm font-medium text-slate-700">Content <span className="text-slate-400 font-normal">· optional if a PDF is attached · formatting supported</span></label>
           <div className="flex rounded-lg border border-slate-200 overflow-hidden">
             <button type="button" onClick={() => setPreview(false)}
               className={`flex items-center gap-1 px-2.5 py-1 text-xs font-semibold ${!preview ? "bg-indigo-600 text-white" : "bg-white text-slate-600"}`}>

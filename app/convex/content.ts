@@ -18,17 +18,41 @@ export const listStudyNotes = query({
     } else {
       notes = await ctx.db.query("studyNotes").collect();
     }
-    return notes.filter((n) => args.includeInactive || n.isActive);
+    const active = notes.filter((n) => args.includeInactive || n.isActive);
+    // Resolve PDF download URLs for any note backed by a stored file.
+    return await Promise.all(
+      active.map(async (n) => ({
+        ...n,
+        language: n.language ?? "English",
+        pdfUrl: n.pdfStorageId ? await ctx.storage.getUrl(n.pdfStorageId) : null,
+      }))
+    );
   },
 });
 
 export const getStudyNote = query({
   args: { slug: v.string() },
   handler: async (ctx, args) => {
-    return await ctx.db
+    const note = await ctx.db
       .query("studyNotes")
       .withIndex("by_slug", (q) => q.eq("slug", args.slug))
       .first();
+    if (!note) return null;
+    return {
+      ...note,
+      language: note.language ?? "English",
+      pdfUrl: note.pdfStorageId ? await ctx.storage.getUrl(note.pdfStorageId) : null,
+    };
+  },
+});
+
+// Admin uploads a PDF straight to Convex file storage: call this to get a
+// short-lived upload URL, POST the file to it, then pass the returned
+// storageId as `pdfStorageId` to create/updateStudyNote.
+export const generateNoteUploadUrl = mutation({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.storage.generateUploadUrl();
   },
 });
 
@@ -37,10 +61,12 @@ export const createStudyNote = mutation({
     examId: v.id("exams"),
     title: v.string(),
     slug: v.string(),
-    content: v.string(),
+    content: v.optional(v.string()),
     summary: v.optional(v.string()),
     subject: v.optional(v.string()),
     topic: v.optional(v.string()),
+    language: v.optional(v.string()),
+    pdfStorageId: v.optional(v.id("_storage")),
     isPremium: v.boolean(),
     // Publish state — omit/true = published, false = draft.
     isActive: v.optional(v.boolean()),
@@ -49,6 +75,7 @@ export const createStudyNote = mutation({
     const { isActive, ...rest } = args;
     return await ctx.db.insert("studyNotes", {
       ...rest,
+      language: rest.language ?? "English",
       isActive: isActive ?? true,
       createdAt: Date.now(),
     });
@@ -63,11 +90,20 @@ export const updateStudyNote = mutation({
     summary: v.optional(v.string()),
     subject: v.optional(v.string()),
     topic: v.optional(v.string()),
+    language: v.optional(v.string()),
+    pdfStorageId: v.optional(v.id("_storage")),
     isPremium: v.optional(v.boolean()),
     isActive: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const { id, ...updates } = args;
+    // If a new PDF replaces an old one, delete the old file to avoid orphans.
+    if (updates.pdfStorageId !== undefined) {
+      const existing = await ctx.db.get(id);
+      if (existing?.pdfStorageId && existing.pdfStorageId !== updates.pdfStorageId) {
+        await ctx.storage.delete(existing.pdfStorageId);
+      }
+    }
     const filtered = Object.fromEntries(
       Object.entries(updates).filter(([, v]) => v !== undefined)
     );
@@ -80,8 +116,10 @@ export const duplicateStudyNote = mutation({
   handler: async (ctx, args) => {
     const note = await ctx.db.get(args.id);
     if (!note) throw new Error("Note not found");
+    // Drop pdfStorageId so the copy doesn't share a file with the original
+    // (deleting the copy would otherwise delete the original's PDF).
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { _id, _creationTime, ...rest } = note;
+    const { _id, _creationTime, pdfStorageId, ...rest } = note;
     return await ctx.db.insert("studyNotes", {
       ...rest,
       title: `${note.title} (Copy)`,
@@ -95,6 +133,8 @@ export const duplicateStudyNote = mutation({
 export const deleteStudyNote = mutation({
   args: { id: v.id("studyNotes") },
   handler: async (ctx, args) => {
+    const note = await ctx.db.get(args.id);
+    if (note?.pdfStorageId) await ctx.storage.delete(note.pdfStorageId);
     await ctx.db.delete(args.id);
   },
 });

@@ -29,10 +29,13 @@ type Note = {
   _id: string;
   examId: string;
   title: string;
-  content: string;
+  content?: string;
   summary?: string;
   subject?: string;
   topic?: string;
+  language?: string;
+  pdfStorageId?: string;
+  pdfUrl?: string | null;
   isPremium: boolean;
   isActive: boolean;
 };
@@ -78,7 +81,7 @@ export function NotesManager() {
           n.title.toLowerCase().includes(q) ||
           (n.subject ?? "").toLowerCase().includes(q) ||
           (n.topic ?? "").toLowerCase().includes(q) ||
-          n.content.toLowerCase().includes(q)
+          (n.content ?? "").toLowerCase().includes(q)
       );
     }
     return list;
@@ -186,6 +189,7 @@ export function NotesManager() {
                 <th className="px-4 py-3">Title</th>
                 <th className="px-4 py-3">Exam</th>
                 <th className="px-4 py-3">Subject / Chapter</th>
+                <th className="px-4 py-3 w-28">Language</th>
                 <th className="px-4 py-3 w-24">Access</th>
                 <th className="px-4 py-3 w-28">Status</th>
                 <th className="px-4 py-3 w-10"></th>
@@ -211,6 +215,12 @@ export function NotesManager() {
                   <td className="px-4 py-3 text-slate-600">
                     {n.subject || "—"}
                     {n.topic ? <span className="text-slate-400"> · {n.topic}</span> : null}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-1.5">
+                      <Badge color="blue">{n.language ?? "English"}</Badge>
+                      {n.pdfStorageId && <Badge color="indigo">PDF</Badge>}
+                    </div>
                   </td>
                   <td className="px-4 py-3">
                     {n.isPremium ? (
@@ -292,14 +302,24 @@ export function NotesManager() {
               <Badge color="blue">{examName(viewNote.examId)}</Badge>
               {viewNote.subject && <Badge>{viewNote.subject}</Badge>}
               {viewNote.topic && <Badge>{viewNote.topic}</Badge>}
+              <Badge color="indigo">{viewNote.language ?? "English"}</Badge>
               <StatusBadge status={viewNote.isActive ? "published" : "draft"} />
             </div>
             {viewNote.summary && (
               <p className="text-sm text-slate-500 italic">{viewNote.summary}</p>
             )}
-            <div className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed border-t border-slate-100 pt-3">
-              {viewNote.content}
-            </div>
+            {viewNote.pdfUrl && (
+              <a href={viewNote.pdfUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-sm font-semibold text-indigo-600 hover:underline">
+                <Eye size={15} /> Open attached PDF
+              </a>
+            )}
+            {viewNote.content ? (
+              <div className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed border-t border-slate-100 pt-3">
+                {viewNote.content}
+              </div>
+            ) : (
+              <p className="text-sm text-slate-400 border-t border-slate-100 pt-3">No written content — this note is a PDF.</p>
+            )}
             <div className="flex gap-3 pt-2">
               <Button
                 onClick={() => {

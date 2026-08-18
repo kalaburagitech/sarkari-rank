@@ -99,6 +99,13 @@ export default defineSchema({
     // Exam year for Previous Year Papers (type = "pyp"). Optional → existing rows valid.
     year: v.optional(v.number()),
     languages: v.array(v.string()),
+    // Primary language of THIS paper (per-language papers). Optional → falls
+    // back to languages[0]/"English". Lets one exam have the same paper in
+    // multiple languages as separate test docs.
+    language: v.optional(v.string()),
+    // Shared key linking the language versions of the same paper together so
+    // the app can group them and offer a language switch.
+    paperGroup: v.optional(v.string()),
     isFree: v.boolean(),
     isPremium: v.boolean(),
     scheduledAt: v.optional(v.number()),
@@ -199,11 +206,17 @@ export default defineSchema({
     examId: v.id("exams"),
     title: v.string(),
     slug: v.string(),
-    content: v.string(),
+    // Markdown body. Optional now — a note can be a PDF-only chapter.
+    content: v.optional(v.string()),
     // Short summary shown in listings (optional → existing rows valid).
     summary: v.optional(v.string()),
     subject: v.optional(v.string()),
     topic: v.optional(v.string()),
+    // Language of this note version (English/Kannada/Hindi/...). Optional →
+    // existing rows default to English at read time.
+    language: v.optional(v.string()),
+    // Uploaded PDF (Convex file storage). When present the app renders the PDF.
+    pdfStorageId: v.optional(v.id("_storage")),
     isPremium: v.boolean(),
     isActive: v.boolean(),
     createdAt: v.number(),
