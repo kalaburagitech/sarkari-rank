@@ -153,7 +153,7 @@ export default function ExamDetailScreen() {
                         </View>
                         <View className="flex-1">
                           <Text className="font-semibold text-slate-900 dark:text-slate-50">{test.title}</Text>
-                          <Text className="text-slate-400 dark:text-slate-400 text-xs mt-1">{test.totalQuestions} Qs · {test.durationMinutes} min</Text>
+                          <Text className="text-slate-400 dark:text-slate-400 text-xs mt-1">{test.totalQuestions} Qs · {test.durationMinutes} min · {(test as any).language ?? "English"}</Text>
                         </View>
                         <Ionicons name="play-circle" size={30} color={colors.primary} />
                       </PremiumCard>
@@ -178,7 +178,7 @@ export default function ExamDetailScreen() {
                     <Badge label={cfg.label} color={cfg.color} />
                     <Text className="font-semibold text-slate-900 dark:text-slate-50 mt-1">{test.title}</Text>
                     <Text className="text-slate-400 dark:text-slate-400 text-xs mt-1">
-                      {test.totalQuestions} Qs · {test.durationMinutes} min · {test.attemptCount}+ attempts
+                      {test.totalQuestions} Qs · {test.durationMinutes} min · {(test as any).language ?? "English"}
                     </Text>
                   </View>
                   <View className="flex-row items-center gap-2">

@@ -19,10 +19,13 @@ import {
   Button,
   Card,
   Input,
+  Select,
   LoadingState,
   EmptyState,
   TableWrap,
 } from "@/components/admin/ui";
+
+const PAPER_LANGUAGES = ["English", "Kannada", "Hindi", "Tamil", "Telugu", "Marathi", "Bengali", "Gujarati", "Malayalam", "Punjabi", "Urdu"];
 import {
   Breadcrumbs,
   ActionMenu,
@@ -62,6 +65,8 @@ export function PreviousYearPapers({
   const [addOpen, setAddOpen] = useState(false);
   const [newYear, setNewYear] = useState("");
   const [newName, setNewName] = useState("");
+  const [newLang, setNewLang] = useState("English");
+  const [newGroup, setNewGroup] = useState("");
   const [editPaper, setEditPaper] = useState<Paper | null>(null);
   const [deletePaper, setDeletePaper] = useState<Paper | null>(null);
 
@@ -103,17 +108,20 @@ export function PreviousYearPapers({
       toast.error("Enter a year and a paper name");
       return;
     }
+    const group = newGroup.trim() || `${examId}-pyp-${newYear}-${slugify(newName)}`;
     const id = (await createTest({
       examId: examId as Id<"exams">,
       title: newName.trim(),
-      slug: `${slugify(newName)}-${newYear}`,
-      description: `${examName} previous year paper (${newYear})`,
+      slug: `${slugify(newName)}-${newYear}-${slugify(newLang)}-${Date.now()}`,
+      description: `${examName} previous year paper (${newYear}) · ${newLang}`,
       type: "pyp",
       year: parseInt(newYear),
       durationMinutes: 60,
       totalMarks: 0,
       negativeMarking: 0.25,
-      languages: ["English"],
+      languages: [newLang],
+      language: newLang,
+      paperGroup: group,
       isFree: true,
       isPremium: false,
       isActive: false, // starts as Draft
@@ -451,7 +459,20 @@ export function PreviousYearPapers({
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
             />
+            <Select label="Language" value={newLang} onChange={(e) => setNewLang(e.target.value)}>
+              {PAPER_LANGUAGES.map((l) => <option key={l} value={l}>{l}</option>)}
+            </Select>
+            <Input
+              label="Paper group (optional)"
+              placeholder="auto — link language versions"
+              value={newGroup}
+              onChange={(e) => setNewGroup(e.target.value)}
+            />
           </div>
+          <p className="text-xs text-slate-500">
+            To offer this paper in another language, create it again with the <b>same Paper name + year</b>
+            and a different <b>Language</b> (they auto-group so users can switch language).
+          </p>
           <p className="text-xs text-slate-400">
             The paper is created as a <b>Draft</b>. Add questions, then Publish it from
             the review screen.

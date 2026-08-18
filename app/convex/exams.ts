@@ -322,6 +322,9 @@ export const createTest = mutation({
     negativeMarking: v.number(),
     passingMarks: v.optional(v.number()),
     languages: v.array(v.string()),
+    // Per-language paper support.
+    language: v.optional(v.string()),
+    paperGroup: v.optional(v.string()),
     isFree: v.boolean(),
     isPremium: v.boolean(),
     // Publish state — omit/true = published, false = draft.
@@ -332,6 +335,7 @@ export const createTest = mutation({
   handler: async (ctx, args) => {
     const testId = await ctx.db.insert("tests", {
       ...args,
+      language: args.language ?? args.languages[0] ?? "English",
       totalQuestions: 0,
       isActive: args.isActive ?? true,
       attemptCount: 0,
@@ -368,6 +372,8 @@ export const updateTest = mutation({
     isFree: v.optional(v.boolean()),
     isPremium: v.optional(v.boolean()),
     isActive: v.optional(v.boolean()),
+    language: v.optional(v.string()),
+    paperGroup: v.optional(v.string()),
     scheduledAt: v.optional(v.number()),
     endsAt: v.optional(v.number()),
   },
@@ -714,6 +720,12 @@ export const addQuestion = mutation({
     const exam = await ctx.db.get(args.examId);
     if (!exam) throw new Error("Exam not found");
 
+    // Per-language papers: papers in different languages are separate test
+    // docs sharing a `paperGroup` so the app can group + offer a language switch.
+    const lang = args.language || "English";
+    const norm = (s: string) =>
+      s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+
     let containerId: Id<"tests">;
 
     // Direct target: when a specific container test is known (e.g. adding
@@ -735,21 +747,23 @@ export const addQuestion = mutation({
         throw new Error("Subject is required for Practice questions");
       const title = `${exam.name} — Practice Questions`;
       const existing = examTests.find(
-        (t) => t.type === "practice" && t.title === title
+        (t) => t.type === "practice" && t.title === title && (t.language ?? "English") === lang
       );
       containerId =
         existing?._id ??
         (await ctx.db.insert("tests", {
           examId: args.examId,
           title,
-          slug: `${exam.slug}-practice`,
+          slug: `${exam.slug}-practice-${norm(lang)}`,
           description: `Practice question bank for ${exam.name}`,
           type: "practice",
           durationMinutes: 0,
           totalQuestions: 0,
           totalMarks: 0,
           negativeMarking: args.negativeMarks,
-          languages: [args.language],
+          languages: [lang],
+          language: lang,
+          paperGroup: `${exam.slug}-practice`,
           isFree: true,
           isPremium: false,
           isActive: true,
@@ -762,23 +776,31 @@ export const addQuestion = mutation({
       if (!args.paperName?.trim())
         throw new Error("Paper name is required for Previous Year papers");
       const title = args.paperName.trim();
+      // Same paper name + year in a different language → a separate, grouped doc.
+      const grp = `${exam.slug}-pyp-${args.year}-${norm(title)}`;
       const existing = examTests.find(
-        (t) => t.type === "pyp" && t.year === args.year && t.title === title
+        (t) =>
+          t.type === "pyp" &&
+          t.year === args.year &&
+          t.title === title &&
+          (t.language ?? "English") === lang
       );
       containerId =
         existing?._id ??
         (await ctx.db.insert("tests", {
           examId: args.examId,
           title,
-          slug: `${exam.slug}-pyp-${args.year}-${Date.now()}`,
-          description: `${exam.name} previous year paper (${args.year})`,
+          slug: `${exam.slug}-pyp-${args.year}-${norm(lang)}-${Date.now()}`,
+          description: `${exam.name} previous year paper (${args.year}) · ${lang}`,
           type: "pyp",
           year: args.year,
           durationMinutes: 60,
           totalQuestions: 0,
           totalMarks: 0,
           negativeMarking: args.negativeMarks,
-          languages: [args.language],
+          languages: [lang],
+          language: lang,
+          paperGroup: grp,
           isFree: true,
           isPremium: false,
           isActive: true,
@@ -794,7 +816,10 @@ export const addQuestion = mutation({
         throw new Error("Test name is required for Test Series questions");
       const title = args.testName.trim();
       const existing = examTests.find(
-        (t) => t.testSeriesId === args.testSeriesId && t.title === title
+        (t) =>
+          t.testSeriesId === args.testSeriesId &&
+          t.title === title &&
+          (t.language ?? "English") === lang
       );
       containerId =
         existing?._id ??
@@ -802,14 +827,16 @@ export const addQuestion = mutation({
           testSeriesId: args.testSeriesId,
           examId: args.examId,
           title,
-          slug: `${exam.slug}-${Date.now()}`,
+          slug: `${exam.slug}-${norm(lang)}-${Date.now()}`,
           description: title,
           type: "mock",
           durationMinutes: 60,
           totalQuestions: 0,
           totalMarks: 0,
           negativeMarking: args.negativeMarks,
-          languages: [args.language],
+          languages: [lang],
+          language: lang,
+          paperGroup: `${args.testSeriesId}-${norm(title)}`,
           isFree: false,
           isPremium: true,
           isActive: true,
