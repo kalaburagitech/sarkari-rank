@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, memo } from "react";
 import { View, Text, TouchableOpacity, ScrollView, Alert } from "react-native";
 import { useLocalSearchParams, useRouter, Redirect } from "expo-router";
 import { useQuery, useMutation } from "convex/react";
@@ -11,6 +11,34 @@ import { PremiumCard, Badge, PrimaryButton, LoadingScreen, EmptyScreen, AnswerOp
 import { TEST_TYPE_CONFIG } from "../../constants/theme";
 import { useTheme } from "../../lib/theme";
 
+// Memoized so it doesn't re-render on every timer tick — only when the current
+// question or the answered set actually changes. Big win for long tests.
+const QuestionNav = memo(function QuestionNav({
+  items,
+  currentIndex,
+  selected,
+  onJump,
+}: {
+  items: { _id: string }[];
+  currentIndex: number;
+  selected: Record<string, string>;
+  onJump: (i: number) => void;
+}) {
+  return (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-1 mx-2">
+      {items.map((q, idx) => (
+        <TouchableOpacity
+          key={q._id}
+          onPress={() => onJump(idx)}
+          className={`w-8 h-8 rounded-lg items-center justify-center mr-1 ${idx === currentIndex ? "bg-indigo-600" : selected[q._id] ? "bg-emerald-500" : "bg-slate-200 dark:bg-slate-700"}`}
+        >
+          <Text className={`text-xs font-bold ${idx === currentIndex || selected[q._id] ? "text-white" : "text-slate-600 dark:text-slate-300"}`}>{idx + 1}</Text>
+        </TouchableOpacity>
+      ))}
+    </ScrollView>
+  );
+});
+
 export default function TestScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
@@ -19,11 +47,19 @@ export default function TestScreen() {
   const insets = useSafeAreaInsets();
   const testId = id as Id<"tests">;
 
+  // Declared before the queries because `started` gates the in-progress subscription.
+  const [started, setStarted] = useState(false);
+
   const test = useQuery(api.exams.getTest, { id: testId });
   const questions = useQuery(api.exams.listQuestions, { testId });
+  // Only needed ONCE — to resume an existing attempt on load. We stop
+  // subscribing after the test starts, otherwise every answered question
+  // (which patches the attempt) would re-run this reactive query and re-send
+  // the whole, growing attempt back to the client — making each successive
+  // option tap slower than the last.
   const inProgress = useQuery(
     api.attempts.getInProgressAttempt,
-    user ? { userId: user._id, testId } : "skip"
+    user && !started ? { userId: user._id, testId } : "skip"
   );
   const bookmarks = useQuery(api.attempts.getBookmarks, user ? { userId: user._id } : "skip");
 
@@ -36,7 +72,6 @@ export default function TestScreen() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<Record<string, string>>({});
   const [timeLeft, setTimeLeft] = useState(0);
-  const [started, setStarted] = useState(false);
   const [starting, setStarting] = useState(false);
   const [lang, setLang] = useState<"en" | "kn">("en");
   const [revealed, setRevealed] = useState<
@@ -339,14 +374,7 @@ export default function TestScreen() {
           <Text className="font-semibold text-slate-700 dark:text-slate-200">Prev</Text>
         </TouchableOpacity>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-1 mx-2">
-          {questions.map((q, idx) => (
-            <TouchableOpacity key={q._id} onPress={() => setCurrentIndex(idx)}
-              className={`w-8 h-8 rounded-lg items-center justify-center mr-1 ${idx === currentIndex ? "bg-indigo-600" : selectedAnswers[q._id] ? "bg-emerald-500" : "bg-slate-200 dark:bg-slate-700"}`}>
-              <Text className={`text-xs font-bold ${idx === currentIndex || selectedAnswers[q._id] ? "text-white" : "text-slate-600 dark:text-slate-300"}`}>{idx + 1}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+        <QuestionNav items={questions} currentIndex={currentIndex} selected={selectedAnswers} onJump={setCurrentIndex} />
 
         <TouchableOpacity onPress={() => setCurrentIndex(Math.min(questions.length - 1, currentIndex + 1))}
           disabled={currentIndex === questions.length - 1}
