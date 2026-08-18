@@ -11,10 +11,12 @@ type Note = {
   _id: string;
   slug: string;
   title: string;
-  content: string;
+  content?: string;
   summary?: string;
   subject?: string;
   topic?: string;
+  language?: string;
+  pdfUrl?: string | null;
   isPremium: boolean;
   examId: string;
 };
@@ -94,12 +96,14 @@ export default function StudyNotesScreen() {
                           <View className="flex-1 mr-2">
                             <Text className="font-bold text-slate-900 dark:text-slate-50 text-[15px]">{note.title}</Text>
                             <Text className="text-slate-400 dark:text-slate-400 text-sm mt-1 leading-5" numberOfLines={2}>
-                              {note.summary || note.content}
+                              {note.summary || note.content || (note.pdfUrl ? "PDF document" : "")}
                             </Text>
                           </View>
-                          <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+                          <Ionicons name={note.pdfUrl ? "document-text" : "chevron-forward"} size={18} color="#94A3B8" />
                         </View>
-                        <View className="flex-row mt-2 gap-2">
+                        <View className="flex-row mt-2 gap-2 flex-wrap">
+                          <Badge label={note.language ?? "English"} color={colors.primary} />
+                          {note.pdfUrl ? <Badge label="PDF" color="#0EA5E9" /> : null}
                           {note.isPremium ? <Badge label="Premium" color={colors.accent} /> : <Badge label="Free" color={colors.success} />}
                         </View>
                       </PremiumCard>
