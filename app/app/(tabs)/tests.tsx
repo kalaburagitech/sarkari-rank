@@ -1,10 +1,10 @@
 import { View, Text, ScrollView, TouchableOpacity, TextInput } from "react-native";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { Link, useLocalSearchParams } from "expo-router";
+import { Link, useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useState, useMemo, useEffect } from "react";
-import { SectionHeader, PremiumCard, Badge, LoadingScreen, FilterChip } from "../../components/ui";
+import { SectionHeader, PremiumCard, Badge, LoadingScreen, FilterChip, DisclaimerBanner } from "../../components/ui";
 import { TEST_TYPE_CONFIG } from "../../constants/theme";
 import { useTheme } from "../../lib/theme";
 
@@ -14,6 +14,7 @@ const isQuizType = (type: string) => type !== "pyp";
 
 export default function TestsScreen() {
   const { colors } = useTheme();
+  const router = useRouter();
   const { type: paramType } = useLocalSearchParams();
   const [filter, setFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
@@ -56,6 +57,9 @@ export default function TestsScreen() {
         </View>
 
         <View className="px-4 pb-8">
+          <View className="mb-2">
+            <DisclaimerBanner onPress={() => router.push("/disclaimer")} />
+          </View>
           <SectionHeader title={`${filtered.length} Tests Available`} subtitle="Mock · Live · Chapter · Daily Quiz · Practice" />
 
           {filtered.map((test) => {

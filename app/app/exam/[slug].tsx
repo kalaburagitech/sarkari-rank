@@ -48,14 +48,15 @@ export default function ExamDetailScreen() {
         </View>
       </View>
 
+      {/* Compliance: always-visible disclaimer + path to official .gov sources */}
+      <View className="px-4 mt-4">
+        <DisclaimerBanner onPress={() => router.push("/disclaimer")} />
+      </View>
+
       {/* Exam info: conducting body, eligibility, posts, pattern, syllabus */}
       {(exam.conductingBody || exam.eligibility || exam.examPattern || exam.syllabus || (exam.posts && exam.posts.length > 0)) && (
         <View className="px-4 mt-5">
           <SectionHeader title="About this Exam" subtitle="Pattern · Eligibility · Syllabus" />
-
-          <View className="mb-2">
-            <DisclaimerBanner onPress={() => router.push("/disclaimer")} />
-          </View>
 
           {exam.conductingBody && (
             <PremiumCard className="p-4 mb-2">
