@@ -72,6 +72,7 @@ export default function TestsScreen() {
                       <View className="flex-1 mr-3">
                         <View className="flex-row items-center gap-2 mb-2 flex-wrap">
                           <Badge label={cfg.label} color={cfg.color} />
+                          <Badge label={(test as any).language ?? "English"} color={colors.primary} />
                           {test.isFree ? <Badge label="FREE" color={colors.success} /> : <Badge label="PREMIUM" color={colors.accent} />}
                         </View>
                         <Text className="font-bold text-slate-900 dark:text-slate-50 text-base leading-5">{test.title}</Text>

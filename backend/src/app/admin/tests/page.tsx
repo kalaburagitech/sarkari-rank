@@ -11,9 +11,11 @@ import { ActionMenu, ConfirmDialog, Modal, usePagination, Pagination } from "@/c
 import { slugify } from "@/lib/utils";
 
 const TEST_TYPES = ["mock", "live", "chapter", "subject", "pyp", "daily", "practice"] as const;
+const PAPER_LANGUAGES = ["English", "Kannada", "Hindi", "Tamil", "Telugu", "Marathi", "Bengali", "Gujarati", "Malayalam", "Punjabi", "Urdu"];
 
 type EditForm = {
   _id: string; title: string; description: string; year: string;
+  language: string; paperGroup: string;
   durationMinutes: number; totalMarks: number; negativeMarking: number;
   isFree: boolean; isPremium: boolean; isActive: boolean;
 };
@@ -29,7 +31,8 @@ export default function TestsPage() {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     examId: "", title: "", description: "", type: "mock" as typeof TEST_TYPES[number],
-    durationMinutes: 60, totalMarks: 100, negativeMarking: 0.25, languages: ["English", "Hindi"], isFree: true, isPremium: false,
+    language: "English", paperGroup: "",
+    durationMinutes: 60, totalMarks: 100, negativeMarking: 0.25, isFree: true, isPremium: false,
   });
 
   const [editRow, setEditRow] = useState<EditForm | null>(null);
@@ -42,7 +45,9 @@ export default function TestsPage() {
     setSaving(true);
     try {
       await createTest({ examId: form.examId as Id<"exams">, title: form.title, slug: slugify(form.title), description: form.description, type: form.type,
-        durationMinutes: form.durationMinutes, totalMarks: form.totalMarks, negativeMarking: form.negativeMarking, languages: form.languages, isFree: form.isFree, isPremium: form.isPremium });
+        durationMinutes: form.durationMinutes, totalMarks: form.totalMarks, negativeMarking: form.negativeMarking,
+        languages: [form.language], language: form.language, paperGroup: form.paperGroup.trim() || undefined,
+        isFree: form.isFree, isPremium: form.isPremium });
       toast.success(`Test "${form.title}" created! Add questions next.`);
       setShowForm(false);
     } catch (err) { toast.error((err as Error).message); }
@@ -57,6 +62,7 @@ export default function TestsPage() {
         id: editRow._id as Id<"tests">,
         title: editRow.title, description: editRow.description,
         year: editRow.year ? parseInt(editRow.year) : undefined,
+        language: editRow.language, paperGroup: editRow.paperGroup.trim() || undefined,
         durationMinutes: editRow.durationMinutes, totalMarks: editRow.totalMarks, negativeMarking: editRow.negativeMarking,
         isFree: editRow.isFree, isPremium: editRow.isPremium, isActive: editRow.isActive,
       });
@@ -86,6 +92,10 @@ export default function TestsPage() {
             <Select label="Test Type *" value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value as typeof form.type })}>
               {TEST_TYPES.map((t) => <option key={t} value={t}>{t.toUpperCase()}</option>)}
             </Select>
+            <Select label="Language" value={form.language} onChange={(e) => setForm({ ...form, language: e.target.value })}>
+              {PAPER_LANGUAGES.map((l) => <option key={l} value={l}>{l}</option>)}
+            </Select>
+            <Input label="Paper group (link language versions)" placeholder="e.g. ssc-cgl-2024-p1" value={form.paperGroup} onChange={(e) => setForm({ ...form, paperGroup: e.target.value })} />
             <div className="sm:col-span-2"><Input label="Test Title *" placeholder="SSC CGL Mock Test 1" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required /></div>
             <Input label="Duration (min)" type="number" value={form.durationMinutes} onChange={(e) => setForm({ ...form, durationMinutes: parseInt(e.target.value) || 0 })} />
             <Input label="Total Marks" type="number" value={form.totalMarks} onChange={(e) => setForm({ ...form, totalMarks: parseInt(e.target.value) || 0 })} />
@@ -109,6 +119,7 @@ export default function TestsPage() {
               <div>
                 <div className="flex items-center gap-2 mb-1 flex-wrap">
                   <Badge color={typeColors[test.type] as any}>{test.type.toUpperCase()}</Badge>
+                  <Badge color="blue">{(test as { language?: string }).language ?? "English"}</Badge>
                   {test.isFree ? <Badge color="green">FREE</Badge> : <Badge color="amber">PREMIUM</Badge>}
                   {!test.isActive && <Badge color="red">Inactive</Badge>}
                 </div>
@@ -118,7 +129,10 @@ export default function TestsPage() {
               <ActionMenu items={[
                 { label: "Edit", icon: Pencil, onClick: () => setEditRow({
                     _id: test._id, title: test.title, description: test.description ?? "",
-                    year: test.year ? String(test.year) : "", durationMinutes: test.durationMinutes,
+                    year: test.year ? String(test.year) : "",
+                    language: (test as { language?: string }).language ?? "English",
+                    paperGroup: (test as { paperGroup?: string }).paperGroup ?? "",
+                    durationMinutes: test.durationMinutes,
                     totalMarks: test.totalMarks, negativeMarking: test.negativeMarking,
                     isFree: test.isFree, isPremium: test.isPremium, isActive: test.isActive,
                   }) },
@@ -136,6 +150,10 @@ export default function TestsPage() {
             <Input label="Test Title" value={editRow.title} onChange={(e) => setEditRow({ ...editRow, title: e.target.value })} />
             <Textarea label="Description" value={editRow.description} onChange={(e) => setEditRow({ ...editRow, description: e.target.value })} rows={2} />
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Select label="Language" value={editRow.language} onChange={(e) => setEditRow({ ...editRow, language: e.target.value })}>
+                {PAPER_LANGUAGES.map((l) => <option key={l} value={l}>{l}</option>)}
+              </Select>
+              <Input label="Paper group (link language versions)" placeholder="e.g. ssc-cgl-2024-p1" value={editRow.paperGroup} onChange={(e) => setEditRow({ ...editRow, paperGroup: e.target.value })} />
               <Input label="Year (for PYP)" type="number" placeholder="2024" value={editRow.year} onChange={(e) => setEditRow({ ...editRow, year: e.target.value })} />
               <Input label="Duration (min)" type="number" value={editRow.durationMinutes} onChange={(e) => setEditRow({ ...editRow, durationMinutes: parseInt(e.target.value) || 0 })} />
               <Input label="Total Marks" type="number" value={editRow.totalMarks} onChange={(e) => setEditRow({ ...editRow, totalMarks: parseInt(e.target.value) || 0 })} />

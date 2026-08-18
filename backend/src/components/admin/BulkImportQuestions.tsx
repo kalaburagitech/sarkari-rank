@@ -128,7 +128,7 @@ export function BulkImportQuestions({ onClose, onDone }: { onClose: () => void; 
   const [examId, setExamId] = useState("");
   const [testMode, setTestMode] = useState<"existing" | "new">("existing");
   const [testId, setTestId] = useState("");
-  const [newTest, setNewTest] = useState({ title: "", type: "mock", durationMinutes: 60, isFree: true });
+  const [newTest, setNewTest] = useState({ title: "", type: "mock", durationMinutes: 60, isFree: true, paperGroup: "" });
   const [def, setDef] = useState({ subject: "", language: "English", marks: 1, negativeMarks: 0.25, difficulty: "medium" as Diff });
   const [raw, setRaw] = useState("");
   const [preview, setPreview] = useState<{ ok: NormalizedQ[]; errors: string[] } | null>(null);
@@ -234,6 +234,8 @@ export function BulkImportQuestions({ onClose, onDone }: { onClose: () => void; 
           totalMarks,
           negativeMarking: def.negativeMarks,
           languages: [def.language],
+          language: def.language,
+          paperGroup: newTest.paperGroup.trim() || undefined,
           isFree: newTest.isFree,
           isPremium: !newTest.isFree,
         })) as Id<"tests">;
@@ -303,6 +305,13 @@ export function BulkImportQuestions({ onClose, onDone }: { onClose: () => void; 
             {["mock", "pyp", "subject", "chapter", "practice", "live", "daily"].map((t) => <option key={t} value={t}>{t}</option>)}
           </Select>
           <Input label="Duration (min)" type="number" value={newTest.durationMinutes} onChange={(e) => setNewTest({ ...newTest, durationMinutes: parseInt(e.target.value) || 60 })} />
+          <div className="md:col-span-2">
+            <Input label="Paper group (optional — set the SAME value on each language version to group them)" placeholder="e.g. ssc-cgl-2024-p1" value={newTest.paperGroup} onChange={(e) => setNewTest({ ...newTest, paperGroup: e.target.value })} />
+          </div>
+          <p className="md:col-span-4 text-xs text-slate-500">
+            The paper&apos;s language comes from <b>Language</b> in Step 2. To add another language,
+            import again with the same Paper group and a different Language.
+          </p>
         </div>
       )}
 
