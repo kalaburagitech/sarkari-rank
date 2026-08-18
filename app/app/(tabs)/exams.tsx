@@ -1,14 +1,15 @@
 import { View, Text, ScrollView, TouchableOpacity, TextInput } from "react-native";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { Link } from "expo-router";
+import { Link, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useState, useMemo } from "react";
-import { SectionHeader, PremiumCard, Badge, LoadingScreen } from "../../components/ui";
+import { SectionHeader, PremiumCard, Badge, LoadingScreen, DisclaimerBanner } from "../../components/ui";
 import { useTheme } from "../../lib/theme";
 
 export default function ExamsScreen() {
   const { colors } = useTheme();
+  const router = useRouter();
   const [search, setSearch] = useState("");
   const categories = useQuery(api.exams.listCategories, {});
   const exams = useQuery(api.exams.listExams, {});
@@ -73,6 +74,9 @@ export default function ExamsScreen() {
         </View>
 
         <View className="px-4 pb-10">
+          <View className="mt-2 mb-1">
+            <DisclaimerBanner onPress={() => router.push("/disclaimer")} />
+          </View>
           {/* Search results */}
           {search.trim().length > 0 ? (
             <View className="mt-2">

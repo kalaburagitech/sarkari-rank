@@ -4,7 +4,7 @@ import { useQuery } from "convex/react";
 import { api } from "../convex/_generated/api";
 import { useRouter, Link } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { ScreenHeader, PremiumCard, Badge, LoadingScreen, EmptyScreen, FilterChip } from "../components/ui";
+import { ScreenHeader, PremiumCard, Badge, LoadingScreen, EmptyScreen, FilterChip, DisclaimerBanner } from "../components/ui";
 import { useTheme } from "../lib/theme";
 
 type Note = {
@@ -64,6 +64,9 @@ export default function StudyNotesScreen() {
       )}
 
       <ScrollView className="px-4" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 32, paddingTop: 8 }}>
+        <View className="mb-3">
+          <DisclaimerBanner onPress={() => router.push("/disclaimer")} />
+        </View>
         {grouped.length === 0 && <EmptyScreen icon="book-outline" message="No notes available for this exam yet." />}
 
         {grouped.map(([subject, chapters]) => (

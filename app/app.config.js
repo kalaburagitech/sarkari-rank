@@ -2,7 +2,7 @@ export default {
   expo: {
     name: "SarkariRank - Govt Exam Prep",
     slug: "sarkari-rank-govt-exam-prep",
-    version: "1.0.5",
+    version: "1.0.6",
     orientation: "portrait",
     icon: "./assets/icon.png",
     userInterfaceStyle: "light",
@@ -22,7 +22,7 @@ export default {
         foregroundImage: "./assets/android-icon-foreground.png",
       },
       package: "com.sarkarirank.app",
-      versionCode: 6,
+      versionCode: 7,
     },
     web: {
       bundler: "metro",
