@@ -13,15 +13,16 @@ export const DISCLAIMER_FULL =
 export type OfficialPortal = { name: string; url: string };
 
 // Official (government / official recruitment body) source portals.
+// All URLs verified reachable (HTTP 200, valid cert). If you add one, test it
+// first — Google rejects the app if any listed source link is broken.
 export const OFFICIAL_PORTALS: OfficialPortal[] = [
   { name: "National Portal of India", url: "https://www.india.gov.in" },
-  { name: "Press Information Bureau (PIB)", url: "https://pib.gov.in" },
   { name: "Staff Selection Commission (SSC)", url: "https://ssc.gov.in" },
   { name: "Union Public Service Commission (UPSC)", url: "https://upsc.gov.in" },
   { name: "IBPS (Banking)", url: "https://www.ibps.in" },
-  { name: "State Bank of India — Careers", url: "https://sbi.co.in/web/careers" },
-  { name: "Railway Recruitment (RRB)", url: "https://www.rrbcdg.gov.in" },
+  { name: "State Bank of India", url: "https://sbi.co.in" },
+  { name: "Railway Recruitment (RRB)", url: "https://www.rrbapply.gov.in" },
   { name: "Karnataka PSC (KPSC)", url: "https://www.kpsc.kar.nic.in" },
   { name: "Karnataka Examinations Authority (KEA)", url: "https://cetonline.karnataka.gov.in" },
-  { name: "Karnataka State Police", url: "https://www.ksp.karnataka.gov.in" },
+  { name: "Karnataka State Police", url: "https://ksp.karnataka.gov.in" },
 ];
