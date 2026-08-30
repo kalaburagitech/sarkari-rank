@@ -315,6 +315,15 @@ export const deletePracticeQuestion = mutation({
   },
 });
 
+// Delete many questions at once (multi-select in the admin list).
+export const bulkDeletePracticeQuestions = mutation({
+  args: { ids: v.array(v.id("practiceQuestions")) },
+  handler: async (ctx, args) => {
+    for (const id of args.ids) await ctx.db.delete(id);
+    return args.ids.length;
+  },
+});
+
 // Bulk JSON import into a chapter — questions are appended in order.
 export const bulkImportPracticeQuestions = mutation({
   args: {
