@@ -13,6 +13,7 @@ import type * as content from "../content.js";
 import type * as crons from "../crons.js";
 import type * as exams from "../exams.js";
 import type * as news from "../news.js";
+import type * as practiceBank from "../practiceBank.js";
 import type * as questionBank from "../questionBank.js";
 import type * as seed from "../seed.js";
 import type * as seedKarnataka from "../seedKarnataka.js";
@@ -31,6 +32,7 @@ declare const fullApi: ApiFromModules<{
   crons: typeof crons;
   exams: typeof exams;
   news: typeof news;
+  practiceBank: typeof practiceBank;
   questionBank: typeof questionBank;
   seed: typeof seed;
   seedKarnataka: typeof seedKarnataka;

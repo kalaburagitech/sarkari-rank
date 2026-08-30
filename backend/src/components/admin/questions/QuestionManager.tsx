@@ -174,7 +174,11 @@ export function QuestionManager() {
       <p className="text-sm text-slate-500 -mt-2 mb-5">{TAB_HELP[tab]}</p>
 
       {showImport && (
-        <BulkImportQuestions onClose={() => setShowImport(false)} onDone={() => {}} />
+        <BulkImportQuestions
+          mode={tab === "practice" ? "practice" : "generic"}
+          onClose={() => setShowImport(false)}
+          onDone={() => {}}
+        />
       )}
 
       {/* Previous Year & Test Series have their own container-level workflows */}

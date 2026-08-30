@@ -7,7 +7,7 @@ import { motion } from "framer-motion";
 import {
   LayoutDashboard, BookOpen, FileQuestion, ClipboardList, Users,
   Newspaper, StickyNote, HelpCircle, Settings, GraduationCap, LogOut, Zap,
-  ListChecks, CalendarClock, Layers,
+  ListChecks, CalendarClock, Layers, FolderTree,
 } from "lucide-react";
 import { useAdminAuth } from "@/lib/admin-auth";
 import { BrandLogo } from "@/components/BrandLogo";
@@ -32,6 +32,7 @@ const navGroups: NavGroup[] = [
       { href: "/admin/questions?tab=practice", label: "Practice", icon: BookOpen, tab: "practice" },
       { href: "/admin/questions?tab=pyp", label: "Previous Year", icon: CalendarClock, tab: "pyp" },
       { href: "/admin/questions?tab=series", label: "Test Series", icon: Layers, tab: "series" },
+      { href: "/admin/practice-bank", label: "Practice Bank", icon: FolderTree },
     ],
   },
   {

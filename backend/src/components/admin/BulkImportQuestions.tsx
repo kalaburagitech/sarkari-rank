@@ -116,16 +116,29 @@ function resolveAnswer(rawAns: unknown, options: { id: string; text: string }[])
   return null;
 }
 
-export function BulkImportQuestions({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
+export function BulkImportQuestions({
+  onClose,
+  onDone,
+  mode = "generic",
+}: {
+  onClose: () => void;
+  onDone: () => void;
+  // "practice" hides the Category / test picker and files questions into the
+  // exam's auto-managed practice bank by Subject → Chapter instead.
+  mode?: "generic" | "practice";
+}) {
+  const isPractice = mode === "practice";
   const categories = useQuery(api.exams.listCategories, {});
   const exams = useQuery(api.exams.listExams, {});
   const tests = useQuery(api.exams.listTests, {});
   const createTest = useMutation(api.exams.createTest);
   const bulkCreate = useMutation(api.exams.bulkCreateQuestions);
+  const bulkCreatePractice = useMutation(api.exams.bulkCreatePracticeQuestions);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [categoryId, setCategoryId] = useState("");
   const [examId, setExamId] = useState("");
+  const [chapter, setChapter] = useState("");
   const [testMode, setTestMode] = useState<"existing" | "new">("existing");
   const [testId, setTestId] = useState("");
   const [newTest, setNewTest] = useState({ title: "", type: "mock", durationMinutes: 60, isFree: true, paperGroup: "" });
@@ -160,7 +173,9 @@ export function BulkImportQuestions({ onClose, onDone }: { onClose: () => void; 
         : [];
     if (arr.length === 0) return { ok: [], errors: ["No questions found. Provide a JSON array (or an object with a \"questions\" array)."] };
 
-    const startOrder = testMode === "existing" ? selectedTest?.totalQuestions ?? 0 : 0;
+    // Practice imports append server-side (order is recomputed in the mutation);
+    // for a specific existing test we continue after its current questions.
+    const startOrder = !isPractice && testMode === "existing" ? selectedTest?.totalQuestions ?? 0 : 0;
     const ok: NormalizedQ[] = [];
     arr.forEach((item, i) => {
       const n = i + 1;
@@ -189,7 +204,7 @@ export function BulkImportQuestions({ onClose, onDone }: { onClose: () => void; 
         optionsKn: optionsKn && optionsKn.length ? optionsKn : undefined,
         explanationKn: (pick<string>(q, ["explanationKn", "expKn"]) ?? "").toString().trim() || undefined,
         subject: (pick<string>(q, ["subject", "sub"]) ?? def.subject).toString().trim() || undefined,
-        topic: (pick<string>(q, ["topic"]) ?? "").toString().trim() || undefined,
+        topic: (pick<string>(q, ["topic", "chapter"]) ?? chapter).toString().trim() || undefined,
         difficulty,
         marks: Number(pick(q, ["marks", "mark"]) ?? def.marks) || def.marks,
         negativeMarks: Number(pick(q, ["negativeMarks", "negative", "neg"]) ?? def.negativeMarks),
@@ -213,14 +228,41 @@ export function BulkImportQuestions({ onClose, onDone }: { onClose: () => void; 
     reader.readAsText(file);
   };
 
-  const readyContext = examId && (testMode === "existing" ? testId : newTest.title.trim());
+  const readyContext = isPractice
+    ? examId && def.subject.trim()
+    : examId && (testMode === "existing" ? testId : newTest.title.trim());
 
   const handleImport = async () => {
-    if (!readyContext) { toast.error("Select an exam and a test (or enter a new test title)"); return; }
+    if (!readyContext) {
+      toast.error(
+        isPractice
+          ? "Select an exam and enter a subject"
+          : "Select an exam and a test (or enter a new test title)"
+      );
+      return;
+    }
     const result = preview ?? parse();
     if (!result.ok.length) { toast.error("Nothing valid to import. Validate first."); return; }
     setImporting(true);
     try {
+      if (isPractice) {
+        await bulkCreatePractice({
+          examId: examId as Id<"exams">,
+          subject: def.subject.trim(),
+          topic: chapter.trim() || undefined,
+          language: def.language,
+          negativeMarks: def.negativeMarks,
+          questions: result.ok,
+        });
+        const n = result.ok.length;
+        toast.success(`✅ Imported ${n} practice question(s) into ${def.subject.trim()}${chapter.trim() ? ` › ${chapter.trim()}` : ""}! Paste another batch below.`);
+        setRaw("");
+        setPreview(null);
+        setSessionCount((c) => c + n);
+        onDone();
+        setImporting(false);
+        return;
+      }
       let targetTestId = testId as Id<"tests">;
       if (testMode === "new") {
         const totalMarks = result.ok.reduce((s, q) => s + q.marks, 0);
@@ -270,6 +312,25 @@ export function BulkImportQuestions({ onClose, onDone }: { onClose: () => void; 
       </div>
 
       {/* Step 1: target context */}
+      {isPractice ? (
+        <>
+          <p className="text-xs font-bold text-indigo-500 uppercase tracking-wide mb-2">Step 1 · Exam, Subject &amp; Chapter</p>
+          <p className="text-xs text-slate-500 mb-2">
+            Practice questions are filed by <b>Subject → Chapter</b> into the exam&apos;s practice
+            bank — no test to pick. Set the subject &amp; chapter once here (each question may still
+            override them with its own <code>subject</code> / <code>chapter</code> field).
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+            <Select label="Exam *" value={examId} onChange={(e) => setExamId(e.target.value)}>
+              <option value="">— Select exam —</option>
+              {(exams ?? []).map((e) => <option key={e._id} value={e._id}>{e.name}</option>)}
+            </Select>
+            <Input label="Subject *" value={def.subject} onChange={(e) => setDef({ ...def, subject: e.target.value })} placeholder="e.g. Indian Polity" />
+            <Input label="Chapter / Topic" value={chapter} onChange={(e) => setChapter(e.target.value)} placeholder="e.g. Fundamental Rights" />
+          </div>
+        </>
+      ) : (
+      <>
       <p className="text-xs font-bold text-indigo-500 uppercase tracking-wide mb-2">Step 1 · Where do these questions belong?</p>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
         <Select label="Category" value={categoryId} onChange={(e) => { setCategoryId(e.target.value); setExamId(""); setTestId(""); }}>
@@ -314,16 +375,20 @@ export function BulkImportQuestions({ onClose, onDone }: { onClose: () => void; 
           </p>
         </div>
       )}
+      </>
+      )}
 
       {/* Step 2: defaults */}
       <p className="text-xs font-bold text-indigo-500 uppercase tracking-wide mt-5 mb-1">Step 2 · Default values (optional)</p>
       <p className="text-xs text-slate-500 mb-2">
-        Set Subject, Difficulty, Marks &amp; Negative <b>once</b> here — they apply to every imported
+        Set {isPractice ? "Language, " : "Subject, "}Difficulty, Marks &amp; Negative <b>once</b> here — they apply to every imported
         question automatically. You do <b>not</b> need to repeat them in the JSON (add them per-question only
         if you want to override these defaults).
       </p>
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-1">
-        <Input label="Subject" value={def.subject} onChange={(e) => setDef({ ...def, subject: e.target.value })} placeholder="e.g. Karnataka GK" />
+        {!isPractice && (
+          <Input label="Subject" value={def.subject} onChange={(e) => setDef({ ...def, subject: e.target.value })} placeholder="e.g. Karnataka GK" />
+        )}
         <Select label="Language" value={def.language} onChange={(e) => setDef({ ...def, language: e.target.value })}>
           {["English", "Kannada", "Hindi"].map((l) => <option key={l} value={l}>{l}</option>)}
         </Select>

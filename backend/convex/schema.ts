@@ -302,4 +302,65 @@ export default defineSchema({
   })
     .index("by_test", ["testId"])
     .index("by_test_rank", ["testId", "rank"]),
+
+  // ─── Practice Bank (Subject → Chapter → Questions) ───────
+  // A global practice question bank organised purely by Subject → Chapter,
+  // independent of any exam. One subject has many chapters; one chapter has
+  // many questions. Used by the app's "Practice by Subject" experience.
+  subjects: defineTable({
+    name: v.string(),
+    slug: v.string(),
+    description: v.optional(v.string()),
+    icon: v.optional(v.string()), // Ionicon name (e.g. "book") or emoji
+    order: v.number(),
+    isActive: v.boolean(),
+    createdAt: v.number(),
+  }).index("by_slug", ["slug"]),
+
+  chapters: defineTable({
+    subjectId: v.id("subjects"),
+    name: v.string(),
+    slug: v.string(),
+    description: v.optional(v.string()),
+    order: v.number(),
+    isActive: v.boolean(),
+    createdAt: v.number(),
+  })
+    .index("by_subject", ["subjectId"])
+    .index("by_subject_slug", ["subjectId", "slug"]),
+
+  practiceQuestions: defineTable({
+    chapterId: v.id("chapters"),
+    subjectId: v.id("subjects"), // denormalised for subject-wide queries
+    questionText: v.string(),
+    questionImage: v.optional(v.string()),
+    options: v.array(
+      v.object({
+        id: v.string(),
+        text: v.string(),
+        image: v.optional(v.string()),
+      })
+    ),
+    correctOptionId: v.string(),
+    explanation: v.optional(v.string()),
+    questionTextKn: v.optional(v.string()),
+    optionsKn: v.optional(
+      v.array(v.object({ id: v.string(), text: v.string() }))
+    ),
+    explanationKn: v.optional(v.string()),
+    difficulty: v.union(
+      v.literal("easy"),
+      v.literal("medium"),
+      v.literal("hard")
+    ),
+    marks: v.number(),
+    negativeMarks: v.number(),
+    order: v.number(),
+    language: v.string(),
+    status: v.optional(v.union(v.literal("draft"), v.literal("published"))),
+    createdAt: v.number(),
+  })
+    .index("by_chapter", ["chapterId"])
+    .index("by_chapter_order", ["chapterId", "order"])
+    .index("by_subject", ["subjectId"]),
 });

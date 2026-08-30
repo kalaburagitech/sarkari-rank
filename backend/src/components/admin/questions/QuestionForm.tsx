@@ -467,9 +467,10 @@ export function QuestionForm({
 
           <Textarea
             label="Explanation (shown after the test)"
-            rows={2}
+            rows={8}
             value={explanation}
             onChange={(e) => setExplanation(e.target.value)}
+            className="min-h-[180px] leading-relaxed resize-y"
           />
 
           <div className="grid grid-cols-4 gap-3">
