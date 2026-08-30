@@ -319,10 +319,12 @@ function QuestionsPanel({
   questions: PracticeQuestion[] | undefined;
 }) {
   const deleteQuestion = useMutation(api.practiceBank.deletePracticeQuestion);
+  const bulkDelete = useMutation(api.practiceBank.bulkDeletePracticeQuestions);
   // This panel is keyed by chapter id in the parent, so it remounts (resetting
-  // mode/editing) whenever the selected chapter changes — no cleanup effect.
+  // mode/editing/selection) whenever the selected chapter changes.
   const [mode, setMode] = useState<"list" | "add" | "import">("list");
   const [editing, setEditing] = useState<PracticeQuestion | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
 
   if (!subject || !chapter) {
     return (
@@ -339,6 +341,31 @@ function QuestionsPanel({
     if (!confirm("Delete this question? This cannot be undone.")) return;
     try { await deleteQuestion({ id: q._id as Id<"practiceQuestions"> }); toast.success("Question deleted"); }
     catch (e) { toast.error((e as Error).message); }
+  };
+
+  const rows = questions ?? [];
+  const toggleOne = (id: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  const allSelected = rows.length > 0 && rows.every((q) => selected.has(q._id));
+  const toggleAll = () =>
+    setSelected(allSelected ? new Set() : new Set(rows.map((q) => q._id)));
+
+  const removeSelected = async () => {
+    const ids = rows.filter((q) => selected.has(q._id)).map((q) => q._id);
+    if (ids.length === 0) return;
+    if (!confirm(`Delete ${ids.length} selected question(s)? This cannot be undone.`)) return;
+    try {
+      await bulkDelete({ ids: ids as Id<"practiceQuestions">[] });
+      toast.success(`Deleted ${ids.length} question(s)`);
+      setSelected(new Set());
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
   };
 
   return (
@@ -389,10 +416,40 @@ function QuestionsPanel({
           />
         ) : (
           <div className="space-y-2">
+            {/* Selection / bulk-delete toolbar */}
+            <div className="flex items-center justify-between gap-3 px-1 pb-1">
+              <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  className="accent-indigo-600 w-4 h-4"
+                  checked={allSelected}
+                  onChange={toggleAll}
+                  aria-label="Select all questions"
+                />
+                {selected.size > 0 ? `${selected.size} selected` : "Select all"}
+              </label>
+              {selected.size > 0 && (
+                <Button variant="danger" size="sm" onClick={removeSelected}>
+                  <Trash2 size={15} /> Delete selected ({selected.size})
+                </Button>
+              )}
+            </div>
+
             {questions.map((q, i) => {
               const correct = q.options.find((o) => o.id === q.correctOptionId);
+              const isChecked = selected.has(q._id);
               return (
-                <div key={q._id} className="group flex items-start gap-3 border border-slate-100 rounded-xl p-3 hover:bg-slate-50">
+                <div key={q._id} className={cn(
+                  "group flex items-start gap-3 border rounded-xl p-3 hover:bg-slate-50",
+                  isChecked ? "border-indigo-300 bg-indigo-50/50" : "border-slate-100"
+                )}>
+                  <input
+                    type="checkbox"
+                    className="accent-indigo-600 w-4 h-4 mt-0.5 shrink-0"
+                    checked={isChecked}
+                    onChange={() => toggleOne(q._id)}
+                    aria-label={`Select question ${i + 1}`}
+                  />
                   <span className="text-xs font-bold text-slate-400 mt-0.5 w-6 shrink-0">{i + 1}.</span>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-slate-900">{q.questionText}</p>
