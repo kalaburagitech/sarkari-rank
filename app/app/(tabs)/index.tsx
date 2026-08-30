@@ -200,6 +200,7 @@ export default function HomeScreen() {
         <SectionHeader title="Quick Access" />
         <View className="flex-row flex-wrap gap-3">
           {[
+            { t: "Practice", i: "school", c: "#7C3AED", h: "/practice" },
             { t: "Mock Tests", i: "clipboard", c: "#4F46E5", h: "/(tabs)/tests?type=mock" },
             { t: "PYP Papers", i: "archive", c: "#F59E0B", h: "/previous-year-papers" },
             { t: "Study Notes", i: "book", c: "#8B5CF6", h: "/study-notes" },
