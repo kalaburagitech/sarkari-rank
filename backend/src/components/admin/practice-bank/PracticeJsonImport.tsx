@@ -16,10 +16,31 @@ const SAMPLE_JSON = `[
     "answer": "B"
   },
   {
-    "question": "What is the capital of India?",
-    "options": ["Mumbai", "New Delhi", "Kolkata", "Chennai"],
-    "answer": "B",
-    "explanation": "New Delhi has been the capital since 1911."
+    "question": "Who was the founder of the Gupta Empire?",
+    "options": ["Sri Gupta", "Ghatotkacha", "Chandragupta I", "Samudragupta"],
+    "answer": "A",
+    "explanation": "Sri Gupta founded the Gupta Empire around 240 CE.",
+    "message": "UPSC Civil Services Prelims",
+    "year": 2023
+  }
+]`;
+
+// Full example (every supported field) — shown in the format reference only.
+const FULL_SAMPLE_JSON = `[
+  {
+    "question": "Who was the founder of the Gupta Empire?",
+    "options": ["Sri Gupta", "Ghatotkacha", "Chandragupta I", "Samudragupta"],
+    "answer": "A",
+    "explanation": "Sri Gupta founded the Gupta Empire around 240 CE.",
+    "message": "UPSC Civil Services Prelims",
+    "year": 2023,
+    "difficulty": "medium",
+    "marks": 1,
+    "negativeMarks": 0.25,
+    "language": "English",
+    "questionKn": "ಗುಪ್ತ ಸಾಮ್ರಾಜ್ಯದ ಸ್ಥಾಪಕರು ಯಾರು?",
+    "optionsKn": ["ಶ್ರೀ ಗುಪ್ತ", "ಘಟೋತ್ಕಚ", "ಚಂದ್ರಗುಪ್ತ I", "ಸಮುದ್ರಗುಪ್ತ"],
+    "explanationKn": "ಶ್ರೀ ಗುಪ್ತ ಗುಪ್ತ ಸಾಮ್ರಾಜ್ಯವನ್ನು ಸ್ಥಾಪಿಸಿದರು."
   }
 ]`;
 
@@ -182,6 +203,21 @@ export function PracticeJsonImport({
           </span>
         )}
       </div>
+
+      <details className="mt-4 text-xs text-slate-500">
+        <summary className="cursor-pointer font-semibold text-slate-600">JSON format reference (all fields)</summary>
+        <pre className="mt-2 bg-slate-900 text-slate-100 rounded-xl p-4 overflow-x-auto">{FULL_SAMPLE_JSON}</pre>
+        <ul className="list-disc ml-5 mt-2 space-y-1">
+          <li><b>question</b> <span className="text-red-500 font-semibold">(required)</span> — the question text. Aliases: questionText, q.</li>
+          <li><b>options</b> <span className="text-red-500 font-semibold">(required)</span> — array of 2–6 strings. Aliases: opts, choices.</li>
+          <li><b>answer</b> <span className="text-red-500 font-semibold">(required)</span> — correct option as a letter (A/B/C/D), a number (1-based), or the exact option text. Aliases: correct, correctAnswer, ans.</li>
+          <li><b>message</b> — <b className="text-emerald-600">optional</b> exam name. Aliases: exam, examName, askedIn.</li>
+          <li><b>year</b> — <b className="text-emerald-600">optional</b> exam year (number). Alias: examYear.</li>
+          <li className="text-slate-400">When <b>both</b> message &amp; year are set, the app shows &ldquo;Exam: &lt;message&gt; (&lt;year&gt;)&rdquo; above the question.</li>
+          <li><b>explanation</b>, <b>difficulty</b> (easy/medium/hard), <b>marks</b>, <b>negativeMarks</b>, <b>language</b> — <b className="text-emerald-600">optional</b>; leave them out to use the defaults above.</li>
+          <li><b>questionKn</b>, <b>optionsKn</b>, <b>explanationKn</b> — optional Kannada translations for bilingual questions.</li>
+        </ul>
+      </details>
     </Card>
   );
 }
