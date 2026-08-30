@@ -18,6 +18,8 @@ type Question = {
   explanation?: string;
   difficulty: "easy" | "medium" | "hard";
   language: string;
+  year?: number;
+  message?: string;
 };
 type Practice = {
   chapter: { _id: string; name: string; slug: string };
@@ -139,6 +141,14 @@ export default function PracticeChapterScreen() {
         </View>
 
         <PremiumCard className="p-4 mb-4">
+          {q.message && q.year != null && (
+            <View className="flex-row items-center mb-2 pb-2 border-b border-slate-100 dark:border-slate-800">
+              <Ionicons name="school-outline" size={14} color={colors.textMuted} />
+              <Text style={{ color: colors.textMuted }} className="text-xs font-semibold ml-1.5" numberOfLines={2}>
+                Exam: {q.message} ({q.year})
+              </Text>
+            </View>
+          )}
           <Text className="text-slate-900 dark:text-slate-50 text-[16px] leading-6 font-medium">{q.questionText}</Text>
         </PremiumCard>
 
