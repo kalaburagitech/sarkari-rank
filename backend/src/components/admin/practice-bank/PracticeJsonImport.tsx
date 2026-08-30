@@ -86,6 +86,8 @@ export function PracticeJsonImport({
           marks: q.marks,
           negativeMarks: q.negativeMarks,
           language: q.language,
+          year: q.year,
+          message: q.message,
         })),
       });
       const n = result.ok.length;
@@ -145,6 +147,8 @@ export function PracticeJsonImport({
       </div>
       <p className="text-xs text-slate-500 mb-2">
         Each question needs only <b>question</b>, <b>options</b> and <b>answer</b>. Everything else uses the defaults above.
+        Optional per-question: <b>message</b> (exam name) and <b>year</b> — when both are set they show in the app as
+        &ldquo;Exam: &lt;message&gt; (&lt;year&gt;)&rdquo;.
       </p>
       <Textarea rows={9} value={raw} onChange={(e) => { setRaw(e.target.value); setPreview(null); }}
         placeholder={SAMPLE_JSON} className="font-mono text-xs" />

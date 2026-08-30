@@ -357,6 +357,10 @@ export default defineSchema({
     negativeMarks: v.number(),
     order: v.number(),
     language: v.string(),
+    // Optional provenance shown in the app when BOTH are present, e.g.
+    // "Exam: UPSC Civil Services Prelims (2023)". `message` = exam name.
+    year: v.optional(v.number()),
+    message: v.optional(v.string()),
     status: v.optional(v.union(v.literal("draft"), v.literal("published"))),
     createdAt: v.number(),
   })

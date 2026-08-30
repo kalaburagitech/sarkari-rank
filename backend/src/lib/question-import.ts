@@ -15,6 +15,8 @@ export type ParsedQuestion = {
   optionsKn?: { id: string; text: string }[];
   explanationKn?: string;
   topic?: string;
+  year?: number;
+  message?: string;
   difficulty: Diff;
   marks: number;
   negativeMarks: number;
@@ -171,6 +173,15 @@ export function parseQuestionsJson(
       topic:
         (pick<string>(q, ["topic", "chapter"]) ?? "").toString().trim() ||
         undefined,
+      year: (() => {
+        const y = pick(q, ["year", "examYear"]);
+        const n = y === undefined ? NaN : parseInt(String(y), 10);
+        return Number.isFinite(n) ? n : undefined;
+      })(),
+      message:
+        (pick<string>(q, ["message", "exam", "examName", "askedIn"]) ?? "")
+          .toString()
+          .trim() || undefined,
       difficulty,
       marks: Number(pick(q, ["marks", "mark"]) ?? def.marks) || def.marks,
       negativeMarks: Number(

@@ -33,6 +33,9 @@ const questionFields = {
   marks: v.number(),
   negativeMarks: v.number(),
   language: v.string(),
+  // Optional provenance (Practice Bank only): exam name + year.
+  year: v.optional(v.number()),
+  message: v.optional(v.string()),
   status: v.optional(v.union(v.literal("draft"), v.literal("published"))),
 };
 
@@ -291,6 +294,8 @@ export const updatePracticeQuestion = mutation({
     marks: v.optional(v.number()),
     negativeMarks: v.optional(v.number()),
     language: v.optional(v.string()),
+    year: v.optional(v.number()),
+    message: v.optional(v.string()),
     status: v.optional(v.union(v.literal("draft"), v.literal("published"))),
     order: v.optional(v.number()),
   },

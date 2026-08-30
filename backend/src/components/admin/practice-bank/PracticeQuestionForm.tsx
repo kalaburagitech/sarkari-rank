@@ -22,6 +22,8 @@ export type PracticeQuestion = {
   marks: number;
   negativeMarks: number;
   language: string;
+  year?: number;
+  message?: string;
   status?: string;
 };
 
@@ -54,6 +56,8 @@ export function PracticeQuestionForm({
   const [marks, setMarks] = useState(editTarget?.marks ?? 1);
   const [negativeMarks, setNegativeMarks] = useState(editTarget?.negativeMarks ?? 0.25);
   const [language, setLanguage] = useState(editTarget?.language ?? "English");
+  const [message, setMessage] = useState(editTarget?.message ?? "");
+  const [year, setYear] = useState<string>(editTarget?.year != null ? String(editTarget.year) : "");
   const [errors, setErrors] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
@@ -103,6 +107,8 @@ export function PracticeQuestionForm({
         marks,
         negativeMarks,
         language,
+        message: message.trim() || undefined,
+        year: year.trim() ? parseInt(year, 10) : undefined,
         status,
       };
       if (mode === "edit" && editTarget) {
@@ -191,6 +197,28 @@ export function PracticeQuestionForm({
         onChange={(e) => setExplanation(e.target.value)}
         className="min-h-[180px] leading-relaxed resize-y"
       />
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="md:col-span-2">
+          <Input
+            label="Asked in — exam name (optional)"
+            placeholder="e.g. UPSC Civil Services Prelims"
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+          />
+        </div>
+        <Input
+          label="Year (optional)"
+          type="number"
+          placeholder="e.g. 2023"
+          value={year}
+          onChange={(e) => setYear(e.target.value)}
+        />
+      </div>
+      <p className="-mt-1 text-xs text-slate-400">
+        When both exam name &amp; year are filled, the app shows &ldquo;Exam: {message || "<exam>"}
+        {year ? ` (${year})` : " (<year>)"}&rdquo; above the question.
+      </p>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Select label="Difficulty" value={difficulty} onChange={(e) => setDifficulty(e.target.value as Diff)}>
