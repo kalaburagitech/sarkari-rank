@@ -5,8 +5,7 @@ import { api } from "../../convex/_generated/api";
 import { Link } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
-import { SectionHeader, PremiumCard, Badge, LoadingScreen, SourceLink, DisclaimerBanner } from "../../components/ui";
-import { TEST_TYPE_CONFIG } from "../../constants/theme";
+import { SectionHeader, PremiumCard, Badge, LoadingScreen, SourceLink, DisclaimerBanner, EmptyScreen } from "../../components/ui";
 import { useTheme } from "../../lib/theme";
 
 function CollapsibleInfo({ icon, title, body, color }: { icon: string; title: string; body: string; color: string }) {
@@ -30,9 +29,9 @@ export default function ExamDetailScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const exam = useQuery(api.exams.getExam, { slug });
+  // Exam screen shows Previous Year Papers only — mock/practice/quiz tests live
+  // in the Tests tab, study notes in the Notes screen.
   const tests = useQuery(api.exams.listTests, exam ? { examId: exam._id } : "skip");
-  const testSeries = useQuery(api.exams.listTestSeries, exam ? { examId: exam._id } : "skip");
-  const studyNotes = useQuery(api.content.listStudyNotes, exam ? { examId: exam._id } : "skip");
 
   if (exam === undefined) return <LoadingScreen message="Loading exam..." />;
   if (!exam) return <LoadingScreen message="Exam not found" />;
@@ -107,27 +106,16 @@ export default function ExamDetailScreen() {
         </View>
       )}
 
-      {testSeries && testSeries.length > 0 && (
-        <View className="px-4 mt-6">
-          <SectionHeader title="Test Series" subtitle="Complete preparation packages" />
-          {testSeries.map((series) => (
-            <PremiumCard key={series._id} className="p-4 mb-3">
-              <Text className="font-bold text-slate-900 dark:text-slate-50 text-base">{series.title}</Text>
-              <Text className="text-slate-500 dark:text-slate-400 text-sm mt-1">{series.description}</Text>
-              <View className="flex-row gap-2 mt-3">
-                <Badge label={`${series.totalTests} tests`} color={colors.primary} />
-                {series.price && <Badge label={`₹${series.price}`} color="#10B981" />}
-                {series.isPremium && <Badge label="Premium" color="#F59E0B" />}
-              </View>
-            </PremiumCard>
-          ))}
-        </View>
-      )}
-
       {/* Previous Year Papers — grouped by year */}
       {(() => {
         const pyp = (tests ?? []).filter((t) => t.type === "pyp");
-        if (pyp.length === 0) return null;
+        if (pyp.length === 0)
+          return (
+            <View className="px-4 mt-6 mb-8">
+              <SectionHeader title="Previous Year Papers" subtitle="Real questions, year-wise" />
+              <EmptyScreen icon="document-text-outline" message="No previous year papers uploaded for this exam yet." />
+            </View>
+          );
         const byYear = new Map<number, typeof pyp>();
         for (const t of pyp) {
           const y = t.year ?? 0;
@@ -137,7 +125,7 @@ export default function ExamDetailScreen() {
         }
         const years = [...byYear.keys()].sort((a, b) => b - a);
         return (
-          <View className="px-4 mt-6">
+          <View className="px-4 mt-6 mb-8">
             <SectionHeader title="Previous Year Papers" subtitle="Real questions, year-wise" />
             {years.map((y) => (
               <View key={y} className="mb-2">
@@ -149,7 +137,7 @@ export default function ExamDetailScreen() {
                     <TouchableOpacity activeOpacity={0.85}>
                       <PremiumCard className="p-4 mb-2 flex-row items-center">
                         <View style={{ backgroundColor: colors.accent + "1F" }} className="w-10 h-10 rounded-xl items-center justify-center mr-3">
-                          <Ionicons name="archive" size={18} color={colors.accent} />
+                          <Ionicons name="document-text" size={18} color={colors.accent} />
                         </View>
                         <View className="flex-1">
                           <Text className="font-semibold text-slate-900 dark:text-slate-50">{test.title}</Text>
@@ -166,47 +154,6 @@ export default function ExamDetailScreen() {
         );
       })()}
 
-      <View className="px-4 mt-6">
-        <SectionHeader title="Tests & Quizzes" subtitle="Mock · Practice · Chapter · Live" />
-        {(tests ?? []).filter((t) => t.type !== "pyp").map((test) => {
-          const cfg = TEST_TYPE_CONFIG[test.type] ?? TEST_TYPE_CONFIG.mock;
-          return (
-            <Link key={test._id} href={`/test/${test._id}`} asChild>
-              <TouchableOpacity activeOpacity={0.85}>
-                <PremiumCard className="p-4 mb-2 flex-row items-center">
-                  <View className="flex-1">
-                    <Badge label={cfg.label} color={cfg.color} />
-                    <Text className="font-semibold text-slate-900 dark:text-slate-50 mt-1">{test.title}</Text>
-                    <Text className="text-slate-400 dark:text-slate-400 text-xs mt-1">
-                      {test.totalQuestions} Qs · {test.durationMinutes} min · {(test as any).language ?? "English"}
-                    </Text>
-                  </View>
-                  <View className="flex-row items-center gap-2">
-                    {test.isFree && <Badge label="FREE" color="#10B981" />}
-                    <Ionicons name="play-circle" size={32} color={colors.primary} />
-                  </View>
-                </PremiumCard>
-              </TouchableOpacity>
-            </Link>
-          );
-        })}
-      </View>
-
-      {studyNotes && studyNotes.length > 0 && (
-        <View className="px-4 mt-4 mb-8">
-          <SectionHeader title="Study Notes" />
-          {studyNotes.map((note) => (
-            <Link key={note._id} href={`/study-note/${note.slug}`} asChild>
-              <TouchableOpacity activeOpacity={0.85}>
-                <PremiumCard className="p-4 mb-2">
-                  <Text className="font-semibold text-slate-900 dark:text-slate-50">{note.title}</Text>
-                  <Text className="text-slate-500 dark:text-slate-400 text-sm mt-1" numberOfLines={2}>{note.content}</Text>
-                </PremiumCard>
-              </TouchableOpacity>
-            </Link>
-          ))}
-        </View>
-      )}
     </ScrollView>
   );
 }

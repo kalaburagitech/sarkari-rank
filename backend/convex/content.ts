@@ -142,9 +142,25 @@ export const deleteStudyNote = mutation({
 // ─── Current Affairs ─────────────────────────────────────────
 
 export const listCurrentAffairs = query({
-  args: { limit: v.optional(v.number()) },
+  args: {
+    limit: v.optional(v.number()),
+    // Month/year archive window [start, end) in ms. The caller computes the
+    // bounds in device-local time so month edges don't drift by timezone.
+    start: v.optional(v.number()),
+    end: v.optional(v.number()),
+  },
   handler: async (ctx, args) => {
     const limit = args.limit ?? 20;
+    const { start, end } = args;
+    if (start !== undefined && end !== undefined) {
+      const items = await ctx.db
+        .query("currentAffairs")
+        .withIndex("by_date", (q) => q.gte("date", start).lt("date", end))
+        .order("desc")
+        .filter((q) => q.eq(q.field("isActive"), true))
+        .take(limit);
+      return items.sort((a, b) => b.date - a.date);
+    }
     // Read only ~limit newest active rows (creation order ≈ publish date)
     // instead of collecting the entire, ever-growing table on every call.
     const items = await ctx.db
@@ -153,6 +169,20 @@ export const listCurrentAffairs = query({
       .filter((q) => q.eq(q.field("isActive"), true))
       .take(limit);
     return items.sort((a, b) => b.date - a.date);
+  },
+});
+
+// Oldest published date, so the app can offer year chips back to the start of
+// the archive without scanning the table.
+export const getOldestCurrentAffairDate = query({
+  args: {},
+  handler: async (ctx) => {
+    const oldest = await ctx.db
+      .query("currentAffairs")
+      .withIndex("by_date")
+      .order("asc")
+      .first();
+    return oldest?.date ?? null;
   },
 });
 

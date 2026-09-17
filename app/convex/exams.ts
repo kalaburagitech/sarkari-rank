@@ -25,6 +25,7 @@ export const createCategory = mutation({
     color: v.string(),
     isPopular: v.boolean(),
     order: v.number(),
+    region: v.optional(v.union(v.literal("karnataka"), v.literal("national"))),
   },
   handler: async (ctx, args) => {
     return await ctx.db.insert("examCategories", { ...args, isActive: true });
@@ -41,6 +42,7 @@ export const updateCategory = mutation({
     isPopular: v.optional(v.boolean()),
     isActive: v.optional(v.boolean()),
     order: v.optional(v.number()),
+    region: v.optional(v.union(v.literal("karnataka"), v.literal("national"))),
   },
   handler: async (ctx, args) => {
     const { id, ...updates } = args;
@@ -48,6 +50,34 @@ export const updateCategory = mutation({
       Object.entries(updates).filter(([, v]) => v !== undefined)
     );
     await ctx.db.patch(id, filtered);
+  },
+});
+
+// One-shot cleanup for categories created before the admin form had a Region
+// field: they were saved with region undefined, which the app renders as
+// National. Guesses Karnataka from the name/slug/description, leaves rows that
+// already have a region untouched. Anything guessed wrong is fixable by
+// editing the category.
+export const backfillRegions = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const KA = /karnataka|kpsc|\bkea\b|kptcl|kseb|bescom|bmtc|ksrtc|bbmp|kannada|bengaluru|bangalore|mysuru|mysore/i;
+    const cats = await ctx.db.query("examCategories").collect();
+    const karnataka: string[] = [];
+    const national: string[] = [];
+    for (const cat of cats) {
+      if (cat.region) continue;
+      const hay = `${cat.name} ${cat.slug} ${cat.description}`;
+      const region = KA.test(hay) ? "karnataka" : "national";
+      await ctx.db.patch(cat._id, { region });
+      (region === "karnataka" ? karnataka : national).push(cat.name);
+    }
+    return {
+      patched: karnataka.length + national.length,
+      karnataka,
+      national,
+      message: `Tagged ${karnataka.length} Karnataka + ${national.length} national categor${karnataka.length + national.length === 1 ? "y" : "ies"}.`,
+    };
   },
 });
 
