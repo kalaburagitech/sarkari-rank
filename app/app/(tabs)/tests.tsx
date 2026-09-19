@@ -2,6 +2,7 @@ import { View, Text, ScrollView, TouchableOpacity, TextInput } from "react-nativ
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useCached } from "../../lib/offline";
+import { PracticeTree } from "../../components/PracticeTree";
 import { Link, useLocalSearchParams, useRouter } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useState, useMemo, useEffect } from "react";
@@ -75,7 +76,7 @@ export default function TestsScreen() {
             {[{ id: "all", label: "All" }, ...Object.entries(TEST_TYPE_CONFIG).filter(([id]) => !HIDDEN_FILTERS.includes(id)).map(([id, c]) => ({ id, label: c.label }))].map((f) => (
               <FilterChip key={f.id} label={f.label} active={filter === f.id} onPress={() => setFilter(f.id)} />
             ))}
-            <FilterChip label="Practice" active={false} onPress={() => router.push("/practice" as any)} />
+            <FilterChip label="Practice" active={filter === "practice"} onPress={() => setFilter("practice")} />
           </ScrollView>
         </View>
 
@@ -83,6 +84,13 @@ export default function TestsScreen() {
           <View className="mb-2">
             <DisclaimerBanner onPress={() => router.push("/disclaimer")} />
           </View>
+          {filter === "practice" ? (
+            <>
+              <SectionHeader title="Practice by Subject" subtitle="Tap a subject, then a chapter" />
+              <PracticeTree />
+            </>
+          ) : (
+          <>
           <SectionHeader title={`${filtered.length} Tests Available`} subtitle="Grouped exam-wise" />
 
           {groups.map((group) => (
@@ -127,6 +135,8 @@ export default function TestsScreen() {
             <View className="items-center py-12">
               <Text className="text-slate-400 dark:text-slate-400">No tests found. Ask admin to load production data.</Text>
             </View>
+          )}
+          </>
           )}
         </View>
       </ScrollView>

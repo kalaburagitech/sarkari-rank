@@ -1,3 +1,4 @@
+import React from "react";
 import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, Linking } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -57,11 +58,23 @@ export function StatBox({ icon, value, label, color }: { icon: string; value: st
 
 export function LoadingScreen({ message = "Loading..." }: { message?: string }) {
   const { colors } = useTheme();
+  // A screen whose data has never been cached shows this spinner until the
+  // download lands. Without a hint, a dead connection looks like a hang.
+  const [slow, setSlow] = React.useState(false);
+  React.useEffect(() => {
+    const t = setTimeout(() => setSlow(true), 8000);
+    return () => clearTimeout(t);
+  }, []);
   return (
-    <View className="flex-1 items-center justify-center bg-slate-50 dark:bg-ink-bg">
+    <View className="flex-1 items-center justify-center bg-slate-50 dark:bg-ink-bg px-8">
       <Logo size={72} />
       <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 16 }} />
       <Text className="text-slate-400 dark:text-slate-500 text-sm mt-3">{message}</Text>
+      {slow && (
+        <Text className="text-slate-400 dark:text-slate-500 text-xs mt-3 text-center leading-5">
+          Still waiting for this one. Check your internet connection — once it downloads, it stays on your device and opens instantly offline.
+        </Text>
+      )}
     </View>
   );
 }

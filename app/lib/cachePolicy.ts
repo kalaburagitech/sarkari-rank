@@ -25,7 +25,7 @@ export function isFresh(
 }
 
 // ─── Self-check ──────────────────────────────────────────────
-if (process.argv[1]?.endsWith("cachePolicy.ts")) {
+if (typeof process !== "undefined" && Array.isArray(process?.argv) && process.argv[1]?.endsWith("cachePolicy.ts")) {
   const assert = (cond: boolean, msg: string) => {
     if (!cond) throw new Error("FAIL: " + msg);
   };

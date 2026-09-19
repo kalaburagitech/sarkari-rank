@@ -51,7 +51,7 @@ export function grade(
 }
 
 // ─── Self-check ──────────────────────────────────────────────
-if (process.argv[1]?.endsWith("grade.ts")) {
+if (typeof process !== "undefined" && Array.isArray(process?.argv) && process.argv[1]?.endsWith("grade.ts")) {
   const assert = (cond: boolean, msg: string) => {
     if (!cond) throw new Error("FAIL: " + msg);
   };

@@ -59,8 +59,11 @@ export default function TestScreen() {
   useEffect(() => {
     if (!test) return;
     let cancelled = false;
+    // undefined means "not downloaded" (offline, or still fetching); an empty
+    // array means the test genuinely has no questions. Conflating the two made
+    // a test with 100 questions read as "No questions in database yet".
     getQuestions<any[]>(testId, test.qv ?? 0).then((qs) => {
-      if (!cancelled) setQuestions(qs ?? []);
+      if (!cancelled) setQuestions(qs);
     });
     return () => {
       cancelled = true;
@@ -79,7 +82,9 @@ export default function TestScreen() {
     Record<string, { correctOptionId: string; explanation?: string; explanationKn?: string }>
   >({});
   const isBookmarked = bookmarks.some((b) => b.type === "test" && b.testId === id);
-  const questionCount = questions?.length ?? test?.liveQuestionCount ?? 0;
+  // Fall back to the count stored on the test while questions are downloading.
+  const questionCount = questions ? questions.length : (test?.totalQuestions ?? 0);
+  const questionsReady = questions !== undefined && questions.length > 0;
 
   useEffect(() => {
     if (test && !started) setTimeLeft(test.durationMinutes * 60);
@@ -178,7 +183,7 @@ export default function TestScreen() {
   };
 
   if (!user) return <Redirect href="/(auth)/login" />;
-  if (test === undefined || questions === undefined) return <LoadingScreen message="Loading test from database..." />;
+  if (test === undefined) return <LoadingScreen message="Loading test..." />;
 
   if (!test) {
     return <EmptyScreen icon="alert-circle-outline" message="Test not found in database" />;
@@ -215,9 +220,16 @@ export default function TestScreen() {
             ))}
           </View>
 
-          {questionCount === 0 ? (
+          {questions === undefined ? (
             <View className="bg-amber-50 rounded-xl p-4 mt-4 border border-amber-200">
-              <Text className="text-amber-800 text-sm font-semibold">No questions in database yet</Text>
+              <Text className="text-amber-800 text-sm font-semibold">Downloading questions…</Text>
+              <Text className="text-amber-700 text-xs mt-1">
+                {questionCount > 0 ? `${questionCount} questions` : "This test"} will be saved on your device. Connect to the internet once, then this test works offline.
+              </Text>
+            </View>
+          ) : questionCount === 0 ? (
+            <View className="bg-amber-50 rounded-xl p-4 mt-4 border border-amber-200">
+              <Text className="text-amber-800 text-sm font-semibold">No questions in this test yet</Text>
               <Text className="text-amber-700 text-xs mt-1">Admin can add questions from the dashboard. This test will be available once questions are added.</Text>
             </View>
           ) : (
@@ -240,7 +252,7 @@ export default function TestScreen() {
               </View>
               <PrimaryButton title="Get Premium Pass · ₹499/yr" onPress={() => router.push("/premium")} variant="gold" />
             </View>
-          ) : questionCount > 0 ? (
+          ) : questionsReady ? (
             <View className="mt-6">
               <PrimaryButton
                 title="Start Test Now"
@@ -248,14 +260,18 @@ export default function TestScreen() {
                 loading={starting}
               />
             </View>
+          ) : questions === undefined ? (
+            <View className="mt-6">
+              <PrimaryButton title="Preparing test…" onPress={() => {}} loading />
+            </View>
           ) : null}
         </PremiumCard>
       </ScrollView>
     );
   }
 
-  if (!questions.length) {
-    return <EmptyScreen icon="help-circle-outline" message="No questions found in database for this test" />;
+  if (!questions?.length) {
+    return <EmptyScreen icon="help-circle-outline" message="Questions are not on this device yet — connect to the internet once to download them." />;
   }
 
   const currentQ = questions[currentIndex];

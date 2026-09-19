@@ -13,7 +13,7 @@
 import { useEffect, useRef, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ConvexHttpClient } from "convex/browser";
-import { FunctionReference } from "convex/server";
+import type { FunctionReference } from "convex/server";
 import Constants from "expo-constants";
 import { api } from "../convex/_generated/api";
 
@@ -120,8 +120,11 @@ export async function cachedQuery<T>(
 
   // isFresh decides whether this costs a database read at all.
   if (entry && isFresh(entry, deps, current, Date.now())) return entry.data as T;
-  if (!online) return entry ? (entry.data as T) : undefined;
 
+  // Always attempt the read. `online` is a hint for the UI, never a gate: a
+  // single failed request used to latch it false, and screens with nothing
+  // cached then returned undefined forever — an endless spinner even after
+  // the connection came back.
   try {
     const data = (await http.query(ref, args)) as T;
     const snapshot: Versions = {};
@@ -154,16 +157,30 @@ export function useCached<T>(
     alive.current = true;
     if (args === "skip") return;
     let cancelled = false;
-    (async () => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    const load = async (attempt: number) => {
       // Paint from cache first, then revalidate if a counter moved.
       const entry = await readEntry(name);
       if (entry && !cancelled) setData(entry.data as T);
       const fresh = await cachedQuery<T>(name, ref, JSON.parse(argsKey), deps);
-      if (!cancelled && fresh !== undefined) setData(fresh);
-    })();
+      if (cancelled) return;
+      if (fresh !== undefined) {
+        setData(fresh);
+        return;
+      }
+      // Nothing cached and the read failed — keep trying with a backoff so the
+      // screen fills itself in as soon as the connection is back.
+      if (!entry && attempt < 6) {
+        timer = setTimeout(() => void load(attempt + 1), Math.min(2000 * 2 ** attempt, 30000));
+      }
+    };
+    void load(0);
+
     return () => {
       cancelled = true;
       alive.current = false;
+      if (timer) clearTimeout(timer);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [name, argsKey]);
