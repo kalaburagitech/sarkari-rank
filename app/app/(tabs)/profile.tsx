@@ -1,10 +1,11 @@
 import { View, Text, ScrollView, TouchableOpacity, Alert, Image } from "react-native";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
+import { useCached } from "../../lib/offline";
 import { useAuth } from "../../lib/auth";
 import { useTheme, ThemeMode } from "../../lib/theme";
 import { useRouter, Link } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { PremiumCard, StatBox, SectionHeader } from "../../components/ui";
 
 const APPEARANCE: { mode: ThemeMode; label: string; icon: string }[] = [
@@ -17,7 +18,7 @@ export default function ProfileScreen() {
   const { user, logout } = useAuth();
   const { colors, mode, setMode } = useTheme();
   const router = useRouter();
-  const notifications = useQuery(api.content.listNotifications, user ? { userId: user._id } : "skip");
+  const notifications = useCached<any[]>(`notifications:${user?._id}`, api.content.listNotifications, user ? { userId: user._id } : "skip", ["notifications"]);
   const unread = notifications?.filter((n) => !n.isRead).length ?? 0;
 
   const handleLogout = () => {

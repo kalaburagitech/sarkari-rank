@@ -1,8 +1,9 @@
 import { View, Text, ScrollView, TouchableOpacity, TextInput } from "react-native";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
+import { useCached } from "../../lib/offline";
 import { Link, useLocalSearchParams, useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useState, useMemo, useEffect } from "react";
 import { SectionHeader, PremiumCard, Badge, LoadingScreen, FilterChip, DisclaimerBanner } from "../../components/ui";
 import { TEST_TYPE_CONFIG } from "../../constants/theme";
@@ -20,8 +21,8 @@ export default function TestsScreen() {
   const { type: paramType } = useLocalSearchParams();
   const [filter, setFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
-  const tests = useQuery(api.exams.listTests, {});
-  const exams = useQuery(api.exams.listExams, {});
+  const tests = useCached<any[]>("tests", api.exams.listTests, {}, ["tests"]);
+  const exams = useCached<any[]>("exams", api.exams.listExams, {}, ["exams"]);
 
   // Keep the active filter in sync with the incoming URL param (deep links,
   // "View All" links). Ignore "pyp" — those belong to the dedicated screen.

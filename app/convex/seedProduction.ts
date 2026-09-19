@@ -1,4 +1,5 @@
 import { mutation } from "./_generated/server";
+import { touchAll } from "./sync";
 import { v } from "convex/values";
 import {
   QUESTION_BANK,
@@ -18,6 +19,7 @@ function slugify(text: string): string {
 export const seedProductionData = mutation({
   args: { force: v.optional(v.boolean()) },
   handler: async (ctx, args) => {
+    await touchAll(ctx);
     const existingTests = await ctx.db.query("tests").collect();
     if (existingTests.length >= 50 && !args.force) {
       return {

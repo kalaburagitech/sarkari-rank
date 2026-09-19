@@ -2,8 +2,9 @@ import { useMemo, useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity } from "react-native";
 import { useQuery } from "convex/react";
 import { api } from "../convex/_generated/api";
+import { useCached } from "../lib/offline";
 import { useRouter, Link } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { ScreenHeader, PremiumCard, Badge, LoadingScreen, EmptyScreen, FilterChip, DisclaimerBanner } from "../components/ui";
 import { useTheme } from "../lib/theme";
 
@@ -24,8 +25,8 @@ type Note = {
 export default function StudyNotesScreen() {
   const router = useRouter();
   const { colors } = useTheme();
-  const notes = useQuery(api.content.listStudyNotes, {}) as Note[] | undefined;
-  const exams = useQuery(api.exams.listExams, {});
+  const notes = useCached<Note[]>("studyNotes", api.content.listStudyNotes, {}, ["studyNotes"]);
+  const exams = useCached<any[]>("exams", api.exams.listExams, {}, ["exams"]);
   const [examId, setExamId] = useState<string>("");
 
   const filtered = useMemo(

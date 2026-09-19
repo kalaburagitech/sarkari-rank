@@ -3,7 +3,7 @@ import { useMutation } from "convex/react";
 import { api } from "../convex/_generated/api";
 import { useAuth } from "../lib/auth";
 import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { ScreenHeader, PremiumCard, PrimaryButton } from "../components/ui";
 import { LogoRow } from "../components/Logo";
 import { useTheme } from "../lib/theme";

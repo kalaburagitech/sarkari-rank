@@ -2,8 +2,9 @@ import { useMemo, useState, useCallback } from "react";
 import { View, Text, ScrollView, TouchableOpacity, RefreshControl } from "react-native";
 import { useQuery, useAction } from "convex/react";
 import { api } from "../convex/_generated/api";
+import { useCached } from "../lib/offline";
 import { useRouter, Link } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { ScreenHeader, PremiumCard, Badge, LoadingScreen, EmptyScreen, FilterChip, DisclaimerBanner } from "../components/ui";
 import { useTheme } from "../lib/theme";
 
@@ -66,11 +67,13 @@ export default function CurrentAffairsScreen() {
     return { start, end };
   }, [year, month]);
 
-  const affairs = useQuery(
+  const affairs = useCached<Affair[]>(
+    range ? `affairs:${year}:${month ?? "all"}` : "affairs:latest",
     api.content.listCurrentAffairs,
-    range ? { ...range, limit: 500 } : { limit: 60 }
-  ) as Affair[] | undefined;
-  const oldestDate = useQuery(api.content.getOldestCurrentAffairDate, {});
+    range ? { ...range, limit: 500 } : { limit: 60 },
+    ["currentAffairs"]
+  );
+  const oldestDate = useCached<number | null>("affairs:oldest", api.content.getOldestCurrentAffairDate, {}, ["currentAffairs"]);
 
   const years = useMemo(() => {
     const thisYear = new Date().getFullYear();

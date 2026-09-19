@@ -2,9 +2,10 @@ import { useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity } from "react-native";
 import { useQuery } from "convex/react";
 import { api } from "../convex/_generated/api";
+import { useCached } from "../lib/offline";
 import { Id } from "../convex/_generated/dataModel";
 import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { ScreenHeader, PremiumCard, LoadingScreen } from "../components/ui";
 import { useAuth } from "../lib/auth";
 import { useTheme } from "../lib/theme";
@@ -15,7 +16,7 @@ export default function LeaderboardScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const { user } = useAuth();
-  const tests = useQuery(api.exams.listTests, {});
+  const tests = useCached<any[]>("tests", api.exams.listTests, {}, ["tests"]);
   const [selectedTestId, setSelectedTestId] = useState<Id<"tests"> | null>(null);
 
   const mockTests = tests?.filter((t) => t.type === "mock" || t.type === "live").slice(0, 15) ?? [];

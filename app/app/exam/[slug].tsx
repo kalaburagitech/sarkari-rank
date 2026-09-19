@@ -2,8 +2,9 @@ import { View, Text, ScrollView, TouchableOpacity } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
+import { useCached } from "../../lib/offline";
 import { Link } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useState } from "react";
 import { SectionHeader, PremiumCard, Badge, LoadingScreen, SourceLink, DisclaimerBanner, EmptyScreen } from "../../components/ui";
 import { useTheme } from "../../lib/theme";
@@ -28,10 +29,10 @@ export default function ExamDetailScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const router = useRouter();
   const { colors } = useTheme();
-  const exam = useQuery(api.exams.getExam, { slug });
+  const exam = useCached<any>(`exam:${slug}`, api.exams.getExam, { slug }, ["exams"]);
   // Exam screen shows Previous Year Papers only — mock/practice/quiz tests live
   // in the Tests tab, study notes in the Notes screen.
-  const tests = useQuery(api.exams.listTests, exam ? { examId: exam._id } : "skip");
+  const tests = useCached<any[]>(`tests:${exam?._id}`, api.exams.listTests, exam ? { examId: exam._id } : "skip", ["tests"]);
 
   if (exam === undefined) return <LoadingScreen message="Loading exam..." />;
   if (!exam) return <LoadingScreen message="Exam not found" />;
@@ -87,7 +88,7 @@ export default function ExamDetailScreen() {
             <PremiumCard className="p-4 mb-2">
               <Text className="font-bold text-slate-900 dark:text-slate-50 text-sm mb-2">Posts Covered</Text>
               <View className="flex-row flex-wrap gap-2">
-                {exam.posts.map((p) => (
+                {(exam.posts as string[]).map((p) => (
                   <View key={p} className="bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-full">
                     <Text className="text-slate-700 dark:text-slate-200 text-xs font-medium">{p}</Text>
                   </View>

@@ -112,6 +112,9 @@ export default defineSchema({
     endsAt: v.optional(v.number()),
     isActive: v.boolean(),
     attemptCount: v.number(),
+    // Bumped whenever this test's questions change, so a client holding a
+    // cached question set knows it is stale without asking the server.
+    qv: v.optional(v.number()),
     createdAt: v.number(),
   })
     .index("by_exam", ["examId"])
@@ -183,6 +186,11 @@ export default defineSchema({
       v.literal("in_progress"),
       v.literal("completed"),
       v.literal("abandoned")
+    ),
+    // Per-subject rollup stored at submit time so analytics never re-reads
+    // question docs. Optional → attempts recorded before this stay valid.
+    subjectStats: v.optional(
+      v.array(v.object({ subject: v.string(), correct: v.number(), total: v.number() }))
     ),
     startedAt: v.number(),
     completedAt: v.optional(v.number()),
@@ -367,4 +375,14 @@ export default defineSchema({
     .index("by_chapter", ["chapterId"])
     .index("by_chapter_order", ["chapterId", "order"])
     .index("by_subject", ["subjectId"]),
+
+  // ─── Sync counters ───────────────────────────────────────
+  // One row per content area, bumped on every publish. The app fetches just
+  // these numbers on launch and re-reads a content area only when its counter
+  // moved — otherwise it serves everything from the on-device cache.
+  syncMeta: defineTable({
+    key: v.string(),
+    version: v.number(),
+    updatedAt: v.number(),
+  }).index("by_key", ["key"]),
 });

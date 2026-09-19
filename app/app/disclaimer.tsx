@@ -1,6 +1,6 @@
 import { View, Text, ScrollView, TouchableOpacity, Linking } from "react-native";
 import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { ScreenHeader, PremiumCard } from "../components/ui";
 import { useTheme } from "../lib/theme";
 import { DISCLAIMER_FULL, OFFICIAL_PORTALS } from "../constants/legal";

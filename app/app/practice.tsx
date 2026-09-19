@@ -2,8 +2,9 @@ import { useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity } from "react-native";
 import { useQuery } from "convex/react";
 import { api } from "../convex/_generated/api";
+import { useCached } from "../lib/offline";
 import { useRouter, Link } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { ScreenHeader, PremiumCard, Badge, LoadingScreen, EmptyScreen, DisclaimerBanner } from "../components/ui";
 import { useTheme } from "../lib/theme";
 
@@ -30,7 +31,7 @@ const isEmoji = (s?: string) => !!s && /\p{Extended_Pictographic}/u.test(s);
 export default function PracticeScreen() {
   const router = useRouter();
   const { colors } = useTheme();
-  const tree = useQuery(api.practiceBank.getPracticeTree, {}) as Subject[] | undefined;
+  const tree = useCached<any>("practiceTree", api.practiceBank.getPracticeTree, {}, ["practice"]) as Subject[] | undefined;
   const [expanded, setExpanded] = useState<string | null>(null);
 
   if (tree === undefined) return <LoadingScreen message="Loading practice sets..." />;

@@ -1,4 +1,5 @@
 import { mutation, query, QueryCtx } from "./_generated/server";
+import { touch } from "./sync";
 import { v } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
 
@@ -75,6 +76,7 @@ export const createSubject = mutation({
     icon: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await touch(ctx, "practice");
     const name = args.name.trim();
     if (!name) throw new Error("Subject name is required");
     let slug = slugify(name);
@@ -108,6 +110,7 @@ export const updateSubject = mutation({
     isActive: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
+    await touch(ctx, "practice");
     const { id, ...rest } = args;
     const patch: Partial<Doc<"subjects">> = {};
     if (rest.name !== undefined) patch.name = rest.name.trim();
@@ -124,6 +127,7 @@ export const updateSubject = mutation({
 export const deleteSubject = mutation({
   args: { id: v.id("subjects") },
   handler: async (ctx, args) => {
+    await touch(ctx, "practice");
     const questions = await ctx.db
       .query("practiceQuestions")
       .withIndex("by_subject", (q) => q.eq("subjectId", args.id))
@@ -173,6 +177,7 @@ export const createChapter = mutation({
     description: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await touch(ctx, "practice");
     const name = args.name.trim();
     if (!name) throw new Error("Chapter name is required");
     const subject = await ctx.db.get(args.subjectId);
@@ -211,6 +216,7 @@ export const updateChapter = mutation({
     isActive: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
+    await touch(ctx, "practice");
     const { id, ...rest } = args;
     const patch: Partial<Doc<"chapters">> = {};
     if (rest.name !== undefined) patch.name = rest.name.trim();
@@ -225,6 +231,7 @@ export const updateChapter = mutation({
 export const deleteChapter = mutation({
   args: { id: v.id("chapters") },
   handler: async (ctx, args) => {
+    await touch(ctx, "practice");
     const questions = await ctx.db
       .query("practiceQuestions")
       .withIndex("by_chapter", (q) => q.eq("chapterId", args.id))
@@ -262,6 +269,7 @@ async function nextOrder(
 export const addPracticeQuestion = mutation({
   args: { chapterId: v.id("chapters"), ...questionFields },
   handler: async (ctx, args) => {
+    await touch(ctx, "practice");
     const { chapterId, ...q } = args;
     const chapter = await ctx.db.get(chapterId);
     if (!chapter) throw new Error("Chapter not found");
@@ -300,6 +308,7 @@ export const updatePracticeQuestion = mutation({
     order: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    await touch(ctx, "practice");
     const { id, ...updates } = args;
     const filtered = Object.fromEntries(
       Object.entries(updates).filter(([, val]) => val !== undefined)
@@ -311,6 +320,7 @@ export const updatePracticeQuestion = mutation({
 export const deletePracticeQuestion = mutation({
   args: { id: v.id("practiceQuestions") },
   handler: async (ctx, args) => {
+    await touch(ctx, "practice");
     await ctx.db.delete(args.id);
   },
 });
@@ -319,6 +329,7 @@ export const deletePracticeQuestion = mutation({
 export const bulkDeletePracticeQuestions = mutation({
   args: { ids: v.array(v.id("practiceQuestions")) },
   handler: async (ctx, args) => {
+    await touch(ctx, "practice");
     for (const id of args.ids) await ctx.db.delete(id);
     return args.ids.length;
   },
@@ -336,6 +347,7 @@ export const bulkImportPracticeQuestions = mutation({
     ),
   },
   handler: async (ctx, args) => {
+    await touch(ctx, "practice");
     const chapter = await ctx.db.get(args.chapterId);
     if (!chapter) throw new Error("Chapter not found");
     let order = await nextOrder(ctx, args.chapterId);

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { View, Text, KeyboardAvoidingView, Platform, ScrollView } from "react-native";
 import { useAuth } from "../../lib/auth";
 import { Link, useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { InputField, PrimaryButton, PremiumCard } from "../../components/ui";
 import { Logo } from "../../components/Logo";
 import { useTheme } from "../../lib/theme";

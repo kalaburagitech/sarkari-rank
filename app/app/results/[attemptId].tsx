@@ -3,17 +3,58 @@ import { useLocalSearchParams, useRouter, Link } from "expo-router";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
-import { Ionicons } from "@expo/vector-icons";
-import { useState } from "react";
+import Ionicons from "@expo/vector-icons/Ionicons";
+import { useEffect, useState } from "react";
 import { PremiumCard, Badge, PrimaryButton } from "../../components/ui";
 import { useTheme } from "../../lib/theme";
+import { useCached, getQuestions } from "../../lib/offline";
+import { getAttempt as getLocalAttempt, LocalAttempt } from "../../lib/attempts";
 
 export default function ResultsScreen() {
   const { attemptId } = useLocalSearchParams<{ attemptId: string }>();
   const router = useRouter();
   const { colors } = useTheme();
   const [showSolutions, setShowSolutions] = useState(false);
-  const attempt = useQuery(api.attempts.getAttempt, { attemptId: attemptId as Id<"testAttempts"> });
+
+  // Attempts taken on this device carry a local id ("<testId>-<startedAt>") and
+  // are read straight from storage — results work with no connection. Ids from
+  // the server (history synced on another device) have no dash.
+  const isLocal = attemptId.includes("-");
+  const [local, setLocal] = useState<LocalAttempt | null | undefined>(undefined);
+  useEffect(() => {
+    if (!isLocal) return;
+    getLocalAttempt(attemptId).then(setLocal);
+  }, [attemptId, isLocal]);
+
+  const remote = useQuery(
+    api.attempts.getAttempt,
+    isLocal ? "skip" : { attemptId: attemptId as Id<"testAttempts"> }
+  );
+
+  const testId = local?.testId ?? remote?.testId;
+  const test = useCached<any>(
+    `test:${testId}`,
+    api.exams.getTest,
+    testId ? { id: testId } : "skip",
+    ["tests"]
+  );
+
+  const [questions, setQuestions] = useState<any[]>([]);
+  useEffect(() => {
+    if (!local || !testId) return;
+    getQuestions<any[]>(testId, test?.qv ?? 0).then((qs) => setQuestions(qs ?? []));
+  }, [local, testId, test]);
+
+  const attempt = local
+    ? {
+        ...local,
+        status: "completed" as const,
+        test: { title: local.testTitle },
+        questions,
+        rank: undefined as number | undefined,
+        percentile: undefined as number | undefined,
+      }
+    : remote;
 
   if (!attempt) {
     return (
@@ -58,8 +99,8 @@ export default function ResultsScreen() {
         <View className="flex-row justify-around mb-5">
           {[
             { label: "Accuracy", value: `${attempt.accuracy.toFixed(0)}%`, color: accuracyColor },
-            { label: "All India Rank", value: attempt.rank ? `#${attempt.rank}` : "—", color: colors.accent },
-            { label: "Percentile", value: attempt.percentile ? `${attempt.percentile.toFixed(0)}%` : "—", color: "#8B5CF6" },
+            { label: "Correct", value: `${correct}/${attempt.answers.length}`, color: colors.accent },
+            { label: "Time", value: `${Math.round(attempt.timeTakenSeconds / 60)}m`, color: "#8B5CF6" },
           ].map((s) => (
             <View key={s.label} className="items-center">
               <Text className="text-xl font-bold" style={{ color: s.color }}>{s.value}</Text>
@@ -94,8 +135,8 @@ export default function ResultsScreen() {
 
       {showSolutions && attempt.questions && attempt.questions.length > 0 && (
         <View className="px-4 pb-8">
-          <Text className="text-lg font-bold text-slate-900 dark:text-slate-50 mb-3">Solutions (from database)</Text>
-          {attempt.questions.map((q, idx) => {
+          <Text className="text-lg font-bold text-slate-900 dark:text-slate-50 mb-3">Solutions</Text>
+          {attempt.questions.map((q: any, idx: number) => {
             const ans = attempt.answers.find((a) => a.questionId === q._id);
             const isCorrect = ans?.isCorrect;
             const withSolutions = q as typeof q & { correctOptionId?: string; explanation?: string };
@@ -107,7 +148,7 @@ export default function ResultsScreen() {
                   <Badge label={isCorrect ? "Correct" : ans?.selectedOptionId ? "Wrong" : "Skipped"} color={isCorrect ? colors.success : ans?.selectedOptionId ? colors.danger : "#94A3B8"} />
                 </View>
                 <Text className="font-medium text-slate-900 dark:text-slate-50 mb-3">{q.questionText}</Text>
-                {q.options.map((opt) => (
+                {(q.options as { id: string; text: string }[]).map((opt) => (
                   <View key={opt.id} className={`px-3 py-2 rounded-xl mb-1 ${opt.id === correctId ? "bg-emerald-50 border border-emerald-200" : opt.id === ans?.selectedOptionId && !isCorrect ? "bg-red-50 border border-red-200" : "bg-slate-50 dark:bg-ink-bg"}`}>
                     <Text className={`text-sm ${opt.id === correctId ? "text-emerald-800 font-semibold" : "text-slate-600 dark:text-slate-400"}`}>
                       {opt.id.toUpperCase()}. {opt.text} {opt.id === correctId ? " ✓" : ""}

@@ -2,10 +2,12 @@ import { useState, useEffect, useCallback, useRef, memo } from "react";
 import { View, Text, TouchableOpacity, ScrollView, Alert } from "react-native";
 import { useLocalSearchParams, useRouter, Redirect } from "expo-router";
 import { useQuery, useMutation } from "convex/react";
+import { useCached, getQuestions } from "../../lib/offline";
+import { grade, saveAttempt, flushAttempts } from "../../lib/attempts";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { useAuth } from "../../lib/auth";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { PremiumCard, Badge, PrimaryButton, LoadingScreen, EmptyScreen, AnswerOptionCard } from "../../components/ui";
 import { TEST_TYPE_CONFIG } from "../../constants/theme";
@@ -50,25 +52,25 @@ export default function TestScreen() {
   // Declared before the queries because `started` gates the in-progress subscription.
   const [started, setStarted] = useState(false);
 
-  const test = useQuery(api.exams.getTest, { id: testId });
-  const questions = useQuery(api.exams.listQuestions, { testId });
-  // Only needed ONCE — to resume an existing attempt on load. We stop
-  // subscribing after the test starts, otherwise every answered question
-  // (which patches the attempt) would re-run this reactive query and re-send
-  // the whole, growing attempt back to the client — making each successive
-  // option tap slower than the last.
-  const inProgress = useQuery(
-    api.attempts.getInProgressAttempt,
-    user && !started ? { userId: user._id, testId } : "skip"
-  );
-  const bookmarks = useQuery(api.attempts.getBookmarks, user ? { userId: user._id } : "skip");
+  const test = useCached<any>(`test:${testId}`, api.exams.getTest, { id: testId }, ["tests"]);
+  // Questions (with their answer key) are pulled once per test version and
+  // then live on the device: the whole attempt runs and is graded offline.
+  const [questions, setQuestions] = useState<any[] | undefined>(undefined);
+  useEffect(() => {
+    if (!test) return;
+    let cancelled = false;
+    getQuestions<any[]>(testId, test.qv ?? 0).then((qs) => {
+      if (!cancelled) setQuestions(qs ?? []);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [test, testId]);
 
-  const startAttempt = useMutation(api.attempts.startAttempt);
-  const submitAnswer = useMutation(api.attempts.submitAnswer);
-  const submitTest = useMutation(api.attempts.submitTest);
+  const bookmarks = useQuery(api.attempts.getBookmarks, user ? { userId: user._id } : "skip");
   const toggleBookmark = useMutation(api.attempts.toggleBookmark);
 
-  const [attemptId, setAttemptId] = useState<Id<"testAttempts"> | null>(null);
+  const startedAtRef = useRef(0);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<Record<string, string>>({});
   const [timeLeft, setTimeLeft] = useState(0);
@@ -77,54 +79,43 @@ export default function TestScreen() {
   const [revealed, setRevealed] = useState<
     Record<string, { correctOptionId: string; explanation?: string; explanationKn?: string }>
   >({});
-  const resumedRef = useRef(false);
-
   const isBookmarked = bookmarks?.some((b) => b.type === "test" && b.testId === id);
   const questionCount = questions?.length ?? test?.liveQuestionCount ?? 0;
 
-  // Resume in-progress attempt from Convex DB
   useEffect(() => {
-    if (!inProgress || !test || !questions?.length || resumedRef.current) return;
-    resumedRef.current = true;
-    setAttemptId(inProgress._id);
-    setStarted(true);
+    if (test && !started) setTimeLeft(test.durationMinutes * 60);
+  }, [test, started]);
 
-    const saved: Record<string, string> = {};
-    for (const a of inProgress.answers) {
-      if (a.selectedOptionId) saved[a.questionId] = a.selectedOptionId;
-    }
-    setSelectedAnswers(saved);
-
-    const elapsed = Math.floor((Date.now() - inProgress.startedAt) / 1000);
-    const remaining = Math.max(0, test.durationMinutes * 60 - elapsed);
-    setTimeLeft(remaining);
-
-    if (remaining <= 0) {
-      submitTest({ attemptId: inProgress._id }).then(() => {
-        router.replace(`/results/${inProgress._id}`);
-      });
-    }
-  }, [inProgress, test, questions, submitTest, router]);
-
-  useEffect(() => {
-    if (test && !inProgress && !started) {
-      setTimeLeft(test.durationMinutes * 60);
-    }
-  }, [test, inProgress, started]);
+  const finish = useCallback(async () => {
+    if (!user || !test || !questions) return;
+    const result = grade(questions, selectedAnswers);
+    const id = `${testId}-${startedAtRef.current || Date.now()}`;
+    await saveAttempt({
+      id,
+      userId: user._id,
+      testId,
+      testTitle: test.title,
+      answers: result.answers,
+      score: result.score,
+      totalMarks: test.totalMarks,
+      accuracy: result.accuracy,
+      timeTakenSeconds: Math.max(0, test.durationMinutes * 60 - timeLeft),
+      startedAt: startedAtRef.current || Date.now(),
+      completedAt: Date.now(),
+      synced: false,
+    });
+    // Fire-and-forget: the result screen reads the local copy, so a failed
+    // upload just stays queued for the next time there is a connection.
+    flushAttempts().catch(() => {});
+    router.replace(`/results/${id}`);
+  }, [user, test, questions, selectedAnswers, testId, timeLeft, router]);
 
   const handleSubmit = useCallback(async () => {
-    if (!attemptId) return;
     Alert.alert("Submit Test", "Are you sure you want to submit?", [
       { text: "Cancel", style: "cancel" },
-      {
-        text: "Submit",
-        onPress: async () => {
-          await submitTest({ attemptId });
-          router.replace(`/results/${attemptId}`);
-        },
-      },
+      { text: "Submit", onPress: () => void finish() },
     ]);
-  }, [attemptId, submitTest, router]);
+  }, [finish]);
 
   useEffect(() => {
     if (!started || timeLeft <= 0) return;
@@ -147,23 +138,17 @@ export default function TestScreen() {
       Alert.alert("No Questions", "This test has no questions yet. Please check back later or contact admin.");
       return;
     }
-    setStarting(true);
-    try {
-      const aId = await startAttempt({ userId: user._id, testId });
-      setAttemptId(aId);
-      setStarted(true);
-      setTimeLeft(test.durationMinutes * 60);
-    } catch (err) {
-      const msg = (err as Error).message ?? "Could not start test";
-      if (msg.includes("Premium")) {
-        Alert.alert("Premium Required", msg, [
-          { text: "Cancel", style: "cancel" },
-          { text: "Get Premium", onPress: () => router.push("/premium") },
-        ]);
-      } else {
-        Alert.alert("Cannot Start", msg);
-      }
+    if (test.isPremium && !test.isFree && !user.isPremium) {
+      Alert.alert("Premium Required", "Premium Pass required for this test", [
+        { text: "Cancel", style: "cancel" },
+        { text: "Get Premium", onPress: () => router.push("/premium") },
+      ]);
+      return;
     }
+    setStarting(true);
+    startedAtRef.current = Date.now();
+    setStarted(true);
+    setTimeLeft(test.durationMinutes * 60);
     setStarting(false);
   };
 
@@ -172,22 +157,19 @@ export default function TestScreen() {
     await toggleBookmark({ userId: user._id, type: "test", testId });
   };
 
-  const handleSelectOption = async (optionId: string) => {
+  const handleSelectOption = (optionId: string) => {
     const q = questions?.[currentIndex];
-    if (!q || !attemptId) return;
+    if (!q) return;
     if (revealed[q._id]) return; // answer locked after first selection
     setSelectedAnswers((prev) => ({ ...prev, [q._id]: optionId }));
-    try {
-      const res = await submitAnswer({ attemptId, questionId: q._id, selectedOptionId: optionId, timeSpentSeconds: 5 });
-      if (res) {
-        setRevealed((prev) => ({
-          ...prev,
-          [q._id]: { correctOptionId: res.correctOptionId, explanation: res.explanation, explanationKn: res.explanationKn },
-        }));
-      }
-    } catch {
-      // keep selection even if the network write fails
-    }
+    setRevealed((prev) => ({
+      ...prev,
+      [q._id]: {
+        correctOptionId: q.correctOptionId,
+        explanation: q.explanation,
+        explanationKn: q.explanationKn,
+      },
+    }));
   };
 
   const formatTime = (s: number) => {
@@ -243,18 +225,11 @@ export default function TestScreen() {
             <View className="bg-amber-50 rounded-xl p-4 mt-4 border border-amber-100">
               <Text className="text-amber-800 text-sm font-bold">Instructions</Text>
               <Text className="text-amber-700 text-xs mt-2 leading-5">
-                • {questionCount} questions loaded live from server{"\n"}
+                • {questionCount} questions saved on your device{"\n"}
                 • Negative marking: -{test.negativeMarking} per wrong answer{"\n"}
                 • Timer auto-submits when time ends{"\n"}
-                • Answers saved to your account in real-time
+                • Works offline — results sync when you are back online
               </Text>
-            </View>
-          )}
-
-          {inProgress && questionCount > 0 && (
-            <View className="bg-indigo-50 rounded-xl p-4 mt-3 border border-indigo-100">
-              <Text className="text-indigo-800 text-sm font-semibold">Resume your in-progress attempt</Text>
-              <Text className="text-indigo-600 text-xs mt-1">Your previous answers are saved in the database.</Text>
             </View>
           )}
 
@@ -269,7 +244,7 @@ export default function TestScreen() {
           ) : questionCount > 0 ? (
             <View className="mt-6">
               <PrimaryButton
-                title={inProgress ? "Resume Test" : "Start Test Now"}
+                title="Start Test Now"
                 onPress={handleStart}
                 loading={starting}
               />
@@ -327,7 +302,7 @@ export default function TestScreen() {
           )}
         </PremiumCard>
 
-        {currentQ.options.map((opt) => {
+        {(currentQ.options as { id: string; text: string }[]).map((opt) => {
           const isSelected = selectedId === opt.id;
           const state: "idle" | "selected" | "correct" | "wrong" = rev
             ? opt.id === rev.correctOptionId

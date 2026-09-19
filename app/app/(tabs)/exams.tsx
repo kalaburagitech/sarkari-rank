@@ -1,8 +1,9 @@
 import { View, Text, ScrollView, TouchableOpacity, TextInput } from "react-native";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
+import { useCached } from "../../lib/offline";
 import { Link, useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useState, useMemo } from "react";
 import { SectionHeader, PremiumCard, Badge, LoadingScreen, DisclaimerBanner } from "../../components/ui";
 import { useTheme } from "../../lib/theme";
@@ -11,8 +12,8 @@ export default function ExamsScreen() {
   const { colors } = useTheme();
   const router = useRouter();
   const [search, setSearch] = useState("");
-  const categories = useQuery(api.exams.listCategories, {});
-  const exams = useQuery(api.exams.listExams, {});
+  const categories = useCached<any[]>("categories", api.exams.listCategories, {}, ["categories"]);
+  const exams = useCached<any[]>("exams", api.exams.listExams, {}, ["exams"]);
 
   const examCountByCategory = useMemo(() => {
     const map: Record<string, number> = {};

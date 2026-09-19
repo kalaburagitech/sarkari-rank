@@ -1,4 +1,5 @@
 import { mutation, query } from "./_generated/server";
+import { touch } from "./sync";
 import { v } from "convex/values";
 
 // ─── Study Notes ─────────────────────────────────────────────
@@ -72,6 +73,7 @@ export const createStudyNote = mutation({
     isActive: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
+    await touch(ctx, "studyNotes");
     const { isActive, ...rest } = args;
     return await ctx.db.insert("studyNotes", {
       ...rest,
@@ -96,6 +98,7 @@ export const updateStudyNote = mutation({
     isActive: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
+    await touch(ctx, "studyNotes");
     const { id, ...updates } = args;
     // If a new PDF replaces an old one, delete the old file to avoid orphans.
     if (updates.pdfStorageId !== undefined) {
@@ -114,6 +117,7 @@ export const updateStudyNote = mutation({
 export const duplicateStudyNote = mutation({
   args: { id: v.id("studyNotes") },
   handler: async (ctx, args) => {
+    await touch(ctx, "studyNotes");
     const note = await ctx.db.get(args.id);
     if (!note) throw new Error("Note not found");
     // Drop pdfStorageId so the copy doesn't share a file with the original
@@ -133,6 +137,7 @@ export const duplicateStudyNote = mutation({
 export const deleteStudyNote = mutation({
   args: { id: v.id("studyNotes") },
   handler: async (ctx, args) => {
+    await touch(ctx, "studyNotes");
     const note = await ctx.db.get(args.id);
     if (note?.pdfStorageId) await ctx.storage.delete(note.pdfStorageId);
     await ctx.db.delete(args.id);
@@ -198,6 +203,7 @@ export const createCurrentAffair = mutation({
     date: v.number(),
   },
   handler: async (ctx, args) => {
+    await touch(ctx, "currentAffairs");
     return await ctx.db.insert("currentAffairs", {
       ...args,
       isActive: true,
@@ -218,6 +224,7 @@ export const updateCurrentAffair = mutation({
     isActive: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
+    await touch(ctx, "currentAffairs");
     const { id, ...updates } = args;
     const filtered = Object.fromEntries(
       Object.entries(updates).filter(([, v]) => v !== undefined)
@@ -229,6 +236,7 @@ export const updateCurrentAffair = mutation({
 export const deleteCurrentAffair = mutation({
   args: { id: v.id("currentAffairs") },
   handler: async (ctx, args) => {
+    await touch(ctx, "currentAffairs");
     await ctx.db.delete(args.id);
   },
 });
@@ -265,6 +273,7 @@ export const getDailyQuiz = query({
 export const setDailyQuiz = mutation({
   args: { date: v.string(), testId: v.id("tests") },
   handler: async (ctx, args) => {
+    await touch(ctx, "dailyQuiz");
     const existing = await ctx.db
       .query("dailyQuizzes")
       .withIndex("by_date", (q) => q.eq("date", args.date))
@@ -290,6 +299,7 @@ export const submitDoubt = mutation({
     questionImage: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await touch(ctx, "doubts");
     return await ctx.db.insert("doubts", {
       ...args,
       status: "pending",
@@ -325,6 +335,7 @@ export const listDoubts = query({
 export const answerDoubt = mutation({
   args: { id: v.id("doubts"), answer: v.string() },
   handler: async (ctx, args) => {
+    await touch(ctx, "doubts");
     await ctx.db.patch(args.id, {
       answer: args.answer,
       status: "answered",
@@ -468,6 +479,7 @@ export const createNotification = mutation({
     userId: v.optional(v.id("users")),
   },
   handler: async (ctx, args) => {
+    await touch(ctx, "notifications");
     return await ctx.db.insert("notifications", {
       ...args,
       isRead: false,

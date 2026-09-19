@@ -1,4 +1,5 @@
 import { mutation, query } from "./_generated/server";
+import { touch, touchTestQuestions } from "./sync";
 import type { MutationCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { v } from "convex/values";
@@ -28,6 +29,7 @@ export const createCategory = mutation({
     region: v.optional(v.union(v.literal("karnataka"), v.literal("national"))),
   },
   handler: async (ctx, args) => {
+    await touch(ctx, "categories");
     return await ctx.db.insert("examCategories", { ...args, isActive: true });
   },
 });
@@ -45,6 +47,7 @@ export const updateCategory = mutation({
     region: v.optional(v.union(v.literal("karnataka"), v.literal("national"))),
   },
   handler: async (ctx, args) => {
+    await touch(ctx, "categories");
     const { id, ...updates } = args;
     const filtered = Object.fromEntries(
       Object.entries(updates).filter(([, v]) => v !== undefined)
@@ -61,6 +64,7 @@ export const updateCategory = mutation({
 export const backfillRegions = mutation({
   args: {},
   handler: async (ctx) => {
+    await touch(ctx, "categories");
     const KA = /karnataka|kpsc|\bkea\b|kptcl|kseb|bescom|bmtc|ksrtc|bbmp|kannada|bengaluru|bangalore|mysuru|mysore/i;
     const cats = await ctx.db.query("examCategories").collect();
     const karnataka: string[] = [];
@@ -84,6 +88,7 @@ export const backfillRegions = mutation({
 export const deleteCategory = mutation({
   args: { id: v.id("examCategories") },
   handler: async (ctx, args) => {
+    await touch(ctx, "categories");
     await ctx.db.patch(args.id, { isActive: false });
   },
 });
@@ -137,6 +142,7 @@ export const createExam = mutation({
     syllabus: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await touch(ctx, "exams");
     return await ctx.db.insert("exams", {
       ...args,
       totalTests: 0,
@@ -162,6 +168,7 @@ export const updateExam = mutation({
     syllabus: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await touch(ctx, "exams");
     const { id, ...updates } = args;
     const filtered = Object.fromEntries(
       Object.entries(updates).filter(([, v]) => v !== undefined)
@@ -173,6 +180,7 @@ export const updateExam = mutation({
 export const deleteExam = mutation({
   args: { id: v.id("exams") },
   handler: async (ctx, args) => {
+    await touch(ctx, "exams");
     await ctx.db.patch(args.id, { isActive: false });
   },
 });
@@ -211,6 +219,7 @@ export const createTestSeries = mutation({
     tags: v.array(v.string()),
   },
   handler: async (ctx, args) => {
+    await touch(ctx, "tests");
     return await ctx.db.insert("testSeries", {
       ...args,
       totalTests: 0,
@@ -234,6 +243,7 @@ export const updateTestSeries = mutation({
     isActive: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
+    await touch(ctx, "tests");
     const { id, ...updates } = args;
     const filtered = Object.fromEntries(
       Object.entries(updates).filter(([, v]) => v !== undefined)
@@ -246,6 +256,7 @@ export const updateTestSeries = mutation({
 export const deleteTestSeriesCascade = mutation({
   args: { id: v.id("testSeries") },
   handler: async (ctx, args) => {
+    await touch(ctx, "tests");
     const tests = await ctx.db
       .query("tests")
       .withIndex("by_series", (q) => q.eq("testSeriesId", args.id))
@@ -363,6 +374,7 @@ export const createTest = mutation({
     endsAt: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    await touch(ctx, "tests");
     const testId = await ctx.db.insert("tests", {
       ...args,
       language: args.language ?? args.languages[0] ?? "English",
@@ -408,6 +420,7 @@ export const updateTest = mutation({
     endsAt: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    await touch(ctx, "tests");
     const { id, ...updates } = args;
     const filtered = Object.fromEntries(
       Object.entries(updates).filter(([, v]) => v !== undefined)
@@ -419,6 +432,7 @@ export const updateTest = mutation({
 export const deleteTest = mutation({
   args: { id: v.id("tests") },
   handler: async (ctx, args) => {
+    await touch(ctx, "tests");
     await ctx.db.patch(args.id, { isActive: false });
   },
 });
@@ -428,6 +442,7 @@ export const deleteTest = mutation({
 export const deleteTestCascade = mutation({
   args: { id: v.id("tests") },
   handler: async (ctx, args) => {
+    await touch(ctx, "tests");
     const questions = await ctx.db
       .query("questions")
       .withIndex("by_test", (q) => q.eq("testId", args.id))
@@ -497,6 +512,7 @@ export const createQuestion = mutation({
         totalQuestions: test.totalQuestions + 1,
       });
     }
+    await touchTestQuestions(ctx, args.testId);
     return questionId;
   },
 });
@@ -549,6 +565,7 @@ export const bulkCreateQuestions = mutation({
         totalQuestions: test.totalQuestions + args.questions.length,
       });
     }
+    await touchTestQuestions(ctx, args.testId);
     return ids;
   },
 });
@@ -699,6 +716,8 @@ export const updateQuestion = mutation({
       Object.entries(updates).filter(([, v]) => v !== undefined)
     );
     await ctx.db.patch(id, filtered);
+    const question = await ctx.db.get(id);
+    if (question) await touchTestQuestions(ctx, question.testId);
   },
 });
 
@@ -727,6 +746,7 @@ export const duplicateQuestion = mutation({
         totalQuestions: test.totalQuestions + 1,
       });
     }
+    await touchTestQuestions(ctx, q.testId);
     return newId;
   },
 });
@@ -743,6 +763,7 @@ export const deleteQuestion = mutation({
           totalQuestions: Math.max(0, test.totalQuestions - 1),
         });
       }
+      await touchTestQuestions(ctx, question.testId);
     }
   },
 });
@@ -769,6 +790,7 @@ export const bulkDeleteQuestions = mutation({
           totalQuestions: Math.max(0, test.totalQuestions - count),
         });
       }
+      await touchTestQuestions(ctx, testId);
     }
     return { deleted: args.ids.length };
   },
@@ -878,7 +900,9 @@ export const addQuestion = mutation({
       const target = await ctx.db.get(args.testId);
       if (!target) throw new Error("Target test not found");
       containerId = args.testId;
-      return await attachQuestion(ctx, containerId, args);
+      const created = await attachQuestion(ctx, containerId, args);
+    await touchTestQuestions(ctx, containerId);
+    return created;
     }
 
     const examTests = await ctx.db

@@ -1,17 +1,18 @@
 import { View, Text, ScrollView, TouchableOpacity } from "react-native";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
+import { useCached } from "../../lib/offline";
 import { useAuth } from "../../lib/auth";
 import { Link } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { SectionHeader, PremiumCard, StatBox, LoadingScreen, EmptyScreen } from "../../components/ui";
 import { useTheme } from "../../lib/theme";
 
 export default function AnalyticsScreen() {
   const { colors } = useTheme();
   const { user } = useAuth();
-  const analytics = useQuery(api.attempts.getPerformanceAnalytics, user ? { userId: user._id } : "skip");
-  const attempts = useQuery(api.attempts.getUserAttempts, user ? { userId: user._id } : "skip");
+  const analytics = useCached<any>(`analytics:${user?._id}`, api.attempts.getPerformanceAnalytics, user ? { userId: user._id } : "skip", []);
+  const attempts = useCached<any[]>(`attempts:${user?._id}`, api.attempts.getUserAttempts, user ? { userId: user._id } : "skip", []);
 
   if (!user) return <LoadingScreen message="Loading analytics..." />;
 
@@ -57,7 +58,7 @@ export default function AnalyticsScreen() {
         {analytics?.subjectBreakdown && analytics.subjectBreakdown.length > 0 && (
           <View className="mb-6">
             <SectionHeader title="Subject-wise Analysis" subtitle="Strength & weakness breakdown" />
-            {analytics.subjectBreakdown.map((sub) => (
+            {analytics.subjectBreakdown.map((sub: { subject: string; accuracy: number; total: number }) => (
               <PremiumCard key={sub.subject} className="p-4 mb-2">
                 <View className="flex-row justify-between mb-2">
                   <Text className="font-semibold text-slate-900 dark:text-slate-50">{sub.subject}</Text>

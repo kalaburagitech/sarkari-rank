@@ -2,6 +2,7 @@ import { View, Text, ScrollView } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
+import { useCached } from "../../lib/offline";
 import { ScreenHeader, PremiumCard, Badge, LoadingScreen, SourceLink, DisclaimerBanner } from "../../components/ui";
 import { useTheme } from "../../lib/theme";
 
@@ -9,7 +10,7 @@ export default function CurrentAffairScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const router = useRouter();
   const { colors } = useTheme();
-  const affairs = useQuery(api.content.listCurrentAffairs, { limit: 60 });
+  const affairs = useCached<any[]>("affairs:latest", api.content.listCurrentAffairs, { limit: 60 }, ["currentAffairs"]);
   const article = affairs?.find((a) => a.slug === slug);
 
   if (affairs === undefined) return <LoadingScreen message="Loading article..." />;

@@ -1,4 +1,5 @@
 import { action, internalAction, internalMutation } from "./_generated/server";
+import { touch } from "./sync";
 import type { ActionCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
@@ -136,6 +137,7 @@ export const insertAffair = internalMutation({
     sourceName: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await touch(ctx, "currentAffairs");
     const existing = await ctx.db
       .query("currentAffairs")
       .withIndex("by_slug", (q) => q.eq("slug", args.slug))

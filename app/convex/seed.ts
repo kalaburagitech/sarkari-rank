@@ -1,9 +1,11 @@
 import { mutation } from "./_generated/server";
+import { touchAll } from "./sync";
 
 /** Bootstrap seed: categories, exams, admin only. Questions come from admin or seedProduction. */
 export const seedDatabase = mutation({
   args: {},
   handler: async (ctx) => {
+    await touchAll(ctx);
     const existing = await ctx.db.query("examCategories").first();
     if (existing) return { message: "Already seeded" };
 

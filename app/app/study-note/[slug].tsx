@@ -5,8 +5,9 @@ import { useQuery } from "convex/react";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 import Pdf from "react-native-pdf";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { api } from "../../convex/_generated/api";
+import { useCached } from "../../lib/offline";
 import { ScreenHeader, Badge, LoadingScreen, FilterChip, DisclaimerBanner } from "../../components/ui";
 import { Markdown } from "../../components/Markdown";
 import { useTheme } from "../../lib/theme";
@@ -16,8 +17,8 @@ export default function StudyNoteScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const router = useRouter();
   const { colors } = useTheme();
-  const note = useQuery(api.content.getStudyNote, { slug });
-  const exams = useQuery(api.exams.listExams, {});
+  const note = useCached<any>(`note:${slug}`, api.content.getStudyNote, { slug }, ["studyNotes"]);
+  const exams = useCached<any[]>("exams", api.exams.listExams, {}, ["exams"]);
   // Sibling notes in the same exam — used to find other language versions of
   // this chapter (same subject + topic).
   const examNotes = useQuery(
