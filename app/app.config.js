@@ -53,7 +53,7 @@ export default {
       typedRoutes: true,
     },
     extra: {
-      convexUrl: process.env.EXPO_PUBLIC_CONVEX_URL ?? "https://silent-jackal-490.convex.cloud",
+      convexUrl: process.env.EXPO_PUBLIC_CONVEX_URL ?? "https://capable-gazelle-597.convex.cloud",
     },
   },
 };

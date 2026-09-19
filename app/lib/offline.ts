@@ -20,7 +20,7 @@ import { api } from "../convex/_generated/api";
 const convexUrl =
   process.env.EXPO_PUBLIC_CONVEX_URL ??
   (Constants.expoConfig?.extra?.convexUrl as string) ??
-  "https://silent-jackal-490.convex.cloud";
+  "https://capable-gazelle-597.convex.cloud";
 
 export const http = new ConvexHttpClient(convexUrl);
 

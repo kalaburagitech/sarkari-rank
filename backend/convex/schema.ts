@@ -385,6 +385,14 @@ export default defineSchema({
   // One row per content area, bumped on every publish. The app fetches just
   // these numbers on launch and re-reads a content area only when its counter
   // moved — otherwise it serves everything from the on-device cache.
+  // Running totals kept on write, so the admin dashboard never scans a table
+  // to show a number. testAttempts rows carry a full answers array (~7 KB
+  // each) — counting them by collecting was the expensive way to say "178".
+  counters: defineTable({
+    key: v.string(),
+    value: v.number(),
+  }).index("by_key", ["key"]),
+
   syncMeta: defineTable({
     key: v.string(),
     version: v.number(),

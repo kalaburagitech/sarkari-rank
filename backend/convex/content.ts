@@ -1,5 +1,5 @@
 import { mutation, query } from "./_generated/server";
-import { touch } from "./sync";
+import { touch, readCounter } from "./sync";
 import { v } from "convex/values";
 
 // ─── Study Notes ─────────────────────────────────────────────
@@ -426,7 +426,7 @@ export const getDashboardStats = query({
       totalExams: exams.filter((e) => e.isActive).length,
       totalTests: activeTests.length,
       totalQuestions: tests.reduce((n, t) => n + (t.totalQuestions ?? 0), 0),
-      totalAttempts: tests.reduce((n, t) => n + (t.attemptCount ?? 0), 0),
+      totalAttempts: await readCounter(ctx, "attempts"),
       recentAttempts: recent.filter((a) => a.status === "completed").length,
       activeSubscriptions: subscriptions.filter((s) => s.isActive).length,
       revenue: subscriptions.reduce((s, sub) => s + sub.amount, 0),

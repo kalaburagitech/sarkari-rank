@@ -1,5 +1,5 @@
-import { query } from "./_generated/server";
-import { MutationCtx } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
+import { MutationCtx, QueryCtx } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 
 // Content areas the app caches on-device. Every publish bumps the matching
@@ -42,6 +42,23 @@ export async function touchAll(ctx: MutationCtx) {
   for (const k of keys) await touch(ctx, k);
 }
 
+export async function bumpCounter(ctx: MutationCtx, key: string, delta: number) {
+  const row = await ctx.db
+    .query("counters")
+    .withIndex("by_key", (q) => q.eq("key", key))
+    .first();
+  if (row) await ctx.db.patch(row._id, { value: row.value + delta });
+  else await ctx.db.insert("counters", { key, value: delta });
+}
+
+export async function readCounter(ctx: QueryCtx, key: string) {
+  const row = await ctx.db
+    .query("counters")
+    .withIndex("by_key", (q) => q.eq("key", key))
+    .first();
+  return row?.value ?? 0;
+}
+
 export const versions = query({
   args: {},
   handler: async (ctx) => {
@@ -49,5 +66,21 @@ export const versions = query({
     const out: Record<string, number> = {};
     for (const r of rows) out[r.key] = r.version;
     return out;
+  },
+});
+
+// Seeds the running totals from the data already in the database. One-off
+// after deploying counters; safe to re-run (it recounts, not increments).
+export const backfillCounters = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const attempts = await ctx.db.query("testAttempts").collect();
+    const row = await ctx.db
+      .query("counters")
+      .withIndex("by_key", (q) => q.eq("key", "attempts"))
+      .first();
+    if (row) await ctx.db.patch(row._id, { value: attempts.length });
+    else await ctx.db.insert("counters", { key: "attempts", value: attempts.length });
+    return { attempts: attempts.length };
   },
 });

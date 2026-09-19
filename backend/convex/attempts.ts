@@ -1,5 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { bumpCounter } from "./sync";
 
 function stripQuestionAnswers<T extends { correctOptionId: string; explanation?: string }>(
   questions: T[]
@@ -82,6 +83,7 @@ export const recordAttempt = mutation({
     });
 
     await ctx.db.patch(args.testId, { attemptCount: test.attemptCount + 1 });
+    await bumpCounter(ctx, "attempts", 1);
 
     const user = await ctx.db.get(args.userId);
     if (user) {

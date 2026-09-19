@@ -19,7 +19,7 @@ import {
 } from "convex/server";
 
 const CONVEX_URL =
-  process.env.NEXT_PUBLIC_CONVEX_URL ?? "https://silent-jackal-490.convex.cloud";
+  process.env.NEXT_PUBLIC_CONVEX_URL ?? "https://capable-gazelle-597.convex.cloud";
 
 export const adminHttp = new ConvexHttpClient(CONVEX_URL);
 
