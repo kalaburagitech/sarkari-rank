@@ -197,7 +197,9 @@ export default defineSchema({
   })
     .index("by_user", ["userId"])
     .index("by_test", ["testId"])
-    .index("by_user_test", ["userId", "testId"]),
+    .index("by_user_test", ["userId", "testId"])
+    // Bounded "attempts in the last 7 days" for the admin dashboard.
+    .index("by_completed", ["completedAt"]),
 
   // ─── Bookmarks ───────────────────────────────────────────
   bookmarks: defineTable({
@@ -332,6 +334,9 @@ export default defineSchema({
     description: v.optional(v.string()),
     order: v.number(),
     isActive: v.boolean(),
+    // Published questions in this chapter, maintained on write so the browse
+    // tree never scans the question bank. Absent → counted as 0.
+    questionCount: v.optional(v.number()),
     createdAt: v.number(),
   })
     .index("by_subject", ["subjectId"])

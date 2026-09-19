@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery, useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
+import { useOnce, useAdminMutation } from "@/lib/admin-data";
 import { Id } from "@convex/_generated/dataModel";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -24,11 +24,11 @@ const emptyForm: ExamForm = {
 const splitPosts = (s: string) => s.split(",").map((p) => p.trim()).filter(Boolean);
 
 export default function ExamsPage() {
-  const categories = useQuery(api.exams.listCategories, {});
-  const exams = useQuery(api.exams.listExams, { includeInactive: true });
-  const createExam = useMutation(api.exams.createExam);
-  const updateExam = useMutation(api.exams.updateExam);
-  const deleteExam = useMutation(api.exams.deleteExam);
+  const categories = useOnce(api.exams.listCategories, {});
+  const exams = useOnce(api.exams.listExams, { includeInactive: true });
+  const createExam = useAdminMutation(api.exams.createExam);
+  const updateExam = useAdminMutation(api.exams.updateExam);
+  const deleteExam = useAdminMutation(api.exams.deleteExam);
 
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);

@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery, useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
+import { useOnce, useAdminMutation } from "@/lib/admin-data";
 import { Id } from "@convex/_generated/dataModel";
 import { Plus, Pencil, Trash2, Wand2 } from "lucide-react";
 import { toast } from "sonner";
@@ -15,11 +15,11 @@ type CatForm = { name: string; description: string; icon: string; color: string;
 const emptyForm: CatForm = { name: "", description: "", icon: "📋", color: "#3B82F6", isPopular: false, order: 1, isActive: true, region: "national" };
 
 export default function CategoriesPage() {
-  const categories = useQuery(api.exams.listCategories, { includeInactive: true });
-  const createCategory = useMutation(api.exams.createCategory);
-  const updateCategory = useMutation(api.exams.updateCategory);
-  const deleteCategory = useMutation(api.exams.deleteCategory);
-  const backfillRegions = useMutation(api.exams.backfillRegions);
+  const categories = useOnce(api.exams.listCategories, { includeInactive: true });
+  const createCategory = useAdminMutation(api.exams.createCategory);
+  const updateCategory = useAdminMutation(api.exams.updateCategory);
+  const deleteCategory = useAdminMutation(api.exams.deleteCategory);
+  const backfillRegions = useAdminMutation(api.exams.backfillRegions);
 
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);

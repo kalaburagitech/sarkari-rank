@@ -400,41 +400,34 @@ export const createSubscription = mutation({
 export const getDashboardStats = query({
   args: {},
   handler: async (ctx) => {
-    const [
-      users,
-      exams,
-      tests,
-      questions,
-      attempts,
-      subscriptions,
-    ] = await Promise.all([
+    // Counts come from already-maintained fields on the small tables:
+    // tests.totalQuestions and tests.attemptCount. Collecting the questions
+    // and attempts tables here (on a live admin subscription) was re-reading
+    // the entire question bank on every single write during an import.
+    const [users, exams, tests, subscriptions] = await Promise.all([
       ctx.db.query("users").collect(),
       ctx.db.query("exams").collect(),
       ctx.db.query("tests").collect(),
-      ctx.db.query("questions").collect(),
-      ctx.db.query("testAttempts").collect(),
       ctx.db.query("subscriptions").collect(),
     ]);
 
-    const students = users.filter((u) => u.role === "student");
-    const premiumUsers = students.filter((u) => u.isPremium);
-    const completedAttempts = attempts.filter(
-      (a) => a.status === "completed"
-    );
-
     const last7Days = Date.now() - 7 * 24 * 60 * 60 * 1000;
-    const recentAttempts = completedAttempts.filter(
-      (a) => (a.completedAt ?? 0) > last7Days
-    );
+    const recent = await ctx.db
+      .query("testAttempts")
+      .withIndex("by_completed", (q) => q.gt("completedAt", last7Days))
+      .take(500);
+
+    const students = users.filter((u) => u.role === "student");
+    const activeTests = tests.filter((t) => t.isActive);
 
     return {
       totalUsers: students.length,
-      premiumUsers: premiumUsers.length,
+      premiumUsers: students.filter((u) => u.isPremium).length,
       totalExams: exams.filter((e) => e.isActive).length,
-      totalTests: tests.filter((t) => t.isActive).length,
-      totalQuestions: questions.length,
-      totalAttempts: completedAttempts.length,
-      recentAttempts: recentAttempts.length,
+      totalTests: activeTests.length,
+      totalQuestions: tests.reduce((n, t) => n + (t.totalQuestions ?? 0), 0),
+      totalAttempts: tests.reduce((n, t) => n + (t.attemptCount ?? 0), 0),
+      recentAttempts: recent.filter((a) => a.status === "completed").length,
       activeSubscriptions: subscriptions.filter((s) => s.isActive).length,
       revenue: subscriptions.reduce((s, sub) => s + sub.amount, 0),
     };

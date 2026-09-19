@@ -1,15 +1,15 @@
 "use client";
 
-import { useQuery, useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
+import { useOnce, useAdminMutation } from "@/lib/admin-data";
 import { Users, FileQuestion, ClipboardList, TrendingUp, Crown, Activity, Database, Rocket } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader, StatCard, Card, Button, LoadingState } from "@/components/admin/ui";
 
 export default function AdminDashboard() {
-  const stats = useQuery(api.content.getDashboardStats);
-  const seedDatabase = useMutation(api.seed.seedDatabase);
-  const seedProduction = useMutation(api.seedProduction.seedProductionData);
+  const stats = useOnce(api.content.getDashboardStats);
+  const seedDatabase = useAdminMutation(api.seed.seedDatabase);
+  const seedProduction = useAdminMutation(api.seedProduction.seedProductionData);
 
   const handleBasicSeed = async () => {
     try {

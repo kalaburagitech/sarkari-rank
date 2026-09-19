@@ -35,15 +35,12 @@ export type SyncKey =
   | "doubts"
   | "dailyQuiz";
 
-type Versions = Record<string, number>;
-type Entry = { deps: Versions; data: unknown; at: number };
+import { Entry, Versions, isFresh } from "./cachePolicy";
+export type { Entry, Versions };
 
 const KEY = (name: string) => `cache:${name}`;
 const VERSIONS_KEY = "cache:__versions";
 const VERSION_TTL_MS = 60_000;
-// Safety net: even if a counter never moves (a publish path that forgot to
-// bump, a seed script), nothing on the device goes more than a day stale.
-const MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 // In-memory mirror so several screens mounting at once hit AsyncStorage once.
 const mem = new Map<string, Entry>();
@@ -108,11 +105,6 @@ export async function getVersions(force = false): Promise<Versions> {
   return inflight;
 }
 
-function depsMatch(entry: Entry, deps: SyncKey[], current: Versions) {
-  if (Date.now() - entry.at > MAX_AGE_MS) return false;
-  return deps.every((d) => entry.deps[d] === (current[d] ?? 0));
-}
-
 /**
  * Fetch-through cache for one query. Returns the cached value immediately and
  * refreshes only when a dependency counter moved (or nothing is cached yet).
@@ -126,9 +118,8 @@ export async function cachedQuery<T>(
   const entry = await readEntry(name);
   const current = await getVersions();
 
-  // No deps means "user data": always refresh when online, fall back to the
-  // cached copy when not.
-  if (entry && deps.length > 0 && depsMatch(entry, deps, current)) return entry.data as T;
+  // isFresh decides whether this costs a database read at all.
+  if (entry && isFresh(entry, deps, current, Date.now())) return entry.data as T;
   if (!online) return entry ? (entry.data as T) : undefined;
 
   try {

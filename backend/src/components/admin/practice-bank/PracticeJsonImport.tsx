@@ -1,8 +1,8 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
+import { useOnce, useAdminMutation } from "@/lib/admin-data";
 import { Id } from "@convex/_generated/dataModel";
 import { toast } from "sonner";
 import { UploadCloud, CheckCircle2, AlertTriangle, Copy, X } from "lucide-react";
@@ -55,7 +55,7 @@ export function PracticeJsonImport({
   onClose: () => void;
   onDone: () => void;
 }) {
-  const bulkImport = useMutation(api.practiceBank.bulkImportPracticeQuestions);
+  const bulkImport = useAdminMutation(api.practiceBank.bulkImportPracticeQuestions);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [def, setDef] = useState({

@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
+import { useOnce, useAdminMutation } from "@/lib/admin-data";
 import { Id } from "@convex/_generated/dataModel";
 import { toast } from "sonner";
 import { Eye, Pencil, Copy, Trash2 } from "lucide-react";
@@ -66,9 +66,9 @@ export function QuestionListTable({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkConfirm, setBulkConfirm] = useState(false);
 
-  const duplicateQuestion = useMutation(api.exams.duplicateQuestion);
-  const deleteQuestion = useMutation(api.exams.deleteQuestion);
-  const bulkDeleteQuestions = useMutation(api.exams.bulkDeleteQuestions);
+  const duplicateQuestion = useAdminMutation(api.exams.duplicateQuestion);
+  const deleteQuestion = useAdminMutation(api.exams.deleteQuestion);
+  const bulkDeleteQuestions = useAdminMutation(api.exams.bulkDeleteQuestions);
 
   // Drop stale ids whenever the visible rows change (filter/tab/exam switch),
   // so a selection can never carry over deleted or filtered-out questions.

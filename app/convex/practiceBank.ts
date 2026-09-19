@@ -1,4 +1,4 @@
-import { mutation, query, QueryCtx } from "./_generated/server";
+import { mutation, query, MutationCtx, QueryCtx } from "./_generated/server";
 import { touch } from "./sync";
 import { v } from "convex/values";
 import { Doc, Id } from "./_generated/dataModel";
@@ -274,7 +274,7 @@ export const addPracticeQuestion = mutation({
     const chapter = await ctx.db.get(chapterId);
     if (!chapter) throw new Error("Chapter not found");
     const order = await nextOrder(ctx, chapterId);
-    return await ctx.db.insert("practiceQuestions", {
+    const id = await ctx.db.insert("practiceQuestions", {
       chapterId,
       subjectId: chapter.subjectId,
       ...q,
@@ -282,6 +282,8 @@ export const addPracticeQuestion = mutation({
       order,
       createdAt: Date.now(),
     });
+    await recountChapter(ctx, chapterId);
+    return id;
   },
 });
 
@@ -314,6 +316,8 @@ export const updatePracticeQuestion = mutation({
       Object.entries(updates).filter(([, val]) => val !== undefined)
     );
     await ctx.db.patch(id, filtered);
+    const q = await ctx.db.get(id);
+    if (q) await recountChapter(ctx, q.chapterId);
   },
 });
 
@@ -321,7 +325,9 @@ export const deletePracticeQuestion = mutation({
   args: { id: v.id("practiceQuestions") },
   handler: async (ctx, args) => {
     await touch(ctx, "practice");
+    const q = await ctx.db.get(args.id);
     await ctx.db.delete(args.id);
+    if (q) await recountChapter(ctx, q.chapterId);
   },
 });
 
@@ -330,7 +336,13 @@ export const bulkDeletePracticeQuestions = mutation({
   args: { ids: v.array(v.id("practiceQuestions")) },
   handler: async (ctx, args) => {
     await touch(ctx, "practice");
-    for (const id of args.ids) await ctx.db.delete(id);
+    const chapterIds = new Set<Id<"chapters">>();
+    for (const id of args.ids) {
+      const q = await ctx.db.get(id);
+      if (q) chapterIds.add(q.chapterId);
+      await ctx.db.delete(id);
+    }
+    for (const chapterId of chapterIds) await recountChapter(ctx, chapterId);
     return args.ids.length;
   },
 });
@@ -368,7 +380,31 @@ export const bulkImportPracticeQuestions = mutation({
       ids.push(id);
       order += 1;
     }
+    await recountChapter(ctx, args.chapterId);
     return ids;
+  },
+});
+
+// Published-question count kept on the chapter row. getPracticeTree used to
+// read every question in the bank just to count them; now it reads chapters.
+async function recountChapter(ctx: MutationCtx, chapterId: Id<"chapters">) {
+  const qs = await ctx.db
+    .query("practiceQuestions")
+    .withIndex("by_chapter", (q) => q.eq("chapterId", chapterId))
+    .collect();
+  const questionCount = qs.filter((q) => (q.status ?? "published") === "published").length;
+  await ctx.db.patch(chapterId, { questionCount });
+}
+
+// One-off after deploying chapter counts: fills questionCount for chapters
+// created before the field existed. Safe to re-run.
+export const backfillChapterCounts = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const chapters = await ctx.db.query("chapters").collect();
+    for (const c of chapters) await recountChapter(ctx, c._id);
+    await touch(ctx, "practice");
+    return { chapters: chapters.length };
   },
 });
 
@@ -394,28 +430,17 @@ export const getPracticeTree = query({
           .filter((c) => c.isActive)
           .sort((a, b) => a.order - b.order || a.name.localeCompare(b.name));
 
-        const chaptersWithCounts = await Promise.all(
-          chapters.map(async (c) => {
-            const qs = await ctx.db
-              .query("practiceQuestions")
-              .withIndex("by_chapter", (q) => q.eq("chapterId", c._id))
-              .collect();
-            const publishedCount = qs.filter(
-              (q) => (q.status ?? "published") === "published"
-            ).length;
-            return {
-              _id: c._id,
-              name: c.name,
-              slug: c.slug,
-              description: c.description,
-              questionCount: publishedCount,
-            };
-          })
-        );
+        const chaptersWithCounts = chapters.map((c) => ({
+          _id: c._id,
+          name: c.name,
+          slug: c.slug,
+          description: c.description,
+          questionCount: c.questionCount,
+        }));
 
-        const visibleChapters = chaptersWithCounts.filter(
-          (c) => c.questionCount > 0
-        );
+        // `undefined` means "not counted yet" (pre-backfill) — keep those
+        // visible; only a real zero hides a chapter.
+        const visibleChapters = chaptersWithCounts.filter((c) => c.questionCount !== 0);
         return {
           _id: s._id,
           name: s.name,
@@ -424,7 +449,7 @@ export const getPracticeTree = query({
           icon: s.icon,
           chapters: visibleChapters,
           questionCount: visibleChapters.reduce(
-            (sum, c) => sum + c.questionCount,
+            (sum, c) => sum + (c.questionCount ?? 0),
             0
           ),
         };

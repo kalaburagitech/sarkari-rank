@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useQuery, useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
+import { useOnce, useAdminMutation } from "@/lib/admin-data";
 import { Id } from "@convex/_generated/dataModel";
 import { toast } from "sonner";
 import {
@@ -89,22 +89,22 @@ export function TestSeriesManager({
   const [tNeg, setTNeg] = useState("0.25");
   const [deleteTestRow, setDeleteTestRow] = useState<TestRow | null>(null);
 
-  const createSeries = useMutation(api.exams.createTestSeries);
-  const updateSeries = useMutation(api.exams.updateTestSeries);
-  const deleteSeriesCascade = useMutation(api.exams.deleteTestSeriesCascade);
-  const createTest = useMutation(api.exams.createTest);
-  const updateTest = useMutation(api.exams.updateTest);
-  const deleteTestCascade = useMutation(api.exams.deleteTestCascade);
+  const createSeries = useAdminMutation(api.exams.createTestSeries);
+  const updateSeries = useAdminMutation(api.exams.updateTestSeries);
+  const deleteSeriesCascade = useAdminMutation(api.exams.deleteTestSeriesCascade);
+  const createTest = useAdminMutation(api.exams.createTest);
+  const updateTest = useAdminMutation(api.exams.updateTest);
+  const deleteTestCascade = useAdminMutation(api.exams.deleteTestCascade);
 
-  const seriesData = useQuery(
+  const seriesData = useOnce(
     api.exams.listTestSeries,
     examId ? { examId: examId as Id<"exams">, includeInactive: true } : "skip"
   ) as Series[] | undefined;
-  const testsData = useQuery(
+  const testsData = useOnce(
     api.exams.listTests,
     series ? { testSeriesId: series._id as Id<"testSeries">, includeInactive: true } : "skip"
   ) as TestRow[] | undefined;
-  const testQuestions = useQuery(
+  const testQuestions = useOnce(
     api.exams.listQuestionsRich,
     test ? { testId: test._id as Id<"tests"> } : "skip"
   ) as Row[] | undefined;

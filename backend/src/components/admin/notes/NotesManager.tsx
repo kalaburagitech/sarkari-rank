@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useQuery, useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
+import { useOnce, useAdminMutation } from "@/lib/admin-data";
 import { Id } from "@convex/_generated/dataModel";
 import { toast } from "sonner";
 import { Plus, Eye, Pencil, Copy, Trash2, CheckCircle2, Rocket } from "lucide-react";
@@ -41,14 +41,14 @@ type Note = {
 };
 
 export function NotesManager() {
-  const exams = useQuery(api.exams.listExams, {});
-  const notes = useQuery(api.content.listStudyNotes, { includeInactive: true }) as
+  const exams = useOnce(api.exams.listExams, {});
+  const notes = useOnce(api.content.listStudyNotes, { includeInactive: true }) as
     | Note[]
     | undefined;
 
-  const updateNote = useMutation(api.content.updateStudyNote);
-  const duplicateNote = useMutation(api.content.duplicateStudyNote);
-  const deleteNote = useMutation(api.content.deleteStudyNote);
+  const updateNote = useAdminMutation(api.content.updateStudyNote);
+  const duplicateNote = useAdminMutation(api.content.duplicateStudyNote);
+  const deleteNote = useAdminMutation(api.content.deleteStudyNote);
 
   const [examId, setExamId] = useState("");
   const [subjectF, setSubjectF] = useState("");

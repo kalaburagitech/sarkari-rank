@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery, useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
+import { useOnce, useAdminMutation } from "@/lib/admin-data";
 import { Id } from "@convex/_generated/dataModel";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -16,10 +16,10 @@ type EditForm = {
 };
 
 export default function CurrentAffairsPage() {
-  const affairs = useQuery(api.content.listCurrentAffairs, { limit: 50 });
-  const createAffair = useMutation(api.content.createCurrentAffair);
-  const updateAffair = useMutation(api.content.updateCurrentAffair);
-  const deleteAffair = useMutation(api.content.deleteCurrentAffair);
+  const affairs = useOnce(api.content.listCurrentAffairs, { limit: 50 });
+  const createAffair = useAdminMutation(api.content.createCurrentAffair);
+  const updateAffair = useAdminMutation(api.content.updateCurrentAffair);
+  const deleteAffair = useAdminMutation(api.content.deleteCurrentAffair);
 
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);

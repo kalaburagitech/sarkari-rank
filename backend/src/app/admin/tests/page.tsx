@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery, useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
+import { useOnce, useAdminMutation } from "@/lib/admin-data";
 import { Id } from "@convex/_generated/dataModel";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -21,11 +21,11 @@ type EditForm = {
 };
 
 export default function TestsPage() {
-  const exams = useQuery(api.exams.listExams, {});
-  const tests = useQuery(api.exams.listTests, { includeInactive: true });
-  const createTest = useMutation(api.exams.createTest);
-  const updateTest = useMutation(api.exams.updateTest);
-  const deleteTest = useMutation(api.exams.deleteTest);
+  const exams = useOnce(api.exams.listExams, {});
+  const tests = useOnce(api.exams.listTests, { includeInactive: true });
+  const createTest = useAdminMutation(api.exams.createTest);
+  const updateTest = useAdminMutation(api.exams.updateTest);
+  const deleteTest = useAdminMutation(api.exams.deleteTest);
 
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);

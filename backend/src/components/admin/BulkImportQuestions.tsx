@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import { useQuery, useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
+import { useOnce, useAdminMutation } from "@/lib/admin-data";
 import { Id } from "@convex/_generated/dataModel";
 import { toast } from "sonner";
 import { UploadCloud, FileJson, CheckCircle2, AlertTriangle, X, Copy } from "lucide-react";
@@ -128,12 +128,12 @@ export function BulkImportQuestions({
   mode?: "generic" | "practice";
 }) {
   const isPractice = mode === "practice";
-  const categories = useQuery(api.exams.listCategories, {});
-  const exams = useQuery(api.exams.listExams, {});
-  const tests = useQuery(api.exams.listTests, {});
-  const createTest = useMutation(api.exams.createTest);
-  const bulkCreate = useMutation(api.exams.bulkCreateQuestions);
-  const bulkCreatePractice = useMutation(api.exams.bulkCreatePracticeQuestions);
+  const categories = useOnce(api.exams.listCategories, {});
+  const exams = useOnce(api.exams.listExams, {});
+  const tests = useOnce(api.exams.listTests, {});
+  const createTest = useAdminMutation(api.exams.createTest);
+  const bulkCreate = useAdminMutation(api.exams.bulkCreateQuestions);
+  const bulkCreatePractice = useAdminMutation(api.exams.bulkCreatePracticeQuestions);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [categoryId, setCategoryId] = useState("");
