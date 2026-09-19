@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback, useRef, memo } from "react";
 import { View, Text, TouchableOpacity, ScrollView, Alert } from "react-native";
 import { useLocalSearchParams, useRouter, Redirect } from "expo-router";
-import { useQuery, useMutation } from "convex/react";
 import { useCached, getQuestions } from "../../lib/offline";
 import { grade, saveAttempt, flushAttempts } from "../../lib/attempts";
+import { useBookmarks } from "../../lib/bookmarks";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { useAuth } from "../../lib/auth";
@@ -67,8 +67,7 @@ export default function TestScreen() {
     };
   }, [test, testId]);
 
-  const bookmarks = useQuery(api.attempts.getBookmarks, user ? { userId: user._id } : "skip");
-  const toggleBookmark = useMutation(api.attempts.toggleBookmark);
+  const { bookmarks, toggle: toggleBookmark } = useBookmarks(user?._id);
 
   const startedAtRef = useRef(0);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -79,7 +78,7 @@ export default function TestScreen() {
   const [revealed, setRevealed] = useState<
     Record<string, { correctOptionId: string; explanation?: string; explanationKn?: string }>
   >({});
-  const isBookmarked = bookmarks?.some((b) => b.type === "test" && b.testId === id);
+  const isBookmarked = bookmarks.some((b) => b.type === "test" && b.testId === id);
   const questionCount = questions?.length ?? test?.liveQuestionCount ?? 0;
 
   useEffect(() => {
@@ -154,7 +153,7 @@ export default function TestScreen() {
 
   const handleToggleBookmark = async () => {
     if (!user) return;
-    await toggleBookmark({ userId: user._id, type: "test", testId });
+    await toggleBookmark({ type: "test", testId });
   };
 
   const handleSelectOption = (optionId: string) => {

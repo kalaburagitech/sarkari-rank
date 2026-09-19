@@ -2,7 +2,8 @@ import { useMemo, useState, useCallback } from "react";
 import { View, Text, ScrollView, TouchableOpacity, RefreshControl } from "react-native";
 import { useQuery, useAction } from "convex/react";
 import { api } from "../convex/_generated/api";
-import { useCached } from "../lib/offline";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useCached, invalidateVersions } from "../lib/offline";
 import { useRouter, Link } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { ScreenHeader, PremiumCard, Badge, LoadingScreen, EmptyScreen, FilterChip, DisclaimerBanner } from "../components/ui";
@@ -109,9 +110,17 @@ export default function CurrentAffairsScreen() {
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      await refresh({});
+      // The cron already pulls the news daily. Let a manual refresh actually
+      // hit the source at most hourly: every fetch writes rows and bumps the
+      // sync counter, which makes every other device re-download the feed.
+      const last = Number((await AsyncStorage.getItem("affairs:lastFetch")) ?? 0);
+      if (Date.now() - last > 60 * 60 * 1000) {
+        await refresh({});
+        await AsyncStorage.setItem("affairs:lastFetch", String(Date.now()));
+      }
+      invalidateVersions();
     } catch {
-      // ignore network hiccups; query stays as-is
+      // ignore network hiccups; the cached feed stays on screen
     }
     setRefreshing(false);
   }, [refresh]);

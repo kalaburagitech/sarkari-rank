@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity } from "react-native";
-import { useQuery } from "convex/react";
 import { api } from "../convex/_generated/api";
 import { useCached } from "../lib/offline";
 import { useRouter, Link } from "expo-router";
@@ -33,7 +32,7 @@ type PaperGroup = {
 export default function PreviousYearPapersScreen() {
   const router = useRouter();
   const { colors } = useTheme();
-  const papers = useQuery(api.exams.listTests, { type: "pyp" }) as Paper[] | undefined;
+  const papers = useCached<Paper[]>("tests:pyp", api.exams.listTests, { type: "pyp" }, ["tests"]);
   const exams = useCached<any[]>("exams", api.exams.listExams, {}, ["exams"]);
 
   const [examId, setExamId] = useState<string>("");

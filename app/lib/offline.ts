@@ -235,22 +235,52 @@ export async function prefetchAll(onProgress?: (done: number, total: number) => 
   await getVersions(true);
   if (!online) return;
 
+  // Catalogue first — these are what the screens render.
   await cachedQuery("categories", api.exams.listCategories, {}, ["categories"]);
   await cachedQuery("exams", api.exams.listExams, {}, ["exams"]);
   await cachedQuery("studyNotes", api.content.listStudyNotes, {}, ["studyNotes"]);
   await cachedQuery("affairs:latest", api.content.listCurrentAffairs, { limit: 60 }, ["currentAffairs"]);
-  await cachedQuery("practiceTree", api.practiceBank.getPracticeTree, {}, ["practice"]);
+  await cachedQuery("affairs:oldest", api.content.getOldestCurrentAffairDate, {}, ["currentAffairs"]);
+  await cachedQuery("tests:pyp", api.exams.listTests, { type: "pyp" }, ["tests"]);
+  const tree = await cachedQuery<{ chapters: { _id: string }[] }[]>(
+    "practiceTree",
+    api.practiceBank.getPracticeTree,
+    {},
+    ["practice"]
+  );
   const tests = await cachedQuery<{ _id: string; qv?: number }[]>(
     "tests",
     api.exams.listTests,
     {},
     ["tests"]
   );
+  const notes = await cachedQuery<{ slug: string }[]>(
+    "studyNotes",
+    api.content.listStudyNotes,
+    {},
+    ["studyNotes"]
+  );
 
-  const list = tests ?? [];
-  for (let i = 0; i < list.length; i++) {
-    if (!online) break;
-    await getQuestions(list[i]._id, list[i].qv ?? 0);
-    onProgress?.(i + 1, list.length);
+  // Then every question set, practice chapter and note body, so the whole app
+  // is readable with no connection. Each is a no-op once cached.
+  const chapters = (tree ?? []).flatMap((s) => s.chapters ?? []);
+  const total = (tests ?? []).length + chapters.length + (notes ?? []).length;
+  let done = 0;
+  const step = () => onProgress?.(++done, total);
+
+  for (const t of tests ?? []) {
+    if (!online) return;
+    await getQuestions(t._id, t.qv ?? 0);
+    step();
+  }
+  for (const c of chapters) {
+    if (!online) return;
+    await cachedQuery(`practice:${c._id}`, api.practiceBank.getChapterPractice, { chapterId: c._id }, ["practice"]);
+    step();
+  }
+  for (const n of notes ?? []) {
+    if (!online) return;
+    await cachedQuery(`note:${n.slug}`, api.content.getStudyNote, { slug: n.slug }, ["studyNotes"]);
+    step();
   }
 }

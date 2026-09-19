@@ -9,6 +9,7 @@ import { useEffect } from "react";
 import { AppState } from "react-native";
 import { prefetchAll, invalidateVersions } from "../lib/offline";
 import { flushAttempts } from "../lib/attempts";
+import { flushBookmarks } from "../lib/bookmarks";
 
 export default function RootLayout() {
   // Warm the on-device catalogue and push any attempt taken offline. Both are
@@ -17,6 +18,7 @@ export default function RootLayout() {
     const sync = () => {
       invalidateVersions();
       flushAttempts().catch(() => {});
+      flushBookmarks().catch(() => {});
       prefetchAll().catch(() => {});
     };
     sync();
