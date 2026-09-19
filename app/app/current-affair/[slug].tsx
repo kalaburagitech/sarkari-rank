@@ -10,10 +10,9 @@ export default function CurrentAffairScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const router = useRouter();
   const { colors } = useTheme();
-  const affairs = useCached<any[]>("affairs:latest", api.content.listCurrentAffairs, { limit: 60 }, ["currentAffairs"]);
-  const article = affairs?.find((a) => a.slug === slug);
+  const article = useCached<any>(`affair:${slug}`, api.content.getCurrentAffair, { slug }, ["currentAffairs"]);
 
-  if (affairs === undefined) return <LoadingScreen message="Loading article..." />;
+  if (article === undefined) return <LoadingScreen message="Loading article..." />;
 
   return (
     <View className="flex-1 bg-slate-50 dark:bg-ink-bg">

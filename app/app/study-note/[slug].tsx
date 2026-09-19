@@ -16,7 +16,7 @@ export default function StudyNoteScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const note = useCached<any>(`note:${slug}`, api.content.getStudyNote, { slug }, ["studyNotes"]);
-  const exams = useCached<any[]>("exams", api.exams.listExams, {}, ["exams"]);
+  const exams = useCached<any[]>("exams", api.exams.listExams, { view: "lite" }, ["exams"]);
   // Sibling notes in the same exam — used to find other language versions of
   // this chapter (same subject + topic).
   const examNotes = useCached<any[]>(

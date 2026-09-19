@@ -13,7 +13,7 @@ export default function CategoryScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const categories = useCached<any[]>("categories", api.exams.listCategories, {}, ["categories"]);
-  const allExams = useCached<any[]>("exams", api.exams.listExams, {}, ["exams"]);
+  const allExams = useCached<any[]>("exams", api.exams.listExams, { view: "lite" }, ["exams"]);
 
   const category = useMemo(
     () => categories?.find((c) => c.slug === slug),

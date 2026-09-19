@@ -32,7 +32,7 @@ export default function ExamDetailScreen() {
   const exam = useCached<any>(`exam:${slug}`, api.exams.getExam, { slug }, ["exams"]);
   // Exam screen shows Previous Year Papers only — mock/practice/quiz tests live
   // in the Tests tab, study notes in the Notes screen.
-  const tests = useCached<any[]>(`tests:${exam?._id}`, api.exams.listTests, exam ? { examId: exam._id } : "skip", ["tests"]);
+  const tests = useCached<any[]>(`tests:${exam?._id}`, api.exams.listTests, exam ? { examId: exam._id, view: "lite" } : "skip", ["tests"]);
 
   if (exam === undefined) return <LoadingScreen message="Loading exam..." />;
   if (!exam) return <LoadingScreen message="Exam not found" />;

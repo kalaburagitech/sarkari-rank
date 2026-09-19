@@ -13,7 +13,7 @@ export default function BookmarksScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const { bookmarks } = useBookmarks(user?._id);
-  const tests = useCached<any[]>("tests", api.exams.listTests, {}, ["tests"]);
+  const tests = useCached<any[]>("tests", api.exams.listTests, { view: "lite" }, ["tests"]);
 
   const getTestTitle = (testId: string) => tests?.find((t) => t._id === testId)?.title ?? "Saved Test";
 

@@ -16,7 +16,7 @@ export default function LeaderboardScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const { user } = useAuth();
-  const tests = useCached<any[]>("tests", api.exams.listTests, {}, ["tests"]);
+  const tests = useCached<any[]>("tests", api.exams.listTests, { view: "lite" }, ["tests"]);
   const [selectedTestId, setSelectedTestId] = useState<Id<"tests"> | null>(null);
 
   const mockTests = tests?.filter((t) => t.type === "mock" || t.type === "live").slice(0, 15) ?? [];

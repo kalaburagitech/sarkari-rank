@@ -32,8 +32,8 @@ type PaperGroup = {
 export default function PreviousYearPapersScreen() {
   const router = useRouter();
   const { colors } = useTheme();
-  const papers = useCached<Paper[]>("tests:pyp", api.exams.listTests, { type: "pyp" }, ["tests"]);
-  const exams = useCached<any[]>("exams", api.exams.listExams, {}, ["exams"]);
+  const papers = useCached<Paper[]>("tests:pyp", api.exams.listTests, { type: "pyp", view: "lite" }, ["tests"]);
+  const exams = useCached<any[]>("exams", api.exams.listExams, { view: "lite" }, ["exams"]);
 
   const [examId, setExamId] = useState<string>("");
 

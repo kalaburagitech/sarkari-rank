@@ -21,8 +21,8 @@ export default function TestsScreen() {
   const { type: paramType } = useLocalSearchParams();
   const [filter, setFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
-  const tests = useCached<any[]>("tests", api.exams.listTests, {}, ["tests"]);
-  const exams = useCached<any[]>("exams", api.exams.listExams, {}, ["exams"]);
+  const tests = useCached<any[]>("tests", api.exams.listTests, { view: "lite" }, ["tests"]);
+  const exams = useCached<any[]>("exams", api.exams.listExams, { view: "lite" }, ["exams"]);
 
   // Keep the active filter in sync with the incoming URL param (deep links,
   // "View All" links). Ignore "pyp" — those belong to the dedicated screen.

@@ -71,7 +71,7 @@ export default function CurrentAffairsScreen() {
   const affairs = useCached<Affair[]>(
     range ? `affairs:${year}:${month ?? "all"}` : "affairs:latest",
     api.content.listCurrentAffairs,
-    range ? { ...range, limit: 500 } : { limit: 60 },
+    range ? { ...range, limit: 500, view: "lite" } : { limit: 60, view: "lite" },
     ["currentAffairs"]
   );
   const oldestDate = useCached<number | null>("affairs:oldest", api.content.getOldestCurrentAffairDate, {}, ["currentAffairs"]);

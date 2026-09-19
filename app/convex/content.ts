@@ -4,8 +4,17 @@ import { v } from "convex/values";
 
 // ─── Study Notes ─────────────────────────────────────────────
 
+// A note body is markdown measured in kilobytes. Listings take a preview.
+const liteNote = <T extends { content?: string }>(n: T) => ({
+  ...n,
+  content: undefined,
+  contentPreview: n.content ? n.content.slice(0, 180) : undefined,
+  hasContent: !!n.content,
+});
+
 export const listStudyNotes = query({
   args: {
+    view: v.optional(v.literal("lite")),
     examId: v.optional(v.id("exams")),
     includeInactive: v.optional(v.boolean()),
   },
@@ -21,13 +30,14 @@ export const listStudyNotes = query({
     }
     const active = notes.filter((n) => args.includeInactive || n.isActive);
     // Resolve PDF download URLs for any note backed by a stored file.
-    return await Promise.all(
+    const rows = await Promise.all(
       active.map(async (n) => ({
         ...n,
         language: n.language ?? "English",
         pdfUrl: n.pdfStorageId ? await ctx.storage.getUrl(n.pdfStorageId) : null,
       }))
     );
+    return args.view === "lite" ? rows.map(liteNote) : rows;
   },
 });
 
@@ -153,9 +163,14 @@ export const listCurrentAffairs = query({
     // bounds in device-local time so month edges don't drift by timezone.
     start: v.optional(v.number()),
     end: v.optional(v.number()),
+    view: v.optional(v.literal("lite")),
   },
   handler: async (ctx, args) => {
     const limit = args.limit ?? 20;
+    // Listing screens show title/summary/date only; the article body is
+    // fetched per slug by getCurrentAffair.
+    const project = <T extends { content?: string }>(rows: T[]): T[] =>
+      args.view === "lite" ? rows.map((r) => ({ ...r, content: undefined })) : rows;
     const { start, end } = args;
     if (start !== undefined && end !== undefined) {
       const items = await ctx.db
@@ -164,7 +179,7 @@ export const listCurrentAffairs = query({
         .order("desc")
         .filter((q) => q.eq(q.field("isActive"), true))
         .take(limit);
-      return items.sort((a, b) => b.date - a.date);
+      return project(items.sort((a, b) => b.date - a.date));
     }
     // Read only ~limit newest active rows (creation order ≈ publish date)
     // instead of collecting the entire, ever-growing table on every call.
@@ -173,7 +188,18 @@ export const listCurrentAffairs = query({
       .order("desc")
       .filter((q) => q.eq(q.field("isActive"), true))
       .take(limit);
-    return items.sort((a, b) => b.date - a.date);
+    return project(items.sort((a, b) => b.date - a.date));
+  },
+});
+
+// One article, for the detail screen — replaces re-reading the whole feed.
+export const getCurrentAffair = query({
+  args: { slug: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("currentAffairs")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .first();
   },
 });
 

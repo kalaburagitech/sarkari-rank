@@ -14,10 +14,10 @@ export default function HomeScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const categories = useCached<any[]>("categories", api.exams.listCategories, {}, ["categories"]);
-  const exams = useCached<any[]>("exams", api.exams.listExams, {}, ["exams"]);
-  const tests = useCached<any[]>("tests", api.exams.listTests, {}, ["tests"]);
+  const exams = useCached<any[]>("exams", api.exams.listExams, { view: "lite" }, ["exams"]);
+  const tests = useCached<any[]>("tests", api.exams.listTests, { view: "lite" }, ["tests"]);
   const dailyQuiz = useCached<any>("dailyQuiz", api.content.getDailyQuiz, {}, ["dailyQuiz"]);
-  const currentAffairs = useCached<any[]>("affairs:home", api.content.listCurrentAffairs, { limit: 5 }, ["currentAffairs"]);
+  const currentAffairs = useCached<any[]>("affairs:home", api.content.listCurrentAffairs, { limit: 5, view: "lite" }, ["currentAffairs"]);
   const notifications = useCached<any[]>(`notifications:${user?._id}`, api.content.listNotifications, user ? { userId: user._id } : "skip", ["notifications"]);
   const analytics = useCached<any>(`analytics:${user?._id}`, api.attempts.getPerformanceAnalytics, user ? { userId: user._id } : "skip", []);
   const unreadCount = notifications?.filter((n) => !n.isRead).length ?? 0;

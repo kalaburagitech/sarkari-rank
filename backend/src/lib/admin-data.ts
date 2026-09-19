@@ -25,8 +25,41 @@ export const adminHttp = new ConvexHttpClient(CONVEX_URL);
 
 const listeners = new Set<() => void>();
 
+// Several components on one page ask for the same list (exams, series...).
+// Without this they each fire their own request on mount and again after every
+// write. Identical in-flight reads share one response, and a just-fetched
+// result is reused for a moment so remounts (tab switches, modals) are free.
+const inflight = new Map<string, Promise<unknown>>();
+const recent = new Map<string, { at: number; value: unknown }>();
+const REUSE_MS = 2000;
+
+function cacheKey(ref: unknown, args: unknown) {
+  return `${JSON.stringify(ref)}:${JSON.stringify(args)}`;
+}
+
+async function sharedQuery(ref: FunctionReference<"query">, args: Record<string, unknown>) {
+  const key = cacheKey(ref, args);
+  const hit = recent.get(key);
+  if (hit && Date.now() - hit.at < REUSE_MS) return hit.value;
+  const running = inflight.get(key);
+  if (running) return running;
+
+  const p = adminHttp
+    .query(ref, args)
+    .then((value) => {
+      recent.set(key, { at: Date.now(), value });
+      return value;
+    })
+    .finally(() => inflight.delete(key));
+  inflight.set(key, p);
+  return p;
+}
+
 /** Re-run every mounted admin query — called after any admin mutation. */
 export function refreshAdminData() {
+  // A write invalidates whatever was just read, so the reuse window is
+  // cleared before the refetch round.
+  recent.clear();
   listeners.forEach((l) => l());
 }
 
@@ -42,8 +75,7 @@ export function useOnce<Query extends FunctionReference<"query">>(
       setData(undefined);
       return;
     }
-    adminHttp
-      .query(ref, JSON.parse(argsKey))
+    sharedQuery(ref, JSON.parse(argsKey))
       .then((d) => setData(d as FunctionReturnType<Query>))
       .catch(() => setData(undefined));
     // eslint-disable-next-line react-hooks/exhaustive-deps

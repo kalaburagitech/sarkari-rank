@@ -95,10 +95,24 @@ export const deleteCategory = mutation({
 
 // ─── Exams ───────────────────────────────────────────────────
 
+// Long-form exam text (syllabus, eligibility, pattern) is only ever read on
+// the exam detail screen, which calls getExam. Listing screens ask for "lite"
+// and skip ~550 bytes per exam.
+// Blanked rather than deleted: Convex drops undefined fields from the wire
+// payload, so the saving is the same while the row keeps one shape for every
+// caller (the admin editor still reads the full document).
+const liteExam = <T extends { syllabus?: string; eligibility?: string; examPattern?: string }>(e: T): T => ({
+  ...e,
+  syllabus: undefined,
+  eligibility: undefined,
+  examPattern: undefined,
+});
+
 export const listExams = query({
   args: {
     categoryId: v.optional(v.id("examCategories")),
     includeInactive: v.optional(v.boolean()),
+    view: v.optional(v.literal("lite")),
   },
   handler: async (ctx, args) => {
     let exams;
@@ -110,9 +124,10 @@ export const listExams = query({
     } else {
       exams = await ctx.db.query("exams").collect();
     }
-    return exams
+    const rows = exams
       .filter((e) => args.includeInactive || e.isActive)
       .sort((a, b) => a.order - b.order);
+    return args.view === "lite" ? rows.map(liteExam) : rows;
   },
 });
 
@@ -294,6 +309,7 @@ export const listTests = query({
       )
     ),
     includeInactive: v.optional(v.boolean()),
+    view: v.optional(v.literal("lite")),
   },
   handler: async (ctx, args) => {
     let tests;
@@ -323,10 +339,22 @@ export const listTests = query({
     // mutations) instead of scanning every question document per test. That scan
     // read thousands of full docs on every call and was the main source of
     // database bandwidth.
-    return activeTests.map((test) => ({
-      ...test,
-      liveQuestionCount: test.totalQuestions,
-    }));
+    return activeTests.map((test) => {
+      // Lists show title/type/counts; the description is only read on the test
+      // detail screen, which fetches the test by id.
+      if (args.view === "lite") {
+        // Lists address tests by id and read totalQuestions; slug, description
+        // and the duplicate count are dead weight across hundreds of rows.
+        return {
+          ...test,
+          description: undefined,
+          slug: undefined,
+          paperGroup: undefined,
+          liveQuestionCount: test.totalQuestions,
+        };
+      }
+      return { ...test, liveQuestionCount: test.totalQuestions };
+    });
   },
 });
 
@@ -931,9 +959,6 @@ export const listQuestionsRich = query({
     ),
   },
   handler: async (ctx, args) => {
-    const exams = await ctx.db.query("exams").collect();
-    const examById = new Map(exams.map((e) => [e._id, e]));
-
     // Resolve the set of container tests we care about.
     let tests;
     if (args.testId) {
@@ -948,6 +973,15 @@ export const listQuestionsRich = query({
       tests = await ctx.db.query("tests").collect();
     }
     if (args.type) tests = tests.filter((t) => t.type === args.type);
+
+    // Point-read only the exams these tests belong to, instead of collecting
+    // the whole exams table on every call.
+    const examIds = [...new Set(tests.map((t) => t.examId))];
+    const examById = new Map(
+      (await Promise.all(examIds.map((id) => ctx.db.get(id))))
+        .filter((e): e is NonNullable<typeof e> => !!e)
+        .map((e) => [e._id, e])
+    );
 
     const rows = [];
     for (const test of tests) {
@@ -993,14 +1027,20 @@ export const listQuestionsPaginated = query({
       : ctx.db.query("questions").order("desc");
     const result = await base.paginate(args.paginationOpts);
 
-    // Enrich just this page. Exams table is tiny; tests are point-read per page.
-    const exams = await ctx.db.query("exams").collect();
-    const examById = new Map(exams.map((e) => [e._id, e]));
+    // Enrich just this page: point-read the tests on it, then only the exams
+    // those tests belong to. Collecting the exams table per page was a read of
+    // every exam document (45 KB) for a 50-row page.
     const testIds = [...new Set(result.page.map((q) => q.testId))];
     const testEntries = await Promise.all(
       testIds.map(async (id) => [id, await ctx.db.get(id)] as const)
     );
     const testById = new Map(testEntries);
+    const examIds = [...new Set([...testById.values()].filter(Boolean).map((t) => t!.examId))];
+    const examById = new Map(
+      (await Promise.all(examIds.map((id) => ctx.db.get(id))))
+        .filter((e): e is NonNullable<typeof e> => !!e)
+        .map((e) => [e._id, e])
+    );
 
     const page = result.page.map((q) => {
       const test = testById.get(q.testId);

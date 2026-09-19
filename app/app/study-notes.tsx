@@ -12,7 +12,7 @@ type Note = {
   _id: string;
   slug: string;
   title: string;
-  content?: string;
+  contentPreview?: string;
   summary?: string;
   subject?: string;
   topic?: string;
@@ -25,8 +25,8 @@ type Note = {
 export default function StudyNotesScreen() {
   const router = useRouter();
   const { colors } = useTheme();
-  const notes = useCached<Note[]>("studyNotes", api.content.listStudyNotes, {}, ["studyNotes"]);
-  const exams = useCached<any[]>("exams", api.exams.listExams, {}, ["exams"]);
+  const notes = useCached<Note[]>("studyNotes", api.content.listStudyNotes, { view: "lite" }, ["studyNotes"]);
+  const exams = useCached<any[]>("exams", api.exams.listExams, { view: "lite" }, ["exams"]);
   const [examId, setExamId] = useState<string>("");
 
   const filtered = useMemo(
@@ -97,7 +97,7 @@ export default function StudyNotesScreen() {
                           <View className="flex-1 mr-2">
                             <Text className="font-bold text-slate-900 dark:text-slate-50 text-[15px]">{note.title}</Text>
                             <Text className="text-slate-400 dark:text-slate-400 text-sm mt-1 leading-5" numberOfLines={2}>
-                              {note.summary || note.content || (note.pdfUrl ? "PDF document" : "")}
+                              {note.summary || note.contentPreview || (note.pdfUrl ? "PDF document" : "")}
                             </Text>
                           </View>
                           <Ionicons name={note.pdfUrl ? "document-text" : "chevron-forward"} size={18} color="#94A3B8" />

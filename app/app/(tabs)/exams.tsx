@@ -13,7 +13,7 @@ export default function ExamsScreen() {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const categories = useCached<any[]>("categories", api.exams.listCategories, {}, ["categories"]);
-  const exams = useCached<any[]>("exams", api.exams.listExams, {}, ["exams"]);
+  const exams = useCached<any[]>("exams", api.exams.listExams, { view: "lite" }, ["exams"]);
 
   const examCountByCategory = useMemo(() => {
     const map: Record<string, number> = {};
