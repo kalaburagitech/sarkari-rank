@@ -1,13 +1,13 @@
 "use client";
 
-import { useQuery, useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
+import { useOnce, useAdminMutation } from "@/lib/admin-data";
 import { toast } from "sonner";
 import { PageHeader, LoadingState, EmptyState, TableWrap, Badge, Button } from "@/components/admin/ui";
 
 export default function UsersPage() {
-  const users = useQuery(api.content.listAllUsers);
-  const createSubscription = useMutation(api.content.createSubscription);
+  const users = useOnce(api.content.listAllUsers);
+  const createSubscription = useAdminMutation(api.content.createSubscription);
 
   const grantPremium = async (userId: string) => {
     try {

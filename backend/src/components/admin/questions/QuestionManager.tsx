@@ -2,8 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useQuery, usePaginatedQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
+import { useOnce, useAdminMutation, usePagedOnce } from "@/lib/admin-data";
 import {
   Plus,
   FileJson,
@@ -73,24 +73,25 @@ export function QuestionManager() {
   const [adding, setAdding] = useState(false);
   const [showImport, setShowImport] = useState(false);
 
-  const exams = useQuery(api.exams.listExams, {});
-  const seriesList = useQuery(api.exams.listTestSeries, { includeInactive: true });
+  const exams = useOnce(api.exams.listExams, {});
+  const seriesList = useOnce(api.exams.listTestSeries, { includeInactive: true });
   // Paginated: reads ~50 questions per page instead of the whole table.
   // Exam/subject/difficulty/status/search are applied client-side over the
   // pages loaded so far — click "Load more" to pull in additional pages.
   const {
-    results: rows,
-    status,
+    rows,
+    loading: pageLoading,
+    isDone,
     loadMore,
-  } = usePaginatedQuery(
-    api.exams.listQuestionsPaginated,
-    {},
-    { initialNumItems: 50 }
-  ) as unknown as {
-    results: Row[];
-    status: "LoadingFirstPage" | "CanLoadMore" | "LoadingMore" | "Exhausted";
-    loadMore: (n: number) => void;
-  };
+  } = usePagedOnce<Row>(api.exams.listQuestionsPaginated, {}, 50);
+  const status: "LoadingFirstPage" | "CanLoadMore" | "LoadingMore" | "Exhausted" =
+    pageLoading && rows.length === 0
+      ? "LoadingFirstPage"
+      : pageLoading
+        ? "LoadingMore"
+        : isDone
+          ? "Exhausted"
+          : "CanLoadMore";
 
   const subjects = useMemo(() => {
     const s = new Set<string>();
@@ -289,7 +290,7 @@ export function QuestionManager() {
                   {status !== "Exhausted" ? " · filters apply to loaded pages" : ""}
                 </span>
                 {status === "CanLoadMore" && (
-                  <Button variant="secondary" onClick={() => loadMore(50)}>
+                  <Button variant="secondary" onClick={() => loadMore()}>
                     Load 50 more
                   </Button>
                 )}

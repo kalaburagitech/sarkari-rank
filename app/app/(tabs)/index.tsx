@@ -1,9 +1,10 @@
 import { View, Text, ScrollView, TouchableOpacity } from "react-native";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
+import { useCached } from "../../lib/offline";
 import { useAuth } from "../../lib/auth";
 import { Link } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { SectionHeader, PremiumCard, Badge, StatBox, LoadingScreen, DisclaimerBanner } from "../../components/ui";
 import { useRouter } from "expo-router";
 import { useTheme } from "../../lib/theme";
@@ -12,13 +13,13 @@ export default function HomeScreen() {
   const { colors } = useTheme();
   const router = useRouter();
   const { user } = useAuth();
-  const categories = useQuery(api.exams.listCategories, {});
-  const exams = useQuery(api.exams.listExams, {});
-  const tests = useQuery(api.exams.listTests, {});
-  const dailyQuiz = useQuery(api.content.getDailyQuiz, {});
-  const currentAffairs = useQuery(api.content.listCurrentAffairs, { limit: 5 });
-  const notifications = useQuery(api.content.listNotifications, user ? { userId: user._id } : "skip");
-  const analytics = useQuery(api.attempts.getPerformanceAnalytics, user ? { userId: user._id } : "skip");
+  const categories = useCached<any[]>("categories", api.exams.listCategories, {}, ["categories"]);
+  const exams = useCached<any[]>("exams", api.exams.listExams, { view: "lite" }, ["exams"]);
+  const tests = useCached<any[]>("tests", api.exams.listTests, { view: "lite" }, ["tests"]);
+  const dailyQuiz = useCached<any>("dailyQuiz", api.content.getDailyQuiz, {}, ["dailyQuiz"]);
+  const currentAffairs = useCached<any[]>("affairs:home", api.content.listCurrentAffairs, { limit: 5, view: "lite" }, ["currentAffairs"]);
+  const notifications = useCached<any[]>(`notifications:${user?._id}`, api.content.listNotifications, user ? { userId: user._id } : "skip", ["notifications"]);
+  const analytics = useCached<any>(`analytics:${user?._id}`, api.attempts.getPerformanceAnalytics, user ? { userId: user._id } : "skip", []);
   const unreadCount = notifications?.filter((n) => !n.isRead).length ?? 0;
 
   if (!categories || !tests || !exams) return <LoadingScreen message="Loading SarkariRank..." />;

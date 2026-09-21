@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
+import { useOnce, useAdminMutation } from "@/lib/admin-data";
 import { Id } from "@convex/_generated/dataModel";
 import { toast } from "sonner";
 import { BookOpen, CalendarClock, Layers, AlertCircle, Plus, X } from "lucide-react";
@@ -107,8 +107,8 @@ export function QuestionForm({
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const addQuestion = useMutation(api.exams.addQuestion);
-  const updateQuestion = useMutation(api.exams.updateQuestion);
+  const addQuestion = useAdminMutation(api.exams.addQuestion);
+  const updateQuestion = useAdminMutation(api.exams.updateQuestion);
 
   // Locked context: adding straight into a known container (a Previous Year
   // paper or a series test) — hide the type/exam/year pickers.

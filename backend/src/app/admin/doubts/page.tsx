@@ -1,14 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery, useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
+import { useOnce, useAdminMutation } from "@/lib/admin-data";
 import { toast } from "sonner";
 import { PageHeader, LoadingState, EmptyState, Card, Button, Textarea } from "@/components/admin/ui";
 
 export default function DoubtsPage() {
-  const doubts = useQuery(api.content.listDoubts, { status: "pending" });
-  const answerDoubt = useMutation(api.content.answerDoubt);
+  const doubts = useOnce(api.content.listDoubts, { status: "pending" });
+  const answerDoubt = useAdminMutation(api.content.answerDoubt);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState<string | null>(null);
 

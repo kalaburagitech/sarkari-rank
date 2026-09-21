@@ -2,7 +2,8 @@ import { View, Text, ScrollView, TouchableOpacity } from "react-native";
 import { useLocalSearchParams, useRouter, Link } from "expo-router";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { Ionicons } from "@expo/vector-icons";
+import { useCached } from "../../lib/offline";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useMemo } from "react";
 import { PremiumCard, Badge, LoadingScreen, EmptyScreen, ScreenHeader } from "../../components/ui";
 import { useTheme } from "../../lib/theme";
@@ -11,8 +12,8 @@ export default function CategoryScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const router = useRouter();
   const { colors } = useTheme();
-  const categories = useQuery(api.exams.listCategories, {});
-  const allExams = useQuery(api.exams.listExams, {});
+  const categories = useCached<any[]>("categories", api.exams.listCategories, {}, ["categories"]);
+  const allExams = useCached<any[]>("exams", api.exams.listExams, { view: "lite" }, ["exams"]);
 
   const category = useMemo(
     () => categories?.find((c) => c.slug === slug),

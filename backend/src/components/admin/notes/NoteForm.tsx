@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
+import { useOnce, useAdminMutation } from "@/lib/admin-data";
 import { Id } from "@convex/_generated/dataModel";
 import { toast } from "sonner";
 import { AlertCircle, Bold, Italic, Heading2, Heading3, List, ListOrdered, Quote, Eye, Pencil, UploadCloud, FileText, X } from "lucide-react";
@@ -45,9 +45,9 @@ export function NoteForm({
   editTarget?: NoteTarget;
   onClose: () => void;
 }) {
-  const createNote = useMutation(api.content.createStudyNote);
-  const updateNote = useMutation(api.content.updateStudyNote);
-  const generateUploadUrl = useMutation(api.content.generateNoteUploadUrl);
+  const createNote = useAdminMutation(api.content.createStudyNote);
+  const updateNote = useAdminMutation(api.content.updateStudyNote);
+  const generateUploadUrl = useAdminMutation(api.content.generateNoteUploadUrl);
 
   const [examId, setExamId] = useState(editTarget?.examId ?? preset?.examId ?? "");
   const [subject, setSubject] = useState(editTarget?.subject ?? preset?.subject ?? "");

@@ -13,6 +13,7 @@
  * copy of copyrighted past papers — and is fully editable from the admin dashboard.
  */
 import { mutation } from "./_generated/server";
+import { touchAll } from "./sync";
 import { v } from "convex/values";
 
 function slugify(text: string): string {
@@ -1267,6 +1268,7 @@ function assembleQuestions(poolKeys: string[], limit?: number): Q[] {
 export const seed = mutation({
   args: {},
   handler: async (ctx) => {
+    await touchAll(ctx);
     // 1) Push existing (national) categories below Karnataka & tag region.
     const existingCats = await ctx.db.query("examCategories").collect();
     const kaSlugs = new Set(KA_BODIES.map((b) => b.slug));

@@ -1,5 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { bumpCounter } from "./sync";
 
 function stripQuestionAnswers<T extends { correctOptionId: string; explanation?: string }>(
   questions: T[]
@@ -7,195 +8,118 @@ function stripQuestionAnswers<T extends { correctOptionId: string; explanation?:
   return questions.map(({ correctOptionId, explanation, ...rest }) => rest);
 }
 
-export const startAttempt = mutation({
-  args: { userId: v.id("users"), testId: v.id("tests") },
+// One write per finished attempt. The app runs the whole test offline from
+// its cached question set and posts the graded result here — the old
+// start/answer-per-tap/submit trio meant ~2N round trips and rewrote the full
+// answers array on every option tap.
+export const recordAttempt = mutation({
+  args: {
+    userId: v.id("users"),
+    testId: v.id("tests"),
+    startedAt: v.number(),
+    timeTakenSeconds: v.number(),
+    answers: v.array(
+      v.object({
+        questionId: v.id("questions"),
+        selectedOptionId: v.optional(v.string()),
+        timeSpentSeconds: v.number(),
+      })
+    ),
+  },
   handler: async (ctx, args) => {
     const test = await ctx.db.get(args.testId);
-    if (!test || !test.isActive) throw new Error("Test not found");
+    if (!test) throw new Error("Test not found");
 
-    const user = await ctx.db.get(args.userId);
-    if (!user) throw new Error("User not found");
-
-    if (test.isPremium && !test.isFree && !user.isPremium) {
-      throw new Error("Premium Pass required for this test");
-    }
-
+    // Grade server-side so a tampered client can't post a fake score.
     const questions = await ctx.db
       .query("questions")
       .withIndex("by_test", (q) => q.eq("testId", args.testId))
       .collect();
-
-    if (questions.length === 0) {
-      throw new Error("No questions available for this test yet. Admin can add questions from dashboard.");
-    }
-
-    const existing = await ctx.db
-      .query("testAttempts")
-      .withIndex("by_user_test", (q) =>
-        q.eq("userId", args.userId).eq("testId", args.testId)
-      )
-      .filter((q) => q.eq(q.field("status"), "in_progress"))
-      .first();
-
-    if (existing) return existing._id;
-
-    return await ctx.db.insert("testAttempts", {
-      userId: args.userId,
-      testId: args.testId,
-      answers: questions
-        .sort((a, b) => a.order - b.order)
-        .map((q) => ({
-          questionId: q._id,
-          isCorrect: false,
-          timeSpentSeconds: 0,
-        })),
-      score: 0,
-      totalMarks: test.totalMarks,
-      accuracy: 0,
-      timeTakenSeconds: 0,
-      status: "in_progress",
-      startedAt: Date.now(),
-    });
-  },
-});
-
-export const submitAnswer = mutation({
-  args: {
-    attemptId: v.id("testAttempts"),
-    questionId: v.id("questions"),
-    selectedOptionId: v.string(),
-    timeSpentSeconds: v.number(),
-  },
-  handler: async (ctx, args) => {
-    const attempt = await ctx.db.get(args.attemptId);
-    if (!attempt || attempt.status !== "in_progress") {
-      throw new Error("Invalid attempt");
-    }
-
-    const question = await ctx.db.get(args.questionId);
-    if (!question) throw new Error("Question not found");
-
-    const isCorrect = question.correctOptionId === args.selectedOptionId;
-    const updatedAnswers = attempt.answers.map((a) =>
-      a.questionId === args.questionId
-        ? {
-            ...a,
-            selectedOptionId: args.selectedOptionId,
-            isCorrect,
-            timeSpentSeconds: args.timeSpentSeconds,
-          }
-        : a
-    );
-
-    await ctx.db.patch(args.attemptId, { answers: updatedAnswers });
-
-    // Return correctness so the client can show instant feedback + explanation.
-    return {
-      isCorrect,
-      correctOptionId: question.correctOptionId,
-      explanation: question.explanation,
-      explanationKn: question.explanationKn,
-    };
-  },
-});
-
-export const submitTest = mutation({
-  args: { attemptId: v.id("testAttempts") },
-  handler: async (ctx, args) => {
-    const attempt = await ctx.db.get(args.attemptId);
-    if (!attempt) throw new Error("Attempt not found");
-
-    const test = await ctx.db.get(attempt.testId);
-    if (!test) throw new Error("Test not found");
+    const byId = new Map(questions.map((q) => [q._id, q]));
 
     let score = 0;
     let correct = 0;
-    let totalTime = 0;
-
-    for (const answer of attempt.answers) {
-      totalTime += answer.timeSpentSeconds;
-      if (answer.selectedOptionId) {
-        const question = await ctx.db.get(answer.questionId);
-        if (question) {
-          if (answer.isCorrect) {
-            score += question.marks;
-            correct++;
-          } else {
-            score -= question.negativeMarks;
-          }
+    const subjects: Record<string, { correct: number; total: number }> = {};
+    const graded = args.answers.map((a) => {
+      const q = byId.get(a.questionId);
+      const isCorrect = !!q && !!a.selectedOptionId && q.correctOptionId === a.selectedOptionId;
+      if (q && a.selectedOptionId) {
+        if (isCorrect) {
+          score += q.marks;
+          correct++;
+        } else {
+          score -= q.negativeMarks;
+        }
+        if (q.subject) {
+          const bucket = (subjects[q.subject] ??= { correct: 0, total: 0 });
+          bucket.total++;
+          if (isCorrect) bucket.correct++;
         }
       }
-    }
+      return { ...a, isCorrect };
+    });
 
-    const answered = attempt.answers.filter((a) => a.selectedOptionId).length;
+    const answered = graded.filter((a) => a.selectedOptionId).length;
     const accuracy = answered > 0 ? (correct / answered) * 100 : 0;
+    score = Math.max(0, score);
 
-    await ctx.db.patch(args.attemptId, {
-      score: Math.max(0, score),
+    const attemptId = await ctx.db.insert("testAttempts", {
+      userId: args.userId,
+      testId: args.testId,
+      answers: graded,
+      score,
+      totalMarks: test.totalMarks,
       accuracy,
-      timeTakenSeconds: totalTime,
+      timeTakenSeconds: args.timeTakenSeconds,
       status: "completed",
+      startedAt: args.startedAt,
       completedAt: Date.now(),
+      // Rolled up here so the analytics screen never re-reads question docs.
+      subjectStats: Object.entries(subjects).map(([subject, d]) => ({
+        subject,
+        correct: d.correct,
+        total: d.total,
+      })),
     });
 
-    await ctx.db.patch(attempt.testId, {
-      attemptCount: test.attemptCount + 1,
-    });
+    await ctx.db.patch(args.testId, { attemptCount: test.attemptCount + 1 });
+    await bumpCounter(ctx, "attempts", 1);
 
-    const user = await ctx.db.get(attempt.userId);
+    const user = await ctx.db.get(args.userId);
     if (user) {
-      await ctx.db.patch(attempt.userId, {
+      await ctx.db.patch(args.userId, {
         totalTestsTaken: user.totalTestsTaken + 1,
         streak: user.streak + 1,
       });
     }
 
-    // Update leaderboard
-    const allAttempts = await ctx.db
-      .query("testAttempts")
-      .withIndex("by_test", (q) => q.eq("testId", attempt.testId))
-      .filter((q) => q.eq(q.field("status"), "completed"))
-      .collect();
-
-    const sorted = allAttempts
-      .sort((a, b) => b.score - a.score || a.timeTakenSeconds - b.timeTakenSeconds);
-
-    const rank =
-      sorted.findIndex((a) => a._id === args.attemptId) + 1;
-    const percentile =
-      allAttempts.length > 0
-        ? ((allAttempts.length - rank) / allAttempts.length) * 100
-        : 100;
-
-    await ctx.db.patch(args.attemptId, { rank, percentile });
-
-    const existingEntry = await ctx.db
+    // Leaderboard keeps one row per user per test; rank is worked out by the
+    // leaderboard screen, so a submit never reads every other attempt.
+    const existing = await ctx.db
       .query("leaderboard")
-      .withIndex("by_test", (q) => q.eq("testId", attempt.testId))
-      .filter((q) => q.eq(q.field("userId"), attempt.userId))
+      .withIndex("by_test", (q) => q.eq("testId", args.testId))
+      .filter((q) => q.eq(q.field("userId"), args.userId))
       .first();
-
-    if (existingEntry) {
-      if (score > existingEntry.score) {
-        await ctx.db.patch(existingEntry._id, {
+    if (existing) {
+      if (score > existing.score) {
+        await ctx.db.patch(existing._id, {
           score,
-          timeTakenSeconds: totalTime,
-          rank,
+          timeTakenSeconds: args.timeTakenSeconds,
           updatedAt: Date.now(),
         });
       }
     } else {
       await ctx.db.insert("leaderboard", {
-        userId: attempt.userId,
-        testId: attempt.testId,
+        userId: args.userId,
+        testId: args.testId,
         score,
-        timeTakenSeconds: totalTime,
-        rank,
+        timeTakenSeconds: args.timeTakenSeconds,
+        rank: 0,
         updatedAt: Date.now(),
       });
     }
 
-    return { score, accuracy, rank, percentile, correct, total: attempt.answers.length };
+    return { attemptId, score, accuracy, correct, total: graded.length };
   },
 });
 
@@ -219,19 +143,6 @@ export const getAttempt = query({
       test,
       questions: includeSolutions ? sorted : stripQuestionAnswers(sorted),
     };
-  },
-});
-
-export const getInProgressAttempt = query({
-  args: { userId: v.id("users"), testId: v.id("tests") },
-  handler: async (ctx, args) => {
-    return await ctx.db
-      .query("testAttempts")
-      .withIndex("by_user_test", (q) =>
-        q.eq("userId", args.userId).eq("testId", args.testId)
-      )
-      .filter((q) => q.eq(q.field("status"), "in_progress"))
-      .first();
   },
 });
 
@@ -285,13 +196,10 @@ export const getPerformanceAnalytics = query({
 
     const subjectMap: Record<string, { correct: number; total: number }> = {};
     for (const attempt of attempts) {
-      for (const answer of attempt.answers) {
-        const q = await ctx.db.get(answer.questionId);
-        if (q?.subject) {
-          if (!subjectMap[q.subject]) subjectMap[q.subject] = { correct: 0, total: 0 };
-          subjectMap[q.subject].total++;
-          if (answer.isCorrect) subjectMap[q.subject].correct++;
-        }
+      for (const s of attempt.subjectStats ?? []) {
+        const bucket = (subjectMap[s.subject] ??= { correct: 0, total: 0 });
+        bucket.total += s.total;
+        bucket.correct += s.correct;
       }
     }
 
@@ -332,14 +240,16 @@ export const getLeaderboard = query({
       .withIndex("by_test", (q) => q.eq("testId", args.testId))
       .collect();
 
-    const sorted = entries.sort((a, b) => a.rank - b.rank);
+    const sorted = entries.sort(
+      (a, b) => b.score - a.score || a.timeTakenSeconds - b.timeTakenSeconds
+    );
     const limited = sorted.slice(0, args.limit ?? 50);
 
     return await Promise.all(
-      limited.map(async (entry) => {
+      limited.map(async (entry, i) => {
         const user = await ctx.db.get(entry.userId);
         return {
-          rank: entry.rank,
+          rank: i + 1,
           score: entry.score,
           timeTakenSeconds: entry.timeTakenSeconds,
           userName: user?.name ?? "Anonymous",

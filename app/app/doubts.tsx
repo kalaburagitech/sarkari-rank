@@ -2,6 +2,7 @@ import { useState } from "react";
 import { View, Text, ScrollView, TextInput, Alert } from "react-native";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../convex/_generated/api";
+import { useCached } from "../lib/offline";
 import { useAuth } from "../lib/auth";
 import { useRouter } from "expo-router";
 import { ScreenHeader, PremiumCard, Badge, PrimaryButton, EmptyScreen } from "../components/ui";
@@ -11,7 +12,7 @@ export default function DoubtsScreen() {
   const { user } = useAuth();
   const router = useRouter();
   const { colors } = useTheme();
-  const doubts = useQuery(api.content.listDoubts, user ? { userId: user._id } : "skip");
+  const doubts = useCached<any[]>(`doubts:${user?._id}`, api.content.listDoubts, user ? { userId: user._id } : "skip", ["doubts"]);
   const submitDoubt = useMutation(api.content.submitDoubt);
   const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);

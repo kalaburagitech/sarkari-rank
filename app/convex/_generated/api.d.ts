@@ -18,6 +18,7 @@ import type * as questionBank from "../questionBank.js";
 import type * as seed from "../seed.js";
 import type * as seedKarnataka from "../seedKarnataka.js";
 import type * as seedProduction from "../seedProduction.js";
+import type * as sync from "../sync.js";
 import type * as users from "../users.js";
 
 import type {
@@ -37,6 +38,7 @@ declare const fullApi: ApiFromModules<{
   seed: typeof seed;
   seedKarnataka: typeof seedKarnataka;
   seedProduction: typeof seedProduction;
+  sync: typeof sync;
   users: typeof users;
 }>;
 

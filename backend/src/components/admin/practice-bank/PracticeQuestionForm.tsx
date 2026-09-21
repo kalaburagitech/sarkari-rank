@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
+import { useOnce, useAdminMutation } from "@/lib/admin-data";
 import { Id } from "@convex/_generated/dataModel";
 import { toast } from "sonner";
 import { AlertCircle, Plus, X } from "lucide-react";
@@ -45,8 +45,8 @@ export function PracticeQuestionForm({
   editTarget?: PracticeQuestion;
   onClose: () => void;
 }) {
-  const addQuestion = useMutation(api.practiceBank.addPracticeQuestion);
-  const updateQuestion = useMutation(api.practiceBank.updatePracticeQuestion);
+  const addQuestion = useAdminMutation(api.practiceBank.addPracticeQuestion);
+  const updateQuestion = useAdminMutation(api.practiceBank.updatePracticeQuestion);
 
   const [questionText, setQuestionText] = useState(editTarget?.questionText ?? "");
   const [options, setOptions] = useState<Opt[]>(editTarget?.options ?? emptyOptions());

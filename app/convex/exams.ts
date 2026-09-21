@@ -1,4 +1,5 @@
 import { mutation, query } from "./_generated/server";
+import { touch, touchTestQuestions } from "./sync";
 import type { MutationCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { v } from "convex/values";
@@ -25,8 +26,10 @@ export const createCategory = mutation({
     color: v.string(),
     isPopular: v.boolean(),
     order: v.number(),
+    region: v.optional(v.union(v.literal("karnataka"), v.literal("national"))),
   },
   handler: async (ctx, args) => {
+    await touch(ctx, "categories");
     return await ctx.db.insert("examCategories", { ...args, isActive: true });
   },
 });
@@ -41,8 +44,10 @@ export const updateCategory = mutation({
     isPopular: v.optional(v.boolean()),
     isActive: v.optional(v.boolean()),
     order: v.optional(v.number()),
+    region: v.optional(v.union(v.literal("karnataka"), v.literal("national"))),
   },
   handler: async (ctx, args) => {
+    await touch(ctx, "categories");
     const { id, ...updates } = args;
     const filtered = Object.fromEntries(
       Object.entries(updates).filter(([, v]) => v !== undefined)
@@ -51,19 +56,63 @@ export const updateCategory = mutation({
   },
 });
 
+// One-shot cleanup for categories created before the admin form had a Region
+// field: they were saved with region undefined, which the app renders as
+// National. Guesses Karnataka from the name/slug/description, leaves rows that
+// already have a region untouched. Anything guessed wrong is fixable by
+// editing the category.
+export const backfillRegions = mutation({
+  args: {},
+  handler: async (ctx) => {
+    await touch(ctx, "categories");
+    const KA = /karnataka|kpsc|\bkea\b|kptcl|kseb|bescom|bmtc|ksrtc|bbmp|kannada|bengaluru|bangalore|mysuru|mysore/i;
+    const cats = await ctx.db.query("examCategories").collect();
+    const karnataka: string[] = [];
+    const national: string[] = [];
+    for (const cat of cats) {
+      if (cat.region) continue;
+      const hay = `${cat.name} ${cat.slug} ${cat.description}`;
+      const region = KA.test(hay) ? "karnataka" : "national";
+      await ctx.db.patch(cat._id, { region });
+      (region === "karnataka" ? karnataka : national).push(cat.name);
+    }
+    return {
+      patched: karnataka.length + national.length,
+      karnataka,
+      national,
+      message: `Tagged ${karnataka.length} Karnataka + ${national.length} national categor${karnataka.length + national.length === 1 ? "y" : "ies"}.`,
+    };
+  },
+});
+
 export const deleteCategory = mutation({
   args: { id: v.id("examCategories") },
   handler: async (ctx, args) => {
+    await touch(ctx, "categories");
     await ctx.db.patch(args.id, { isActive: false });
   },
 });
 
 // ─── Exams ───────────────────────────────────────────────────
 
+// Long-form exam text (syllabus, eligibility, pattern) is only ever read on
+// the exam detail screen, which calls getExam. Listing screens ask for "lite"
+// and skip ~550 bytes per exam.
+// Blanked rather than deleted: Convex drops undefined fields from the wire
+// payload, so the saving is the same while the row keeps one shape for every
+// caller (the admin editor still reads the full document).
+const liteExam = <T extends { syllabus?: string; eligibility?: string; examPattern?: string }>(e: T): T => ({
+  ...e,
+  syllabus: undefined,
+  eligibility: undefined,
+  examPattern: undefined,
+});
+
 export const listExams = query({
   args: {
     categoryId: v.optional(v.id("examCategories")),
     includeInactive: v.optional(v.boolean()),
+    view: v.optional(v.literal("lite")),
   },
   handler: async (ctx, args) => {
     let exams;
@@ -75,9 +124,10 @@ export const listExams = query({
     } else {
       exams = await ctx.db.query("exams").collect();
     }
-    return exams
+    const rows = exams
       .filter((e) => args.includeInactive || e.isActive)
       .sort((a, b) => a.order - b.order);
+    return args.view === "lite" ? rows.map(liteExam) : rows;
   },
 });
 
@@ -107,6 +157,7 @@ export const createExam = mutation({
     syllabus: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await touch(ctx, "exams");
     return await ctx.db.insert("exams", {
       ...args,
       totalTests: 0,
@@ -132,6 +183,7 @@ export const updateExam = mutation({
     syllabus: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await touch(ctx, "exams");
     const { id, ...updates } = args;
     const filtered = Object.fromEntries(
       Object.entries(updates).filter(([, v]) => v !== undefined)
@@ -143,6 +195,7 @@ export const updateExam = mutation({
 export const deleteExam = mutation({
   args: { id: v.id("exams") },
   handler: async (ctx, args) => {
+    await touch(ctx, "exams");
     await ctx.db.patch(args.id, { isActive: false });
   },
 });
@@ -181,6 +234,7 @@ export const createTestSeries = mutation({
     tags: v.array(v.string()),
   },
   handler: async (ctx, args) => {
+    await touch(ctx, "tests");
     return await ctx.db.insert("testSeries", {
       ...args,
       totalTests: 0,
@@ -204,6 +258,7 @@ export const updateTestSeries = mutation({
     isActive: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
+    await touch(ctx, "tests");
     const { id, ...updates } = args;
     const filtered = Object.fromEntries(
       Object.entries(updates).filter(([, v]) => v !== undefined)
@@ -216,6 +271,7 @@ export const updateTestSeries = mutation({
 export const deleteTestSeriesCascade = mutation({
   args: { id: v.id("testSeries") },
   handler: async (ctx, args) => {
+    await touch(ctx, "tests");
     const tests = await ctx.db
       .query("tests")
       .withIndex("by_series", (q) => q.eq("testSeriesId", args.id))
@@ -253,6 +309,7 @@ export const listTests = query({
       )
     ),
     includeInactive: v.optional(v.boolean()),
+    view: v.optional(v.literal("lite")),
   },
   handler: async (ctx, args) => {
     let tests;
@@ -282,10 +339,22 @@ export const listTests = query({
     // mutations) instead of scanning every question document per test. That scan
     // read thousands of full docs on every call and was the main source of
     // database bandwidth.
-    return activeTests.map((test) => ({
-      ...test,
-      liveQuestionCount: test.totalQuestions,
-    }));
+    return activeTests.map((test) => {
+      // Lists show title/type/counts; the description is only read on the test
+      // detail screen, which fetches the test by id.
+      if (args.view === "lite") {
+        // Lists address tests by id and read totalQuestions; slug, description
+        // and the duplicate count are dead weight across hundreds of rows.
+        return {
+          ...test,
+          description: undefined,
+          slug: undefined,
+          paperGroup: undefined,
+          liveQuestionCount: test.totalQuestions,
+        };
+      }
+      return { ...test, liveQuestionCount: test.totalQuestions };
+    });
   },
 });
 
@@ -333,6 +402,7 @@ export const createTest = mutation({
     endsAt: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    await touch(ctx, "tests");
     const testId = await ctx.db.insert("tests", {
       ...args,
       language: args.language ?? args.languages[0] ?? "English",
@@ -378,6 +448,7 @@ export const updateTest = mutation({
     endsAt: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    await touch(ctx, "tests");
     const { id, ...updates } = args;
     const filtered = Object.fromEntries(
       Object.entries(updates).filter(([, v]) => v !== undefined)
@@ -389,6 +460,7 @@ export const updateTest = mutation({
 export const deleteTest = mutation({
   args: { id: v.id("tests") },
   handler: async (ctx, args) => {
+    await touch(ctx, "tests");
     await ctx.db.patch(args.id, { isActive: false });
   },
 });
@@ -398,6 +470,7 @@ export const deleteTest = mutation({
 export const deleteTestCascade = mutation({
   args: { id: v.id("tests") },
   handler: async (ctx, args) => {
+    await touch(ctx, "tests");
     const questions = await ctx.db
       .query("questions")
       .withIndex("by_test", (q) => q.eq("testId", args.id))
@@ -467,6 +540,7 @@ export const createQuestion = mutation({
         totalQuestions: test.totalQuestions + 1,
       });
     }
+    await touchTestQuestions(ctx, args.testId);
     return questionId;
   },
 });
@@ -519,6 +593,7 @@ export const bulkCreateQuestions = mutation({
         totalQuestions: test.totalQuestions + args.questions.length,
       });
     }
+    await touchTestQuestions(ctx, args.testId);
     return ids;
   },
 });
@@ -555,6 +630,8 @@ export const updateQuestion = mutation({
       Object.entries(updates).filter(([, v]) => v !== undefined)
     );
     await ctx.db.patch(id, filtered);
+    const question = await ctx.db.get(id);
+    if (question) await touchTestQuestions(ctx, question.testId);
   },
 });
 
@@ -583,6 +660,7 @@ export const duplicateQuestion = mutation({
         totalQuestions: test.totalQuestions + 1,
       });
     }
+    await touchTestQuestions(ctx, q.testId);
     return newId;
   },
 });
@@ -599,6 +677,7 @@ export const deleteQuestion = mutation({
           totalQuestions: Math.max(0, test.totalQuestions - 1),
         });
       }
+      await touchTestQuestions(ctx, question.testId);
     }
   },
 });
@@ -625,6 +704,7 @@ export const bulkDeleteQuestions = mutation({
           totalQuestions: Math.max(0, test.totalQuestions - count),
         });
       }
+      await touchTestQuestions(ctx, testId);
     }
     return { deleted: args.ids.length };
   },
@@ -734,7 +814,9 @@ export const addQuestion = mutation({
       const target = await ctx.db.get(args.testId);
       if (!target) throw new Error("Target test not found");
       containerId = args.testId;
-      return await attachQuestion(ctx, containerId, args);
+      const created = await attachQuestion(ctx, containerId, args);
+    await touchTestQuestions(ctx, containerId);
+    return created;
     }
 
     const examTests = await ctx.db
@@ -877,9 +959,6 @@ export const listQuestionsRich = query({
     ),
   },
   handler: async (ctx, args) => {
-    const exams = await ctx.db.query("exams").collect();
-    const examById = new Map(exams.map((e) => [e._id, e]));
-
     // Resolve the set of container tests we care about.
     let tests;
     if (args.testId) {
@@ -894,6 +973,15 @@ export const listQuestionsRich = query({
       tests = await ctx.db.query("tests").collect();
     }
     if (args.type) tests = tests.filter((t) => t.type === args.type);
+
+    // Point-read only the exams these tests belong to, instead of collecting
+    // the whole exams table on every call.
+    const examIds = [...new Set(tests.map((t) => t.examId))];
+    const examById = new Map(
+      (await Promise.all(examIds.map((id) => ctx.db.get(id))))
+        .filter((e): e is NonNullable<typeof e> => !!e)
+        .map((e) => [e._id, e])
+    );
 
     const rows = [];
     for (const test of tests) {
@@ -939,14 +1027,20 @@ export const listQuestionsPaginated = query({
       : ctx.db.query("questions").order("desc");
     const result = await base.paginate(args.paginationOpts);
 
-    // Enrich just this page. Exams table is tiny; tests are point-read per page.
-    const exams = await ctx.db.query("exams").collect();
-    const examById = new Map(exams.map((e) => [e._id, e]));
+    // Enrich just this page: point-read the tests on it, then only the exams
+    // those tests belong to. Collecting the exams table per page was a read of
+    // every exam document (45 KB) for a 50-row page.
     const testIds = [...new Set(result.page.map((q) => q.testId))];
     const testEntries = await Promise.all(
       testIds.map(async (id) => [id, await ctx.db.get(id)] as const)
     );
     const testById = new Map(testEntries);
+    const examIds = [...new Set([...testById.values()].filter(Boolean).map((t) => t!.examId))];
+    const examById = new Map(
+      (await Promise.all(examIds.map((id) => ctx.db.get(id))))
+        .filter((e): e is NonNullable<typeof e> => !!e)
+        .map((e) => [e._id, e])
+    );
 
     const page = result.page.map((q) => {
       const test = testById.get(q.testId);

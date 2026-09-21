@@ -1,16 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery, useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
+import { useOnce, useAdminMutation } from "@/lib/admin-data";
 import { Id } from "@convex/_generated/dataModel";
 import { toast } from "sonner";
 import { PageHeader, Button, Select, LoadingState, Card, Badge } from "@/components/admin/ui";
 
 export default function DailyQuizAdminPage() {
-  const tests = useQuery(api.exams.listTests, {});
-  const dailyQuiz = useQuery(api.content.getDailyQuiz, {});
-  const setDailyQuiz = useMutation(api.content.setDailyQuiz);
+  const tests = useOnce(api.exams.listTests, {});
+  const dailyQuiz = useOnce(api.content.getDailyQuiz, {});
+  const setDailyQuiz = useAdminMutation(api.content.setDailyQuiz);
   const [selectedTest, setSelectedTest] = useState("");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [saving, setSaving] = useState(false);

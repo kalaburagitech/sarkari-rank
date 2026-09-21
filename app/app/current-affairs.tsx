@@ -2,8 +2,10 @@ import { useMemo, useState, useCallback } from "react";
 import { View, Text, ScrollView, TouchableOpacity, RefreshControl } from "react-native";
 import { useQuery, useAction } from "convex/react";
 import { api } from "../convex/_generated/api";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useCached, invalidateVersions } from "../lib/offline";
 import { useRouter, Link } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { ScreenHeader, PremiumCard, Badge, LoadingScreen, EmptyScreen, FilterChip, DisclaimerBanner } from "../components/ui";
 import { useTheme } from "../lib/theme";
 
@@ -18,6 +20,13 @@ const CATEGORY_COLORS: Record<string, string> = {
   Sports: "#EF4444",
   International: "#0EA5E9",
 };
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+function monthLabel(ts: number) {
+  const d = new Date(ts);
+  return `${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+}
 
 function dayBucket(ts: number): "Today" | "Yesterday" | "Earlier" {
   const now = new Date();
@@ -41,11 +50,37 @@ type Affair = {
 export default function CurrentAffairsScreen() {
   const router = useRouter();
   const { colors } = useTheme();
-  const affairs = useQuery(api.content.listCurrentAffairs, { limit: 60 }) as Affair[] | undefined;
   const refresh = useAction(api.news.refreshCurrentAffairs);
 
   const [cat, setCat] = useState<string>("");
   const [refreshing, setRefreshing] = useState(false);
+  // Archive browsing: year === null is the default "Latest" feed; month is a
+  // 0-11 index, null meaning the whole year.
+  const [year, setYear] = useState<number | null>(null);
+  const [month, setMonth] = useState<number | null>(null);
+
+  // Local-time month/year bounds, so an item published late on the 31st stays
+  // in its own month regardless of the device timezone.
+  const range = useMemo(() => {
+    if (year === null) return null;
+    const start = new Date(year, month ?? 0, 1).getTime();
+    const end = month === null ? new Date(year + 1, 0, 1).getTime() : new Date(year, month + 1, 1).getTime();
+    return { start, end };
+  }, [year, month]);
+
+  const affairs = useCached<Affair[]>(
+    range ? `affairs:${year}:${month ?? "all"}` : "affairs:latest",
+    api.content.listCurrentAffairs,
+    range ? { ...range, limit: 500, view: "lite" } : { limit: 60, view: "lite" },
+    ["currentAffairs"]
+  );
+  const oldestDate = useCached<number | null>("affairs:oldest", api.content.getOldestCurrentAffairDate, {}, ["currentAffairs"]);
+
+  const years = useMemo(() => {
+    const thisYear = new Date().getFullYear();
+    const first = oldestDate ? new Date(oldestDate).getFullYear() : thisYear;
+    return Array.from({ length: thisYear - first + 1 }, (_, i) => thisYear - i);
+  }, [oldestDate]);
 
   const categories = useMemo(() => {
     const s = new Set<string>();
@@ -58,24 +93,34 @@ export default function CurrentAffairsScreen() {
     [affairs, cat]
   );
 
-  // Group by day bucket, preserving date-desc order.
+  // Latest feed groups by day bucket; the archive groups month-wise. Both keep
+  // the date-desc order they arrive in.
   const groups = useMemo(() => {
-    const order = ["Today", "Yesterday", "Earlier"] as const;
     const map = new Map<string, Affair[]>();
     for (const a of filtered) {
-      const b = dayBucket(a.date);
-      if (!map.has(b)) map.set(b, []);
-      map.get(b)!.push(a);
+      const key = range ? monthLabel(a.date) : dayBucket(a.date);
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(a);
     }
+    if (range) return [...map.entries()].map(([k, v]) => [k, v] as const);
+    const order = ["Today", "Yesterday", "Earlier"] as const;
     return order.filter((o) => map.has(o)).map((o) => [o, map.get(o)!] as const);
-  }, [filtered]);
+  }, [filtered, range]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      await refresh({});
+      // The cron already pulls the news daily. Let a manual refresh actually
+      // hit the source at most hourly: every fetch writes rows and bumps the
+      // sync counter, which makes every other device re-download the feed.
+      const last = Number((await AsyncStorage.getItem("affairs:lastFetch")) ?? 0);
+      if (Date.now() - last > 60 * 60 * 1000) {
+        await refresh({});
+        await AsyncStorage.setItem("affairs:lastFetch", String(Date.now()));
+      }
+      invalidateVersions();
     } catch {
-      // ignore network hiccups; query stays as-is
+      // ignore network hiccups; the cached feed stays on screen
     }
     setRefreshing(false);
   }, [refresh]);
@@ -86,7 +131,7 @@ export default function CurrentAffairsScreen() {
     <View className="flex-1 bg-slate-50 dark:bg-ink-bg">
       <ScreenHeader
         title="Current Affairs"
-        subtitle="Fresh daily · pull to refresh"
+        subtitle={range ? `Archive · ${month === null ? year : `${MONTHS[month]} ${year}`}` : "Fresh daily · pull to refresh"}
         onBack={() => router.back()}
         right={
           <TouchableOpacity onPress={onRefresh} hitSlop={8} className="w-10 h-10 rounded-xl bg-white/10 items-center justify-center">
@@ -95,9 +140,27 @@ export default function CurrentAffairsScreen() {
         }
       />
 
+      {/* Year + month archive */}
+      <View className="pt-3">
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16 }}>
+          <FilterChip label="Latest" active={year === null} onPress={() => { setYear(null); setMonth(null); }} />
+          {years.map((y) => (
+            <FilterChip key={y} label={String(y)} active={year === y} onPress={() => { setYear(y); setMonth(null); }} />
+          ))}
+        </ScrollView>
+        {year !== null && (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16 }}>
+            <FilterChip label="All months" active={month === null} onPress={() => setMonth(null)} />
+            {MONTHS.map((m, i) => (
+              <FilterChip key={m} label={m} active={month === i} onPress={() => setMonth(i)} />
+            ))}
+          </ScrollView>
+        )}
+      </View>
+
       {/* Category filter */}
       {categories.length > 0 && (
-        <View className="pt-3">
+        <View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16 }}>
             <FilterChip label="All" active={!cat} onPress={() => setCat("")} />
             {categories.map((c) => (
@@ -121,7 +184,12 @@ export default function CurrentAffairsScreen() {
         </View>
 
         {filtered.length === 0 && (
-          <EmptyScreen icon="newspaper-outline" message="No current affairs yet. Pull down to fetch the latest." />
+          <EmptyScreen
+            icon="newspaper-outline"
+            message={range
+              ? `No current affairs published in ${month === null ? year : `${MONTHS[month]} ${year}`}.`
+              : "No current affairs yet. Pull down to fetch the latest."}
+          />
         )}
 
         {groups.map(([bucket, items]) => (

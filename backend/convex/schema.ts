@@ -112,6 +112,9 @@ export default defineSchema({
     endsAt: v.optional(v.number()),
     isActive: v.boolean(),
     attemptCount: v.number(),
+    // Bumped whenever this test's questions change, so a client holding a
+    // cached question set knows it is stale without asking the server.
+    qv: v.optional(v.number()),
     createdAt: v.number(),
   })
     .index("by_exam", ["examId"])
@@ -184,12 +187,19 @@ export default defineSchema({
       v.literal("completed"),
       v.literal("abandoned")
     ),
+    // Per-subject rollup stored at submit time so analytics never re-reads
+    // question docs. Optional → attempts recorded before this stay valid.
+    subjectStats: v.optional(
+      v.array(v.object({ subject: v.string(), correct: v.number(), total: v.number() }))
+    ),
     startedAt: v.number(),
     completedAt: v.optional(v.number()),
   })
     .index("by_user", ["userId"])
     .index("by_test", ["testId"])
-    .index("by_user_test", ["userId", "testId"]),
+    .index("by_user_test", ["userId", "testId"])
+    // Bounded "attempts in the last 7 days" for the admin dashboard.
+    .index("by_completed", ["completedAt"]),
 
   // ─── Bookmarks ───────────────────────────────────────────
   bookmarks: defineTable({
@@ -324,6 +334,9 @@ export default defineSchema({
     description: v.optional(v.string()),
     order: v.number(),
     isActive: v.boolean(),
+    // Published questions in this chapter, maintained on write so the browse
+    // tree never scans the question bank. Absent → counted as 0.
+    questionCount: v.optional(v.number()),
     createdAt: v.number(),
   })
     .index("by_subject", ["subjectId"])
@@ -367,4 +380,22 @@ export default defineSchema({
     .index("by_chapter", ["chapterId"])
     .index("by_chapter_order", ["chapterId", "order"])
     .index("by_subject", ["subjectId"]),
+
+  // ─── Sync counters ───────────────────────────────────────
+  // One row per content area, bumped on every publish. The app fetches just
+  // these numbers on launch and re-reads a content area only when its counter
+  // moved — otherwise it serves everything from the on-device cache.
+  // Running totals kept on write, so the admin dashboard never scans a table
+  // to show a number. testAttempts rows carry a full answers array (~7 KB
+  // each) — counting them by collecting was the expensive way to say "178".
+  counters: defineTable({
+    key: v.string(),
+    value: v.number(),
+  }).index("by_key", ["key"]),
+
+  syncMeta: defineTable({
+    key: v.string(),
+    version: v.number(),
+    updatedAt: v.number(),
+  }).index("by_key", ["key"]),
 });

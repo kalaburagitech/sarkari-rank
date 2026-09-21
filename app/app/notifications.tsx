@@ -1,9 +1,10 @@
 import { View, Text, ScrollView, TouchableOpacity } from "react-native";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../convex/_generated/api";
+import { useCached } from "../lib/offline";
 import { useAuth } from "../lib/auth";
 import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { ScreenHeader, PremiumCard, LoadingScreen, EmptyScreen } from "../components/ui";
 import { useTheme } from "../lib/theme";
 
@@ -19,7 +20,7 @@ export default function NotificationsScreen() {
   const { user } = useAuth();
   const router = useRouter();
   const { colors } = useTheme();
-  const notifications = useQuery(api.content.listNotifications, user ? { userId: user._id } : "skip");
+  const notifications = useCached<any[]>(`notifications:${user?._id}`, api.content.listNotifications, user ? { userId: user._id } : "skip", ["notifications"]);
   const markRead = useMutation(api.content.markNotificationRead);
 
   if (notifications === undefined) return <LoadingScreen message="Loading notifications..." />;

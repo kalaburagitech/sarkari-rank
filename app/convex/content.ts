@@ -1,10 +1,20 @@
 import { mutation, query } from "./_generated/server";
+import { touch, readCounter } from "./sync";
 import { v } from "convex/values";
 
 // ─── Study Notes ─────────────────────────────────────────────
 
+// A note body is markdown measured in kilobytes. Listings take a preview.
+const liteNote = <T extends { content?: string }>(n: T) => ({
+  ...n,
+  content: undefined,
+  contentPreview: n.content ? n.content.slice(0, 180) : undefined,
+  hasContent: !!n.content,
+});
+
 export const listStudyNotes = query({
   args: {
+    view: v.optional(v.literal("lite")),
     examId: v.optional(v.id("exams")),
     includeInactive: v.optional(v.boolean()),
   },
@@ -20,13 +30,14 @@ export const listStudyNotes = query({
     }
     const active = notes.filter((n) => args.includeInactive || n.isActive);
     // Resolve PDF download URLs for any note backed by a stored file.
-    return await Promise.all(
+    const rows = await Promise.all(
       active.map(async (n) => ({
         ...n,
         language: n.language ?? "English",
         pdfUrl: n.pdfStorageId ? await ctx.storage.getUrl(n.pdfStorageId) : null,
       }))
     );
+    return args.view === "lite" ? rows.map(liteNote) : rows;
   },
 });
 
@@ -72,6 +83,7 @@ export const createStudyNote = mutation({
     isActive: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
+    await touch(ctx, "studyNotes");
     const { isActive, ...rest } = args;
     return await ctx.db.insert("studyNotes", {
       ...rest,
@@ -96,6 +108,7 @@ export const updateStudyNote = mutation({
     isActive: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
+    await touch(ctx, "studyNotes");
     const { id, ...updates } = args;
     // If a new PDF replaces an old one, delete the old file to avoid orphans.
     if (updates.pdfStorageId !== undefined) {
@@ -114,6 +127,7 @@ export const updateStudyNote = mutation({
 export const duplicateStudyNote = mutation({
   args: { id: v.id("studyNotes") },
   handler: async (ctx, args) => {
+    await touch(ctx, "studyNotes");
     const note = await ctx.db.get(args.id);
     if (!note) throw new Error("Note not found");
     // Drop pdfStorageId so the copy doesn't share a file with the original
@@ -133,6 +147,7 @@ export const duplicateStudyNote = mutation({
 export const deleteStudyNote = mutation({
   args: { id: v.id("studyNotes") },
   handler: async (ctx, args) => {
+    await touch(ctx, "studyNotes");
     const note = await ctx.db.get(args.id);
     if (note?.pdfStorageId) await ctx.storage.delete(note.pdfStorageId);
     await ctx.db.delete(args.id);
@@ -142,9 +157,30 @@ export const deleteStudyNote = mutation({
 // ─── Current Affairs ─────────────────────────────────────────
 
 export const listCurrentAffairs = query({
-  args: { limit: v.optional(v.number()) },
+  args: {
+    limit: v.optional(v.number()),
+    // Month/year archive window [start, end) in ms. The caller computes the
+    // bounds in device-local time so month edges don't drift by timezone.
+    start: v.optional(v.number()),
+    end: v.optional(v.number()),
+    view: v.optional(v.literal("lite")),
+  },
   handler: async (ctx, args) => {
     const limit = args.limit ?? 20;
+    // Listing screens show title/summary/date only; the article body is
+    // fetched per slug by getCurrentAffair.
+    const project = <T extends { content?: string }>(rows: T[]): T[] =>
+      args.view === "lite" ? rows.map((r) => ({ ...r, content: undefined })) : rows;
+    const { start, end } = args;
+    if (start !== undefined && end !== undefined) {
+      const items = await ctx.db
+        .query("currentAffairs")
+        .withIndex("by_date", (q) => q.gte("date", start).lt("date", end))
+        .order("desc")
+        .filter((q) => q.eq(q.field("isActive"), true))
+        .take(limit);
+      return project(items.sort((a, b) => b.date - a.date));
+    }
     // Read only ~limit newest active rows (creation order ≈ publish date)
     // instead of collecting the entire, ever-growing table on every call.
     const items = await ctx.db
@@ -152,7 +188,32 @@ export const listCurrentAffairs = query({
       .order("desc")
       .filter((q) => q.eq(q.field("isActive"), true))
       .take(limit);
-    return items.sort((a, b) => b.date - a.date);
+    return project(items.sort((a, b) => b.date - a.date));
+  },
+});
+
+// One article, for the detail screen — replaces re-reading the whole feed.
+export const getCurrentAffair = query({
+  args: { slug: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("currentAffairs")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .first();
+  },
+});
+
+// Oldest published date, so the app can offer year chips back to the start of
+// the archive without scanning the table.
+export const getOldestCurrentAffairDate = query({
+  args: {},
+  handler: async (ctx) => {
+    const oldest = await ctx.db
+      .query("currentAffairs")
+      .withIndex("by_date")
+      .order("asc")
+      .first();
+    return oldest?.date ?? null;
   },
 });
 
@@ -168,6 +229,7 @@ export const createCurrentAffair = mutation({
     date: v.number(),
   },
   handler: async (ctx, args) => {
+    await touch(ctx, "currentAffairs");
     return await ctx.db.insert("currentAffairs", {
       ...args,
       isActive: true,
@@ -188,6 +250,7 @@ export const updateCurrentAffair = mutation({
     isActive: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
+    await touch(ctx, "currentAffairs");
     const { id, ...updates } = args;
     const filtered = Object.fromEntries(
       Object.entries(updates).filter(([, v]) => v !== undefined)
@@ -199,6 +262,7 @@ export const updateCurrentAffair = mutation({
 export const deleteCurrentAffair = mutation({
   args: { id: v.id("currentAffairs") },
   handler: async (ctx, args) => {
+    await touch(ctx, "currentAffairs");
     await ctx.db.delete(args.id);
   },
 });
@@ -235,6 +299,7 @@ export const getDailyQuiz = query({
 export const setDailyQuiz = mutation({
   args: { date: v.string(), testId: v.id("tests") },
   handler: async (ctx, args) => {
+    await touch(ctx, "dailyQuiz");
     const existing = await ctx.db
       .query("dailyQuizzes")
       .withIndex("by_date", (q) => q.eq("date", args.date))
@@ -260,6 +325,7 @@ export const submitDoubt = mutation({
     questionImage: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await touch(ctx, "doubts");
     return await ctx.db.insert("doubts", {
       ...args,
       status: "pending",
@@ -295,6 +361,7 @@ export const listDoubts = query({
 export const answerDoubt = mutation({
   args: { id: v.id("doubts"), answer: v.string() },
   handler: async (ctx, args) => {
+    await touch(ctx, "doubts");
     await ctx.db.patch(args.id, {
       answer: args.answer,
       status: "answered",
@@ -359,41 +426,34 @@ export const createSubscription = mutation({
 export const getDashboardStats = query({
   args: {},
   handler: async (ctx) => {
-    const [
-      users,
-      exams,
-      tests,
-      questions,
-      attempts,
-      subscriptions,
-    ] = await Promise.all([
+    // Counts come from already-maintained fields on the small tables:
+    // tests.totalQuestions and tests.attemptCount. Collecting the questions
+    // and attempts tables here (on a live admin subscription) was re-reading
+    // the entire question bank on every single write during an import.
+    const [users, exams, tests, subscriptions] = await Promise.all([
       ctx.db.query("users").collect(),
       ctx.db.query("exams").collect(),
       ctx.db.query("tests").collect(),
-      ctx.db.query("questions").collect(),
-      ctx.db.query("testAttempts").collect(),
       ctx.db.query("subscriptions").collect(),
     ]);
 
-    const students = users.filter((u) => u.role === "student");
-    const premiumUsers = students.filter((u) => u.isPremium);
-    const completedAttempts = attempts.filter(
-      (a) => a.status === "completed"
-    );
-
     const last7Days = Date.now() - 7 * 24 * 60 * 60 * 1000;
-    const recentAttempts = completedAttempts.filter(
-      (a) => (a.completedAt ?? 0) > last7Days
-    );
+    const recent = await ctx.db
+      .query("testAttempts")
+      .withIndex("by_completed", (q) => q.gt("completedAt", last7Days))
+      .take(500);
+
+    const students = users.filter((u) => u.role === "student");
+    const activeTests = tests.filter((t) => t.isActive);
 
     return {
       totalUsers: students.length,
-      premiumUsers: premiumUsers.length,
+      premiumUsers: students.filter((u) => u.isPremium).length,
       totalExams: exams.filter((e) => e.isActive).length,
-      totalTests: tests.filter((t) => t.isActive).length,
-      totalQuestions: questions.length,
-      totalAttempts: completedAttempts.length,
-      recentAttempts: recentAttempts.length,
+      totalTests: activeTests.length,
+      totalQuestions: tests.reduce((n, t) => n + (t.totalQuestions ?? 0), 0),
+      totalAttempts: await readCounter(ctx, "attempts"),
+      recentAttempts: recent.filter((a) => a.status === "completed").length,
       activeSubscriptions: subscriptions.filter((s) => s.isActive).length,
       revenue: subscriptions.reduce((s, sub) => s + sub.amount, 0),
     };
@@ -438,6 +498,7 @@ export const createNotification = mutation({
     userId: v.optional(v.id("users")),
   },
   handler: async (ctx, args) => {
+    await touch(ctx, "notifications");
     return await ctx.db.insert("notifications", {
       ...args,
       isRead: false,

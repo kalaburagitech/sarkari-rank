@@ -1,12 +1,11 @@
 import { useMemo, useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity, Alert, ActivityIndicator, Linking, Dimensions } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, Alert, ActivityIndicator, Linking } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useQuery } from "convex/react";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
-import Pdf from "react-native-pdf";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { api } from "../../convex/_generated/api";
+import { useCached } from "../../lib/offline";
 import { ScreenHeader, Badge, LoadingScreen, FilterChip, DisclaimerBanner } from "../../components/ui";
 import { Markdown } from "../../components/Markdown";
 import { useTheme } from "../../lib/theme";
@@ -16,13 +15,15 @@ export default function StudyNoteScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const router = useRouter();
   const { colors } = useTheme();
-  const note = useQuery(api.content.getStudyNote, { slug });
-  const exams = useQuery(api.exams.listExams, {});
+  const note = useCached<any>(`note:${slug}`, api.content.getStudyNote, { slug }, ["studyNotes"]);
+  const exams = useCached<any[]>("exams", api.exams.listExams, { view: "lite" }, ["exams"]);
   // Sibling notes in the same exam — used to find other language versions of
   // this chapter (same subject + topic).
-  const examNotes = useQuery(
+  const examNotes = useCached<any[]>(
+    `notes:${note?.examId}`,
     api.content.listStudyNotes,
-    note ? { examId: note.examId } : "skip"
+    note ? { examId: note.examId } : "skip",
+    ["studyNotes"]
   );
   const [downloading, setDownloading] = useState(false);
 
@@ -100,7 +101,9 @@ export default function StudyNoteScreen() {
       </View>
     ) : null;
 
-  // ── PDF note: full-screen in-app viewer ──
+  // ── PDF note ──
+  // Opened with the device's own PDF viewer: an in-app renderer meant
+  // shipping pdfium (4.5 MB of native code per ABI) for one screen.
   if (isPdf) {
     return (
       <View className="flex-1 bg-slate-50 dark:bg-ink-bg">
@@ -108,22 +111,33 @@ export default function StudyNoteScreen() {
           title={note.subject || "Study Note"}
           subtitle={note.topic || examName}
           onBack={() => router.back()}
-          right={
-            <TouchableOpacity onPress={handleDownload} hitSlop={8} className="w-10 h-10 rounded-xl bg-white/10 items-center justify-center">
-              <Ionicons name="open-outline" size={20} color="#fff" />
-            </TouchableOpacity>
-          }
         />
         <LanguageBar />
-        <View className="flex-1 mx-3 mb-3 mt-1 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800">
-          <Pdf
-            source={{ uri: note.pdfUrl!, cache: true }}
-            trustAllCerts={false}
-            style={{ flex: 1, width: Dimensions.get("window").width - 24, backgroundColor: colors.bg }}
-            renderActivityIndicator={() => <ActivityIndicator size="large" color={colors.primary} />}
-            onError={() => Alert.alert("PDF error", "This PDF could not be displayed. Tap the open icon to view it in your browser.")}
-          />
-        </View>
+        <ScrollView contentContainerStyle={{ padding: 16 }}>
+          <DisclaimerBanner onPress={() => router.push("/disclaimer")} />
+          <View className="bg-white dark:bg-ink-card rounded-2xl border border-slate-100 dark:border-slate-800 p-6 items-center mt-3">
+            <View style={{ backgroundColor: colors.primary + "18" }} className="w-16 h-16 rounded-2xl items-center justify-center mb-3">
+              <Ionicons name="document-text" size={30} color={colors.primary} />
+            </View>
+            <Text className="font-bold text-slate-900 dark:text-slate-50 text-base text-center">{note.title}</Text>
+            {examName ? (
+              <Text className="text-slate-500 dark:text-slate-400 text-xs mt-1 text-center">{examName}</Text>
+            ) : null}
+            <TouchableOpacity
+              onPress={handleDownload}
+              disabled={downloading}
+              activeOpacity={0.85}
+              style={{ backgroundColor: colors.primary }}
+              className="rounded-2xl py-4 px-6 mt-5 flex-row items-center"
+            >
+              <Ionicons name="open-outline" size={18} color="#fff" />
+              <Text className="text-white font-bold ml-2">{downloading ? "Opening..." : "Open PDF"}</Text>
+            </TouchableOpacity>
+            <Text className="text-slate-400 dark:text-slate-500 text-[11px] mt-3 text-center leading-4">
+              Opens in your device's PDF app, where you can save or print it.
+            </Text>
+          </View>
+        </ScrollView>
         <Text className="text-slate-400 dark:text-slate-500 text-[11px] text-center mb-3 px-6 leading-4">
           For educational use. Verify official information on the respective official government websites.
         </Text>

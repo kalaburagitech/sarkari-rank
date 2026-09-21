@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery, useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
+import { useOnce, useAdminMutation } from "@/lib/admin-data";
 import { Id } from "@convex/_generated/dataModel";
 import { toast } from "sonner";
 import {
@@ -33,16 +33,16 @@ type ChapterRow = {
 const diffColor: Record<string, string> = { easy: "green", medium: "amber", hard: "red" };
 
 export function PracticeBankManager() {
-  const subjects = useQuery(api.practiceBank.listSubjects, {}) as SubjectRow[] | undefined;
+  const subjects = useOnce(api.practiceBank.listSubjects, {}) as SubjectRow[] | undefined;
 
   const [subjectId, setSubjectId] = useState<Id<"subjects"> | null>(null);
   const [chapterId, setChapterId] = useState<Id<"chapters"> | null>(null);
 
-  const chapters = useQuery(
+  const chapters = useOnce(
     api.practiceBank.listChapters,
     subjectId ? { subjectId } : "skip"
   ) as ChapterRow[] | undefined;
-  const questions = useQuery(
+  const questions = useOnce(
     api.practiceBank.listChapterQuestions,
     chapterId ? { chapterId } : "skip"
   ) as PracticeQuestion[] | undefined;
@@ -95,9 +95,9 @@ function SubjectsPanel({
   selectedId: Id<"subjects"> | null;
   onSelect: (id: Id<"subjects">) => void;
 }) {
-  const createSubject = useMutation(api.practiceBank.createSubject);
-  const updateSubject = useMutation(api.practiceBank.updateSubject);
-  const deleteSubject = useMutation(api.practiceBank.deleteSubject);
+  const createSubject = useAdminMutation(api.practiceBank.createSubject);
+  const updateSubject = useAdminMutation(api.practiceBank.updateSubject);
+  const deleteSubject = useAdminMutation(api.practiceBank.deleteSubject);
 
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
@@ -199,9 +199,9 @@ function ChaptersPanel({
   selectedId: Id<"chapters"> | null;
   onSelect: (id: Id<"chapters">) => void;
 }) {
-  const createChapter = useMutation(api.practiceBank.createChapter);
-  const updateChapter = useMutation(api.practiceBank.updateChapter);
-  const deleteChapter = useMutation(api.practiceBank.deleteChapter);
+  const createChapter = useAdminMutation(api.practiceBank.createChapter);
+  const updateChapter = useAdminMutation(api.practiceBank.updateChapter);
+  const deleteChapter = useAdminMutation(api.practiceBank.deleteChapter);
 
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
@@ -318,8 +318,8 @@ function QuestionsPanel({
   chapter: ChapterRow | null;
   questions: PracticeQuestion[] | undefined;
 }) {
-  const deleteQuestion = useMutation(api.practiceBank.deletePracticeQuestion);
-  const bulkDelete = useMutation(api.practiceBank.bulkDeletePracticeQuestions);
+  const deleteQuestion = useAdminMutation(api.practiceBank.deletePracticeQuestion);
+  const bulkDelete = useAdminMutation(api.practiceBank.bulkDeletePracticeQuestions);
   // This panel is keyed by chapter id in the parent, so it remounts (resetting
   // mode/editing/selection) whenever the selected chapter changes.
   const [mode, setMode] = useState<"list" | "add" | "import">("list");

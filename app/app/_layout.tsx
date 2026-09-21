@@ -5,8 +5,29 @@ import { convex } from "../lib/convex";
 import { AuthProvider } from "../lib/auth";
 import { ThemeProvider } from "../lib/theme";
 import { StatusBar } from "expo-status-bar";
+import { useEffect } from "react";
+import { AppState } from "react-native";
+import { prefetchAll, invalidateVersions } from "../lib/offline";
+import { flushAttempts } from "../lib/attempts";
+import { flushBookmarks } from "../lib/bookmarks";
 
 export default function RootLayout() {
+  // Warm the on-device catalogue and push any attempt taken offline. Both are
+  // cheap no-ops when nothing changed and silent when there is no network.
+  useEffect(() => {
+    const sync = () => {
+      invalidateVersions();
+      flushAttempts().catch(() => {});
+      flushBookmarks().catch(() => {});
+      prefetchAll().catch(() => {});
+    };
+    sync();
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") sync();
+    });
+    return () => sub.remove();
+  }, []);
+
   return (
     <ConvexProvider client={convex}>
       <ThemeProvider>

@@ -3,8 +3,9 @@ import { View, Text, ScrollView, TouchableOpacity } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
+import { useCached } from "../../lib/offline";
 import { Id } from "../../convex/_generated/dataModel";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ScreenHeader, PremiumCard, Badge, PrimaryButton, LoadingScreen, EmptyScreen, AnswerOptionCard } from "../../components/ui";
 import { useTheme } from "../../lib/theme";
@@ -35,9 +36,12 @@ export default function PracticeChapterScreen() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
 
-  const data = useQuery(api.practiceBank.getChapterPractice, {
-    chapterId: chapterId as Id<"chapters">,
-  }) as Practice | null | undefined;
+  const data = useCached<Practice>(
+    `practice:${chapterId}`,
+    api.practiceBank.getChapterPractice,
+    { chapterId: chapterId as Id<"chapters"> },
+    ["practice"]
+  );
 
   const [index, setIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});

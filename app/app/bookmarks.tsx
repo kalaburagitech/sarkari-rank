@@ -1,9 +1,10 @@
 import { View, Text, ScrollView, TouchableOpacity } from "react-native";
-import { useQuery } from "convex/react";
 import { api } from "../convex/_generated/api";
+import { useCached } from "../lib/offline";
+import { useBookmarks } from "../lib/bookmarks";
 import { useAuth } from "../lib/auth";
 import { useRouter, Link } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { ScreenHeader, PremiumCard, EmptyScreen, LoadingScreen } from "../components/ui";
 import { useTheme } from "../lib/theme";
 
@@ -11,10 +12,8 @@ export default function BookmarksScreen() {
   const { user } = useAuth();
   const router = useRouter();
   const { colors } = useTheme();
-  const bookmarks = useQuery(api.attempts.getBookmarks, user ? { userId: user._id } : "skip");
-  const tests = useQuery(api.exams.listTests, {});
-
-  if (bookmarks === undefined) return <LoadingScreen message="Loading bookmarks..." />;
+  const { bookmarks } = useBookmarks(user?._id);
+  const tests = useCached<any[]>("tests", api.exams.listTests, { view: "lite" }, ["tests"]);
 
   const getTestTitle = (testId: string) => tests?.find((t) => t._id === testId)?.title ?? "Saved Test";
 
@@ -23,7 +22,7 @@ export default function BookmarksScreen() {
       <ScreenHeader title="Saved Items" subtitle={`${bookmarks.length} bookmarks`} onBack={() => router.back()} />
       <ScrollView className="p-4" showsVerticalScrollIndicator={false}>
         {bookmarks.map((b) => (
-          <PremiumCard key={b._id} className="p-4 mb-2 flex-row items-center">
+          <PremiumCard key={`${b.type}:${b.testId ?? b.questionId}`} className="p-4 mb-2 flex-row items-center">
             <View style={{ backgroundColor: colors.primary + "15" }} className="w-10 h-10 rounded-xl items-center justify-center mr-3">
               <Ionicons name={b.type === "test" ? "document-text" : "help-circle"} size={20} color={colors.primary} />
             </View>

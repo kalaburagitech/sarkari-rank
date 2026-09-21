@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useQuery, useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
+import { useOnce, useAdminMutation } from "@/lib/admin-data";
 import { Id } from "@convex/_generated/dataModel";
 import { toast } from "sonner";
 import {
@@ -70,15 +70,15 @@ export function PreviousYearPapers({
   const [editPaper, setEditPaper] = useState<Paper | null>(null);
   const [deletePaper, setDeletePaper] = useState<Paper | null>(null);
 
-  const createTest = useMutation(api.exams.createTest);
-  const updateTest = useMutation(api.exams.updateTest);
-  const deleteCascade = useMutation(api.exams.deleteTestCascade);
+  const createTest = useAdminMutation(api.exams.createTest);
+  const updateTest = useAdminMutation(api.exams.updateTest);
+  const deleteCascade = useAdminMutation(api.exams.deleteTestCascade);
 
-  const allTests = useQuery(
+  const allTests = useOnce(
     api.exams.listTests,
     examId ? { examId: examId as Id<"exams">, includeInactive: true } : "skip"
   );
-  const paperQuestions = useQuery(
+  const paperQuestions = useOnce(
     api.exams.listQuestionsRich,
     paper ? { testId: paper._id as Id<"tests"> } : "skip"
   ) as Row[] | undefined;
