@@ -139,7 +139,8 @@ export function BulkImportQuestions({
   const [categoryId, setCategoryId] = useState("");
   const [examId, setExamId] = useState("");
   const [chapter, setChapter] = useState("");
-  const [testMode, setTestMode] = useState<"existing" | "new">("existing");
+  // No separate "target test" mode: picking an existing test appends to it,
+  // leaving it empty creates the paper from the title below.
   const [testId, setTestId] = useState("");
   const [newTest, setNewTest] = useState({ title: "", type: "mock", durationMinutes: 60, isFree: true, paperGroup: "" });
   const [def, setDef] = useState({ subject: "", language: "English", marks: 1, negativeMarks: 0.25, difficulty: "medium" as Diff });
@@ -175,7 +176,7 @@ export function BulkImportQuestions({
 
     // Practice imports append server-side (order is recomputed in the mutation);
     // for a specific existing test we continue after its current questions.
-    const startOrder = !isPractice && testMode === "existing" ? selectedTest?.totalQuestions ?? 0 : 0;
+    const startOrder = !isPractice && testId ? selectedTest?.totalQuestions ?? 0 : 0;
     const ok: NormalizedQ[] = [];
     arr.forEach((item, i) => {
       const n = i + 1;
@@ -226,18 +227,24 @@ export function BulkImportQuestions({
     const reader = new FileReader();
     reader.onload = () => { setRaw(String(reader.result ?? "")); setPreview(null); };
     reader.readAsText(file);
+    // Suggest the paper name from the file name ("KAS-Prelims-2024.json" →
+    // "KAS Prelims 2024") so an import needs no extra typing.
+    if (!testId && !newTest.title.trim()) {
+      const suggested = file.name.replace(/\.json$/i, "").replace(/[-_]+/g, " ").trim();
+      if (suggested) setNewTest((t) => ({ ...t, title: suggested }));
+    }
   };
 
   const readyContext = isPractice
     ? examId && def.subject.trim()
-    : examId && (testMode === "existing" ? testId : newTest.title.trim());
+    : examId && (testId || newTest.title.trim());
 
   const handleImport = async () => {
     if (!readyContext) {
       toast.error(
         isPractice
           ? "Select an exam and enter a subject"
-          : "Select an exam and a test (or enter a new test title)"
+          : "Select an exam, then pick a test or enter a title for the new one"
       );
       return;
     }
@@ -264,7 +271,7 @@ export function BulkImportQuestions({
         return;
       }
       let targetTestId = testId as Id<"tests">;
-      if (testMode === "new") {
+      if (!testId) {
         const totalMarks = result.ok.reduce((s, q) => s + q.marks, 0);
         targetTestId = (await createTest({
           examId: examId as Id<"exams">,
@@ -284,10 +291,9 @@ export function BulkImportQuestions({
       }
       await bulkCreate({ testId: targetTestId, questions: result.ok });
       const n = result.ok.length;
-      toast.success(`✅ Imported ${n} questions${testMode === "new" ? ` into new test "${newTest.title}"` : ""}! You can paste another batch below.`);
+      toast.success(`✅ Imported ${n} questions${!testId ? ` into new test "${newTest.title}"` : ""}! You can paste another batch below.`);
       // Keep the panel open so more batches can be added to the SAME test.
-      if (testMode === "new") {
-        setTestMode("existing");
+      if (!testId) {
         setTestId(targetTestId);
         setNewTest({ ...newTest, title: "" });
       }
@@ -341,27 +347,23 @@ export function BulkImportQuestions({
           <option value="">— Select exam —</option>
           {filteredExams.map((e) => <option key={e._id} value={e._id}>{e.name}</option>)}
         </Select>
-        <Select label="Target test" value={testMode} onChange={(e) => setTestMode(e.target.value as "existing" | "new")}>
-          <option value="existing">Add to existing test</option>
-          <option value="new">Create a new test</option>
+        <Select label="Existing test (optional)" value={testId} onChange={(e) => setTestId(e.target.value)}>
+          <option value="">— none: create a new test —</option>
+          {filteredTests.map((t) => <option key={t._id} value={t._id}>{t.title} ({t.totalQuestions} Qs)</option>)}
         </Select>
       </div>
 
-      {testMode === "existing" ? (
+      {testId ? (
         <div>
-          <Select label="Existing test *" value={testId} onChange={(e) => setTestId(e.target.value)}>
-            <option value="">— Select test —</option>
-            {filteredTests.map((t) => <option key={t._id} value={t._id}>{t.title} ({t.totalQuestions} Qs)</option>)}
-          </Select>
           {selectedTest && (
-            <p className="text-xs text-slate-500 mt-1.5">
+            <p className="text-xs text-slate-500">
               <b>{selectedTest.title}</b> currently has <b className="text-indigo-600">{selectedTest.totalQuestions}</b> question(s). New questions are <b>appended</b> after them — safe to import in multiple batches.
             </p>
           )}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-          <div className="md:col-span-2"><Input label="New test title *" value={newTest.title} onChange={(e) => setNewTest({ ...newTest, title: e.target.value })} placeholder="e.g. FDA Mock Test 2" /></div>
+          <div className="md:col-span-2"><Input label="New test title *" placeholder="e.g. KAS Prelims 2024 GS Paper-1" value={newTest.title} onChange={(e) => setNewTest({ ...newTest, title: e.target.value })} /></div>
           <Select label="Type" value={newTest.type} onChange={(e) => setNewTest({ ...newTest, type: e.target.value })}>
             {["mock", "pyp", "subject", "chapter", "practice", "live", "daily"].map((t) => <option key={t} value={t}>{t}</option>)}
           </Select>
