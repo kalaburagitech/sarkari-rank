@@ -91,27 +91,34 @@ export default function TestScreen() {
   }, [test, started]);
 
   const finish = useCallback(async () => {
-    if (!user || !test || !questions) return;
-    const result = grade(questions, selectedAnswers);
-    const id = `${testId}-${startedAtRef.current || Date.now()}`;
-    await saveAttempt({
-      id,
-      userId: user._id,
-      testId,
-      testTitle: test.title,
-      answers: result.answers,
-      score: result.score,
-      totalMarks: test.totalMarks,
-      accuracy: result.accuracy,
-      timeTakenSeconds: Math.max(0, test.durationMinutes * 60 - timeLeft),
-      startedAt: startedAtRef.current || Date.now(),
-      completedAt: Date.now(),
-      synced: false,
-    });
-    // Fire-and-forget: the result screen reads the local copy, so a failed
-    // upload just stays queued for the next time there is a connection.
-    flushAttempts().catch(() => {});
-    router.replace(`/results/${id}`);
+    if (!user || !test || !questions) {
+      Alert.alert("Can't submit yet", "Still loading the test — please try again in a moment.");
+      return;
+    }
+    try {
+      const result = grade(questions, selectedAnswers);
+      const id = `${testId}-${startedAtRef.current || Date.now()}`;
+      await saveAttempt({
+        id,
+        userId: user._id,
+        testId,
+        testTitle: test.title,
+        answers: result.answers,
+        score: result.score,
+        totalMarks: test.totalMarks,
+        accuracy: result.accuracy,
+        timeTakenSeconds: Math.max(0, test.durationMinutes * 60 - timeLeft),
+        startedAt: startedAtRef.current || Date.now(),
+        completedAt: Date.now(),
+        synced: false,
+      });
+      // Fire-and-forget: the result screen reads the local copy, so a failed
+      // upload just stays queued for the next time there is a connection.
+      flushAttempts().catch(() => {});
+      router.replace(`/results/${id}`);
+    } catch {
+      Alert.alert("Couldn't submit", "Your answers are safe — please try Submit again.");
+    }
   }, [user, test, questions, selectedAnswers, testId, timeLeft, router]);
 
   const handleSubmit = useCallback(async () => {
