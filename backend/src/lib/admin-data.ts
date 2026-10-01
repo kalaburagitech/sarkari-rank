@@ -16,6 +16,7 @@ import {
   FunctionArgs,
   FunctionReference,
   FunctionReturnType,
+  getFunctionName,
 } from "convex/server";
 
 const CONVEX_URL =
@@ -33,8 +34,10 @@ const inflight = new Map<string, Promise<unknown>>();
 const recent = new Map<string, { at: number; value: unknown }>();
 const REUSE_MS = 2000;
 
-function cacheKey(ref: unknown, args: unknown) {
-  return `${JSON.stringify(ref)}:${JSON.stringify(args)}`;
+function cacheKey(ref: FunctionReference<"query">, args: unknown) {
+  // JSON.stringify(ref) is always "{}" (ref is a Proxy with no own
+  // enumerable properties) — every query collapsed onto the same key.
+  return `${getFunctionName(ref)}:${JSON.stringify(args)}`;
 }
 
 async function sharedQuery(ref: FunctionReference<"query">, args: Record<string, unknown>) {
