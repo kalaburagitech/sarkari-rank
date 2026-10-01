@@ -435,6 +435,17 @@ export const updateTest = mutation({
     id: v.id("tests"),
     title: v.optional(v.string()),
     description: v.optional(v.string()),
+    type: v.optional(
+      v.union(
+        v.literal("mock"),
+        v.literal("live"),
+        v.literal("chapter"),
+        v.literal("subject"),
+        v.literal("pyp"),
+        v.literal("daily"),
+        v.literal("practice")
+      )
+    ),
     year: v.optional(v.number()),
     durationMinutes: v.optional(v.number()),
     totalMarks: v.optional(v.number()),

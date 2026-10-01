@@ -37,7 +37,10 @@ export default function RootLayout() {
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="(auth)" />
           <Stack.Screen name="category/[slug]" options={{ headerShown: false }} />
-          <Stack.Screen name="test/[id]" options={{ headerShown: true, title: "Mock Test" }} />
+          {/* Real title (Mock Test / Previous Year / Practice / ...) is set
+              per-test once loaded, from test/[id].tsx — this is just the
+              fallback shown for the brief moment before that. */}
+          <Stack.Screen name="test/[id]" options={{ headerShown: true, title: "Test" }} />
           <Stack.Screen name="exam/[slug]" options={{ headerShown: true, title: "Exam" }} />
           <Stack.Screen name="doubts" options={{ headerShown: false }} />
           <Stack.Screen name="premium" options={{ headerShown: false }} />

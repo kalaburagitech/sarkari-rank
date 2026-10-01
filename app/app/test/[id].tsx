@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, memo } from "react";
 import { View, Text, TouchableOpacity, ScrollView, Alert } from "react-native";
-import { useLocalSearchParams, useRouter, Redirect } from "expo-router";
+import { useLocalSearchParams, useRouter, Redirect, Stack } from "expo-router";
 import { useCached, getQuestions } from "../../lib/offline";
 import { grade, saveAttempt, flushAttempts } from "../../lib/attempts";
 import { useBookmarks } from "../../lib/bookmarks";
@@ -199,9 +199,12 @@ export default function TestScreen() {
   const typeCfg = TEST_TYPE_CONFIG[test.type] ?? TEST_TYPE_CONFIG.mock;
   const locked = test.isPremium && !user.isPremium && !test.isFree;
 
+  const header = <Stack.Screen options={{ title: typeCfg.label }} />;
+
   if (!started) {
     return (
       <ScrollView className="flex-1 bg-slate-50 dark:bg-ink-bg" contentContainerStyle={{ padding: 20, paddingBottom: 40 }}>
+        {header}
         <PremiumCard className="p-6">
           <View className="flex-row items-start justify-between mb-2">
             <Badge label={typeCfg.label} color={typeCfg.color} />
@@ -291,6 +294,7 @@ export default function TestScreen() {
 
   return (
     <View className="flex-1 bg-slate-50 dark:bg-ink-bg">
+      {header}
       <View style={{ backgroundColor: colors.hero }} className="px-4 py-3 flex-row justify-between items-center">
         <Text className="text-white font-semibold">Q {currentIndex + 1}/{questions.length}</Text>
         <View className="flex-row items-center gap-2">
