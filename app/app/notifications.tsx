@@ -1,4 +1,5 @@
-import { View, Text, ScrollView, TouchableOpacity } from "react-native";
+import { Touchable } from "../components/Touchable";
+import { View, Text, ScrollView } from "react-native";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../convex/_generated/api";
 import { useCached } from "../lib/offline";
@@ -30,7 +31,7 @@ export default function NotificationsScreen() {
       <ScreenHeader title="Notifications" subtitle="Stay updated with latest tests & news" onBack={() => router.back()} />
       <ScrollView className="p-4" showsVerticalScrollIndicator={false}>
         {notifications.map((n) => (
-          <TouchableOpacity
+          <Touchable
             key={n._id}
             activeOpacity={0.85}
             onPress={() => !n.isRead && markRead({ id: n._id })}
@@ -48,7 +49,7 @@ export default function NotificationsScreen() {
               </View>
               {!n.isRead && <View className="w-2.5 h-2.5 rounded-full bg-indigo-500 mt-1" />}
             </PremiumCard>
-          </TouchableOpacity>
+          </Touchable>
         ))}
         {notifications.length === 0 && <EmptyScreen icon="notifications-outline" message="No notifications yet" />}
       </ScrollView>

@@ -15,12 +15,16 @@ import {
   StatusBadge,
 } from "@/components/admin/ui-extras";
 import { QuestionForm, EditTarget } from "./QuestionForm";
+import { RichView } from "@/components/admin/RichEditor";
+import { richToPlain } from "@/lib/rich";
 
 export type Row = {
   _id: string;
   _creationTime: number;
   questionText: string;
-  options: { id: string; text: string }[];
+  questionImage?: string;
+  passage?: string;
+  options: { id: string; text: string; image?: string }[];
   correctOptionId: string;
   explanation?: string;
   subject?: string;
@@ -159,7 +163,9 @@ export function QuestionListTable({
                     onClick={() => setViewRow(r)}
                     className="text-left text-slate-800 font-medium hover:text-indigo-600 line-clamp-2"
                   >
-                    {r.questionText}
+                    {r.passage && <span className="text-amber-600 font-semibold">[Passage] </span>}
+                    {richToPlain(r.questionText) || (r.questionImage ? "[image question]" : "—")}
+                    {r.questionImage && r.questionText ? <span className="text-slate-400"> 🖼</span> : null}
                   </button>
                 </td>
                 {!hideExam && (
@@ -259,7 +265,17 @@ export function QuestionListTable({
               <Badge color="blue">{viewRow.examName}</Badge>
               {viewRow.subject && <Badge>{viewRow.subject}</Badge>}
             </div>
-            <p className="text-base font-semibold text-slate-900">{viewRow.questionText}</p>
+            {viewRow.passage && (
+              <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 text-sm text-slate-700 max-h-60 overflow-y-auto">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-amber-700 mb-1">Passage</p>
+                <RichView text={viewRow.passage} />
+              </div>
+            )}
+            <RichView text={viewRow.questionText} className="text-base font-semibold text-slate-900" />
+            {viewRow.questionImage && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={viewRow.questionImage} alt="" className="max-h-64 rounded-xl border border-slate-200" />
+            )}
             <div className="space-y-2">
               {viewRow.options.map((o) => (
                 <div
@@ -271,15 +287,24 @@ export function QuestionListTable({
                       : "bg-slate-50 text-slate-700")
                   }
                 >
-                  {o.id.toUpperCase()}. {o.text}
-                  {o.id === viewRow.correctOptionId && " ✓"}
+                  <div className="flex items-start gap-2">
+                    <span>{o.id.toUpperCase()}.</span>
+                    <div className="flex-1">
+                      <RichView text={o.text} />
+                      {o.image && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={o.image} alt="" className="max-h-28 mt-1 rounded-lg border border-slate-200 bg-white" />
+                      )}
+                    </div>
+                    {o.id === viewRow.correctOptionId && <span>✓</span>}
+                  </div>
                 </div>
               ))}
             </div>
             {viewRow.explanation && (
               <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-3 text-sm text-slate-700">
-                <span className="font-semibold text-indigo-700">Explanation: </span>
-                {viewRow.explanation}
+                <span className="font-semibold text-indigo-700">Explanation</span>
+                <RichView text={viewRow.explanation} />
               </div>
             )}
             <div className="flex gap-3 pt-2">

@@ -67,6 +67,13 @@ export const generateNoteUploadUrl = mutation({
   },
 });
 
+// Public URL for an uploaded file (question / option / explanation images).
+// The URL is stored on the question so the app can load it directly.
+export const getStorageUrl = query({
+  args: { storageId: v.id("_storage") },
+  handler: async (ctx, args) => await ctx.storage.getUrl(args.storageId),
+});
+
 export const createStudyNote = mutation({
   args: {
     examId: v.id("exams"),

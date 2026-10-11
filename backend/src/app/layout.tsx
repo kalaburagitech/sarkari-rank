@@ -7,8 +7,8 @@ const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "SarkariRank Admin - Govt Exam Prep Dashboard",
-  description: "Admin dashboard for SarkariRank exam preparation platform",
+  title: "Astraa Admin - Exam App Dashboard",
+  description: "Admin dashboard for Astraa Exam App — ನಿಮ್ಮ ಯಶಸ್ಸಿನ ಅಸ್ತ್ರ",
   icons: {
     icon: [{ url: "/favicon.png", type: "image/png" }],
     apple: [{ url: "/apple-touch-icon.png", type: "image/png" }],

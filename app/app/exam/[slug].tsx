@@ -1,4 +1,6 @@
-import { View, Text, ScrollView, TouchableOpacity } from "react-native";
+import { Touchable } from "../../components/Touchable";
+import { HeroBackground } from "../../components/Gradient";
+import { View, Text, ScrollView } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
@@ -8,18 +10,19 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { useState } from "react";
 import { SectionHeader, PremiumCard, Badge, LoadingScreen, SourceLink, DisclaimerBanner, EmptyScreen } from "../../components/ui";
 import { useTheme } from "../../lib/theme";
+import { officialSourceFor } from "../../constants/legal";
 
 function CollapsibleInfo({ icon, title, body, color }: { icon: string; title: string; body: string; color: string }) {
   const [open, setOpen] = useState(false);
   return (
     <PremiumCard className="p-4 mb-2">
-      <TouchableOpacity activeOpacity={0.7} onPress={() => setOpen((o) => !o)} className="flex-row items-center">
+      <Touchable activeOpacity={0.7} onPress={() => setOpen((o) => !o)} className="flex-row items-center">
         <View style={{ backgroundColor: color + "18" }} className="w-9 h-9 rounded-xl items-center justify-center mr-3">
           <Ionicons name={icon as any} size={18} color={color} />
         </View>
         <Text className="flex-1 font-bold text-slate-900 dark:text-slate-50 text-sm">{title}</Text>
         <Ionicons name={open ? "chevron-up" : "chevron-down"} size={18} color="#94A3B8" />
-      </TouchableOpacity>
+      </Touchable>
       {open && <Text className="text-slate-600 dark:text-slate-400 text-sm leading-6 mt-3">{body}</Text>}
     </PremiumCard>
   );
@@ -39,18 +42,30 @@ export default function ExamDetailScreen() {
 
   return (
     <ScrollView className="flex-1 bg-slate-50 dark:bg-ink-bg" showsVerticalScrollIndicator={false}>
-      <View style={{ backgroundColor: colors.hero }} className="p-6 pb-8">
+      <HeroBackground className="p-6 pb-8 rounded-b-[32px]">
         <Text className="text-white text-2xl font-black">{exam.name}</Text>
         <Text className="text-indigo-200 mt-2 leading-5">{exam.description}</Text>
         <View className="flex-row mt-4 gap-2 flex-wrap">
           <Badge label={`${exam.totalTests} Tests`} color="#fff" />
-          <Badge label="English + ಕನ್ನಡ" color="#A5B4FC" />
+          <Badge label="English + ಕನ್ನಡ" color="#FFBA2E" />
         </View>
-      </View>
+      </HeroBackground>
 
-      {/* Compliance: always-visible disclaimer + path to official .gov sources */}
+      {/* Compliance (Play "Misleading Claims"): disclaimer + a verified official
+          source link on every exam page, right where the exam info is shown. */}
       <View className="px-4 mt-4">
         <DisclaimerBanner onPress={() => router.push("/disclaimer")} />
+        {(() => {
+          const src = officialSourceFor(exam);
+          return (
+            <View className="mt-2">
+              <Text className="text-[11px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500 mb-1 ml-1">
+                Official source
+              </Text>
+              <SourceLink label={`${src.name} · ${src.url.replace(/^https:\/\//, "")}`} url={src.url} />
+            </View>
+          );
+        })()}
       </View>
 
       {/* Exam info: conducting body, eligibility, posts, pattern, syllabus */}
@@ -69,14 +84,6 @@ export default function ExamDetailScreen() {
                   <Text className="text-slate-900 dark:text-slate-50 font-semibold text-sm">{exam.conductingBody}</Text>
                 </View>
               </View>
-              {exam.officialWebsite && (
-                <View className="mt-3">
-                  <SourceLink
-                    label={`Official website · ${exam.officialWebsite.replace(/^https?:\/\//, "")}`}
-                    url={exam.officialWebsite.startsWith("http") ? exam.officialWebsite : `https://${exam.officialWebsite}`}
-                  />
-                </View>
-              )}
             </PremiumCard>
           )}
 
@@ -135,7 +142,7 @@ export default function ExamDetailScreen() {
                 </Text>
                 {(byYear.get(y) ?? []).map((test) => (
                   <Link key={test._id} href={`/test/${test._id}`} asChild>
-                    <TouchableOpacity activeOpacity={0.85}>
+                    <Touchable activeOpacity={0.85}>
                       <PremiumCard className="p-4 mb-2 flex-row items-center">
                         <View style={{ backgroundColor: colors.accent + "1F" }} className="w-10 h-10 rounded-xl items-center justify-center mr-3">
                           <Ionicons name="document-text" size={18} color={colors.accent} />
@@ -146,7 +153,7 @@ export default function ExamDetailScreen() {
                         </View>
                         <Ionicons name="play-circle" size={30} color={colors.primary} />
                       </PremiumCard>
-                    </TouchableOpacity>
+                    </Touchable>
                   </Link>
                 ))}
               </View>

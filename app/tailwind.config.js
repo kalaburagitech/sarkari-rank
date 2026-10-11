@@ -1,3 +1,18 @@
+// Brand navy sampled from the Astraa logo (mirrors palette.primary in constants/theme.ts).
+const navy = {
+  50: "#EEF3FC",
+  100: "#DAE5F8",
+  200: "#B7CBF1",
+  300: "#8AA9E5",
+  400: "#5A82D3",
+  500: "#2F60BE",
+  600: "#1A49A3",
+  700: "#0B3A8C",
+  800: "#0A2F72",
+  900: "#08275E",
+  950: "#051A40",
+};
+
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: ["./app/**/*.{js,jsx,ts,tsx}", "./components/**/*.{js,jsx,ts,tsx}"],
@@ -6,19 +21,9 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        primary: {
-          50: "#EEF2FF",
-          100: "#E0E7FF",
-          200: "#C7D2FE",
-          300: "#A5B4FC",
-          400: "#818CF8",
-          500: "#6366F1",
-          600: "#4F46E5",
-          700: "#4338CA",
-          800: "#3730A3",
-          900: "#312E81",
-          950: "#1E1B4B",
-        },
+        primary: navy,
+        // Many screens hardcode `indigo-*`; alias it to the brand navy.
+        indigo: navy,
         secondary: {
           50: "#ECFDF5",
           100: "#D1FAE5",
@@ -29,11 +34,11 @@ module.exports = {
           700: "#047857",
         },
         accent: {
-          50: "#FFFBEB",
-          100: "#FEF3C7",
-          400: "#FBBF24",
-          500: "#F59E0B",
-          600: "#D97706",
+          50: "#FFF8E5",
+          100: "#FEEDBF",
+          400: "#FFBA2E",
+          500: "#F5A300",
+          600: "#D48A00",
         },
         // App surface tokens used by dark-mode utility classes.
         ink: {

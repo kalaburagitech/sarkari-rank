@@ -1,4 +1,6 @@
-import { View, Text, ScrollView, TouchableOpacity } from "react-native";
+import { Touchable } from "../../components/Touchable";
+import { HeroBackground } from "../../components/Gradient";
+import { View, Text, ScrollView } from "react-native";
 import { useLocalSearchParams, useRouter, Link } from "expo-router";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
@@ -7,6 +9,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { useEffect, useState } from "react";
 import { PremiumCard, Badge, PrimaryButton } from "../../components/ui";
 import { useTheme } from "../../lib/theme";
+import { QuestionContent, RichText, RichImage } from "../../components/RichText";
 import { useCached, getQuestions } from "../../lib/offline";
 import { getAttempt as getLocalAttempt, LocalAttempt } from "../../lib/attempts";
 
@@ -68,9 +71,9 @@ export default function ResultsScreen() {
     return (
       <View className="flex-1 items-center justify-center bg-slate-50 dark:bg-ink-bg p-6">
         <Text className="text-slate-600 dark:text-slate-400 font-semibold text-center">Test still in progress</Text>
-        <TouchableOpacity onPress={() => router.push(`/test/${attempt.testId}`)} className="mt-4 bg-indigo-600 px-6 py-3 rounded-xl">
+        <Touchable onPress={() => router.push(`/test/${attempt.testId}`)} className="mt-4 bg-indigo-600 px-6 py-3 rounded-xl">
           <Text className="text-white font-bold">Resume Test</Text>
-        </TouchableOpacity>
+        </Touchable>
       </View>
     );
   }
@@ -82,13 +85,13 @@ export default function ResultsScreen() {
 
   return (
     <ScrollView className="flex-1 bg-slate-50 dark:bg-ink-bg" showsVerticalScrollIndicator={false}>
-      <View style={{ backgroundColor: colors.hero }} className="p-6 items-center pt-8">
+      <HeroBackground className="p-6 items-center pt-8 rounded-b-[32px]">
         <View className="w-20 h-20 rounded-full bg-amber-400/20 items-center justify-center mb-3">
           <Ionicons name="trophy" size={40} color="#FCD34D" />
         </View>
         <Text className="text-white text-2xl font-bold">Test Completed!</Text>
         <Text className="text-indigo-200 mt-1 text-center px-4">{attempt.test?.title}</Text>
-      </View>
+      </HeroBackground>
 
       <PremiumCard className="mx-4 -mt-5 p-6">
         <View className="items-center mb-5">
@@ -123,9 +126,9 @@ export default function ResultsScreen() {
         <PrimaryButton title={showSolutions ? "Hide Solutions" : "📖 View Solutions & Explanations"} onPress={() => setShowSolutions(!showSolutions)} />
         {attempt.test && (
           <Link href={`/leaderboard`} asChild>
-            <TouchableOpacity className="bg-white dark:bg-ink-card border border-slate-200 dark:border-slate-700 rounded-2xl py-4 items-center">
+            <Touchable className="bg-white dark:bg-ink-card border border-slate-200 dark:border-slate-700 rounded-2xl py-4 items-center">
               <Text className="text-indigo-600 font-bold">🏆 View Leaderboard</Text>
-            </TouchableOpacity>
+            </Touchable>
           </Link>
         )}
         <PrimaryButton title="📊 View Full Analytics" onPress={() => router.push("/(tabs)/analytics")} />
@@ -147,17 +150,29 @@ export default function ResultsScreen() {
                   <Badge label={`Q${idx + 1}`} color={colors.primary} />
                   <Badge label={isCorrect ? "Correct" : ans?.selectedOptionId ? "Wrong" : "Skipped"} color={isCorrect ? colors.success : ans?.selectedOptionId ? colors.danger : "#94A3B8"} />
                 </View>
-                <Text className="font-medium text-slate-900 dark:text-slate-50 mb-3">{q.questionText}</Text>
-                {(q.options as { id: string; text: string }[]).map((opt) => (
+                <View className="mb-3">
+                  <QuestionContent passage={q.passage} text={q.questionText} image={q.questionImage} />
+                </View>
+                {(q.options as { id: string; text: string; image?: string }[]).map((opt) => (
                   <View key={opt.id} className={`px-3 py-2 rounded-xl mb-1 ${opt.id === correctId ? "bg-emerald-50 border border-emerald-200" : opt.id === ans?.selectedOptionId && !isCorrect ? "bg-red-50 border border-red-200" : "bg-slate-50 dark:bg-ink-bg"}`}>
-                    <Text className={`text-sm ${opt.id === correctId ? "text-emerald-800 font-semibold" : "text-slate-600 dark:text-slate-400"}`}>
-                      {opt.id.toUpperCase()}. {opt.text} {opt.id === correctId ? " ✓" : ""}
-                    </Text>
+                    <View className="flex-row">
+                      <Text className={`text-sm mr-1.5 ${opt.id === correctId ? "text-emerald-800 font-semibold" : "text-slate-600 dark:text-slate-400"}`}>
+                        {opt.id.toUpperCase()}.
+                      </Text>
+                      <View className="flex-1">
+                        <RichText
+                          text={`${opt.text}${opt.id === correctId ? "  ✓" : ""}`}
+                          size={14}
+                          color={opt.id === correctId ? "#065F46" : opt.id === ans?.selectedOptionId && !isCorrect ? "#991B1B" : colors.textMuted}
+                        />
+                        {opt.image ? <RichImage uri={opt.image} maxHeight={160} /> : null}
+                      </View>
+                    </View>
                   </View>
                 ))}
                 {withSolutions.explanation ? (
                   <View className="bg-indigo-50 rounded-xl p-3 mt-2">
-                    <Text className="text-indigo-800 text-sm">💡 {withSolutions.explanation}</Text>
+                    <RichText text={withSolutions.explanation} size={14} color="#1E3A8A" />
                   </View>
                 ) : null}
               </PremiumCard>

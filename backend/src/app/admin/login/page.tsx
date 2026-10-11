@@ -43,7 +43,7 @@ export default function AdminLoginPage() {
         <div className="relative z-10 text-white max-w-md">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
             <div className="flex items-center gap-3 mb-8">
-              <BrandLogo size={52} showText subtitle="Govt Exam Prep Platform" />
+              <BrandLogo size={52} showText subtitle="Exam App" />
             </div>
             <h2 className="text-4xl font-bold leading-tight mb-4">Admin Control Center</h2>
             <p className="text-indigo-200 text-lg leading-relaxed">

@@ -5,21 +5,31 @@ import { api } from "@convex/_generated/api";
 import { useOnce, useAdminMutation } from "@/lib/admin-data";
 import { Id } from "@convex/_generated/dataModel";
 import { toast } from "sonner";
-import { BookOpen, CalendarClock, Layers, AlertCircle, Plus, X } from "lucide-react";
-import { Button, Input, Textarea, Select } from "@/components/admin/ui";
+import { BookOpen, CalendarClock, Layers, AlertCircle } from "lucide-react";
+import { Button, Input, Select } from "@/components/admin/ui";
 import { cn } from "@/lib/utils";
+import {
+  QuestionBodyEditor,
+  bodyFrom,
+  bodyPayload,
+  nextInPassage,
+  validateBody,
+  type QuestionBody,
+} from "./QuestionBodyEditor";
 
 export type QuestionType = "practice" | "pyp" | "testSeries";
 
 type Exam = { _id: string; name: string };
 type Series = { _id: string; examId: string; title: string };
 
-type Opt = { id: string; text: string };
+type Opt = { id: string; text: string; image?: string };
 type Diff = "easy" | "medium" | "hard";
 
 export type EditTarget = {
   _id: string;
   questionText: string;
+  questionImage?: string;
+  passage?: string;
   options: Opt[];
   correctOptionId: string;
   explanation?: string;
@@ -60,15 +70,6 @@ const TYPE_CHOICES: {
     icon: Layers,
   },
 ];
-
-// Positional letter ids. Options can be 2–6; ids are assigned by position and
-// NOT renumbered on removal, so `correctOptionId` stays valid for surviving rows.
-const OPTION_IDS = ["a", "b", "c", "d", "e", "f"];
-const MIN_OPTIONS = 2;
-const MAX_OPTIONS = 6;
-
-const emptyOptions = (): Opt[] =>
-  OPTION_IDS.slice(0, 4).map((id) => ({ id, text: "" }));
 
 const LANGUAGES = [
   "English",
@@ -127,12 +128,7 @@ export function QuestionForm({
   const [testName, setTestName] = useState("");
 
   // ── Question payload ──
-  const [questionText, setQuestionText] = useState(editTarget?.questionText ?? "");
-  const [options, setOptions] = useState<Opt[]>(editTarget?.options ?? emptyOptions());
-  const [correctOptionId, setCorrectOptionId] = useState(
-    editTarget?.correctOptionId ?? "a"
-  );
-  const [explanation, setExplanation] = useState(editTarget?.explanation ?? "");
+  const [body, setBody] = useState<QuestionBody>(() => bodyFrom(editTarget));
   const [difficulty, setDifficulty] = useState<Diff>(editTarget?.difficulty ?? "medium");
   const [marks, setMarks] = useState(editTarget?.marks ?? 1);
   const [negativeMarks, setNegativeMarks] = useState(editTarget?.negativeMarks ?? 0.25);
@@ -143,49 +139,19 @@ export function QuestionForm({
 
   const filteredSeries = seriesList.filter((s) => !examId || s.examId === examId);
 
-  const setOpt = (idx: number, text: string) => {
-    const next = [...options];
-    next[idx] = { ...next[idx], text };
-    setOptions(next);
-  };
-
-  const addOption = () => {
-    if (options.length >= MAX_OPTIONS) return;
-    setOptions([...options, { id: OPTION_IDS[options.length], text: "" }]);
-  };
-
-  const removeOption = (idx: number) => {
-    if (options.length <= MIN_OPTIONS) return;
-    const removed = options[idx];
-    const next = options.filter((_, i) => i !== idx);
-    setOptions(next);
-    // If the option marked correct was removed, fall back to the first remaining.
-    if (correctOptionId === removed.id) setCorrectOptionId(next[0].id);
-  };
-
   function validate(): string[] {
     const e: string[] = [];
     if (mode === "add" && !locked) {
       if (!questionType) e.push("Choose what you are adding (Practice / Previous Year / Test Series).");
       if (!examId) e.push("Please select an Exam.");
-      if (questionType === "practice" && !subject.trim())
-        e.push("Subject is required for Practice questions.");
-      if (questionType === "pyp") {
-        if (!year.trim()) e.push("Year is required for a Previous Year paper.");
-        if (!paperName.trim()) e.push("Paper name is required for a Previous Year paper.");
-      }
+      if (questionType === "pyp" && !year.trim())
+        e.push("Year is required for a Previous Year paper.");
       if (questionType === "testSeries") {
         if (!seriesId) e.push("Please select a Test Series.");
         if (!testName.trim()) e.push("Test name is required for a Test Series question.");
       }
     }
-    if (!questionText.trim()) e.push("Question text is required.");
-    if (options.length < MIN_OPTIONS) e.push("Add at least two answer options.");
-    options.forEach((o) => {
-      if (!o.text.trim()) e.push(`Option ${o.id.toUpperCase()} cannot be empty.`);
-    });
-    if (!correctOptionId) e.push("Please select the correct answer.");
-    return e;
+    return [...e, ...validateBody(body)];
   }
 
   async function save(status: "draft" | "published", addAnother = false) {
@@ -200,10 +166,7 @@ export function QuestionForm({
       if (mode === "edit" && editTarget) {
         await updateQuestion({
           id: editTarget._id as Id<"questions">,
-          questionText: questionText.trim(),
-          options: options.map((o) => ({ id: o.id, text: o.text.trim() })),
-          correctOptionId,
-          explanation: explanation.trim() || undefined,
+          ...bodyPayload(body, "edit"),
           subject: subject.trim() || undefined,
           topic: chapter.trim() || undefined,
           difficulty,
@@ -228,10 +191,7 @@ export function QuestionForm({
         paperName: paperName.trim() || undefined,
         testSeriesId: seriesId ? (seriesId as Id<"testSeries">) : undefined,
         testName: testName.trim() || undefined,
-        questionText: questionText.trim(),
-        options: options.map((o) => ({ id: o.id, text: o.text.trim() })),
-        correctOptionId,
-        explanation: explanation.trim() || undefined,
+        ...bodyPayload(body, "add"),
         difficulty,
         marks,
         negativeMarks,
@@ -242,11 +202,8 @@ export function QuestionForm({
       onSaved();
 
       if (addAnother) {
-        // Retain context, clear only the question body.
-        setQuestionText("");
-        setOptions(emptyOptions());
-        setCorrectOptionId("a");
-        setExplanation("");
+        // Retain context (and the passage), clear only the question.
+        setBody(nextInPassage(body));
         setErrors([]);
       } else {
         onClose();
@@ -340,8 +297,8 @@ export function QuestionForm({
           {(mode === "edit" || questionType === "practice" || locked) && (
             <div className="grid grid-cols-2 gap-3">
               <Input
-                label={mode === "add" && !locked ? "Subject *" : "Subject"}
-                placeholder="e.g. General Knowledge"
+                label="Subject"
+                placeholder="e.g. General Knowledge (blank = General)"
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
                 className={inputInvalid(errors.some((x) => x.includes("Subject")))}
@@ -366,8 +323,8 @@ export function QuestionForm({
                 className={inputInvalid(errors.some((x) => x.includes("Year")))}
               />
               <Input
-                label="Paper Name *"
-                placeholder="SSC CGL 2024"
+                label="Paper Name"
+                placeholder="Blank = exam name + year"
                 value={paperName}
                 onChange={(e) => setPaperName(e.target.value)}
                 className={inputInvalid(errors.some((x) => x.includes("Paper")))}
@@ -410,70 +367,14 @@ export function QuestionForm({
       {/* Step 3 — Question body */}
       {(mode === "edit" || questionType) && (
         <>
-          <Textarea
-            label="Question Text *"
-            rows={3}
-            value={questionText}
-            onChange={(e) => setQuestionText(e.target.value)}
-            className={inputInvalid(errors.some((x) => x.includes("Question text")))}
+          <QuestionBodyEditor
+            value={body}
+            onChange={setBody}
+            errors={errors}
+            radioName="correct"
           />
 
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-slate-700">
-              Answer Options — select the correct one{" "}
-              <span className="text-slate-400 font-normal">({MIN_OPTIONS}–{MAX_OPTIONS} options)</span>
-            </p>
-            {options.map((opt, idx) => (
-              <div key={opt.id} className="flex items-center gap-3">
-                <input
-                  type="radio"
-                  name="correct"
-                  className="accent-indigo-600 w-4 h-4 shrink-0"
-                  checked={correctOptionId === opt.id}
-                  onChange={() => setCorrectOptionId(opt.id)}
-                />
-                <span className="font-bold text-sm w-5 text-slate-600 shrink-0">
-                  {opt.id.toUpperCase()}.
-                </span>
-                <Input
-                  placeholder={`Option ${opt.id.toUpperCase()}`}
-                  value={opt.text}
-                  onChange={(e) => setOpt(idx, e.target.value)}
-                  className={cn(
-                    "flex-1",
-                    inputInvalid(
-                      errors.some((x) => x.includes(`Option ${opt.id.toUpperCase()}`))
-                    ),
-                    correctOptionId === opt.id && "border-emerald-300 bg-emerald-50"
-                  )}
-                />
-                <button
-                  type="button"
-                  onClick={() => removeOption(idx)}
-                  disabled={options.length <= MIN_OPTIONS}
-                  aria-label={`Remove option ${opt.id.toUpperCase()}`}
-                  className="p-2 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
-                >
-                  <X size={16} />
-                </button>
-              </div>
-            ))}
-            {options.length < MAX_OPTIONS && (
-              <Button variant="ghost" size="sm" onClick={addOption}>
-                <Plus size={15} /> Add Option
-              </Button>
-            )}
-          </div>
-
-          <Textarea
-            label="Explanation (shown after the test)"
-            rows={8}
-            value={explanation}
-            onChange={(e) => setExplanation(e.target.value)}
-            className="min-h-[180px] leading-relaxed resize-y"
-          />
-
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <Select
               label="Difficulty"
               value={difficulty}

@@ -1,8 +1,8 @@
 export default {
   expo: {
-    name: "SarkariRank - Govt Exam Prep",
+    name: "Astraa Exam App",
     slug: "sarkari-rank-govt-exam-prep",
-    version: "1.0.10",
+    version: "1.0.11",
     orientation: "portrait",
     icon: "./assets/icon.png",
     userInterfaceStyle: "light",
@@ -10,7 +10,7 @@ export default {
     splash: {
       image: "./assets/splash-icon.png",
       resizeMode: "contain",
-      backgroundColor: "#201584",
+      backgroundColor: "#FFFFFF",
     },
     ios: {
       supportsTablet: true,
@@ -18,11 +18,11 @@ export default {
     },
     android: {
       adaptiveIcon: {
-        backgroundColor: "#201584",
+        backgroundColor: "#FFFFFF",
         foregroundImage: "./assets/android-icon-foreground.png",
       },
-      package: "com.sarkarirank.app",
-      versionCode: 11,
+      package: "com.astraa.examapp",
+      versionCode: 12,
     },
     web: {
       bundler: "metro",

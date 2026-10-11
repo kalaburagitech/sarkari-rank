@@ -1,4 +1,9 @@
-import { View, Text, ScrollView, TouchableOpacity, Alert, Image } from "react-native";
+import { PRIVACY_URL, DELETE_ACCOUNT_URL } from "../../constants/legal";
+import { SELL_PASS } from "../../constants/features";
+import { Touchable } from "../../components/Touchable";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { HeroBackground } from "../../components/Gradient";
+import { View, Text, ScrollView, Alert, Image } from "react-native";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useCached } from "../../lib/offline";
@@ -17,6 +22,7 @@ const APPEARANCE: { mode: ThemeMode; label: string; icon: string }[] = [
 export default function ProfileScreen() {
   const { user, logout } = useAuth();
   const { colors, mode, setMode } = useTheme();
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const notifications = useCached<any[]>(`notifications:${user?._id}`, api.content.listNotifications, user ? { userId: user._id } : "skip", ["notifications"]);
   const unread = notifications?.filter((n) => !n.isRead).length ?? 0;
@@ -33,33 +39,34 @@ export default function ProfileScreen() {
     { icon: "trophy", label: "All India Leaderboard", color: "#F59E0B", href: "/leaderboard" },
     { icon: "book", label: "Notes", color: "#8B5CF6", href: "/study-notes" },
     { icon: "newspaper", label: "Current Affairs", color: "#10B981", href: "/current-affairs" },
-    { icon: "notifications", label: "Notifications", color: "#6366F1", href: "/notifications", badge: unread },
+    { icon: "notifications", label: "Notifications", color: "#2F60BE", href: "/notifications", badge: unread },
     { icon: "chatbubble", label: "Doubt Support", color: "#EC4899", href: "/doubts" },
-    { icon: "card", label: "Premium Pass", color: "#EF4444", href: "/premium" },
+    ...(SELL_PASS ? [{ icon: "card", label: "Premium Pass", color: "#EF4444", href: "/premium" }] : []),
     { icon: "information-circle", label: "About & Disclaimer", color: "#64748B", href: "/disclaimer" },
+    { icon: "shield-checkmark", label: "Privacy Policy", color: "#0EA5E9", href: PRIVACY_URL },
+    { icon: "trash", label: "Delete Account", color: "#EF4444", href: DELETE_ACCOUNT_URL },
   ];
 
   return (
     <ScrollView className="flex-1 bg-slate-50 dark:bg-ink-bg" showsVerticalScrollIndicator={false}>
-      <View style={{ backgroundColor: colors.hero }} className="px-5 pt-6 pb-10 items-center">
+      <HeroBackground style={{ paddingTop: insets.top + 16 }} className="px-5 pb-10 items-center rounded-b-[32px]">
         <View className="w-20 h-20 rounded-2xl items-center justify-center mb-3 border-2 border-amber-400/40 overflow-hidden" style={{ backgroundColor: colors.primary }}>
-          <Image source={require("../../assets/icon.png")} style={{ width: 80, height: 80, position: "absolute", opacity: 0.25 }} />
           <Text className="text-white text-3xl font-black">{user?.name?.charAt(0)?.toUpperCase() ?? "U"}</Text>
         </View>
         <Text className="text-white text-xl font-bold">{user?.name}</Text>
         <Text style={{ color: colors.onHeroMuted }} className="text-sm mt-0.5">{user?.email}</Text>
-        {user?.isPremium ? (
+        {!SELL_PASS ? null : user?.isPremium ? (
           <View className="bg-amber-500/25 px-4 py-1.5 rounded-full mt-3 border border-amber-400/40">
             <Text className="text-amber-300 text-sm font-bold">⭐ Premium Member</Text>
           </View>
         ) : (
           <Link href="/premium" asChild>
-            <TouchableOpacity className="bg-amber-500 px-6 py-2.5 rounded-full mt-3">
+            <Touchable className="bg-amber-500 px-6 py-2.5 rounded-full mt-3">
               <Text className="text-white font-bold text-sm">Get Premium Pass · ₹499/yr</Text>
-            </TouchableOpacity>
+            </Touchable>
           </Link>
         )}
-      </View>
+      </HeroBackground>
 
       <PremiumCard className="mx-4 -mt-5 p-1 flex-row">
         <StatBox icon="document-text" value={user?.totalTestsTaken ?? 0} label="Tests" color={colors.primary} />
@@ -76,7 +83,7 @@ export default function ProfileScreen() {
           {APPEARANCE.map((opt) => {
             const active = mode === opt.mode;
             return (
-              <TouchableOpacity
+              <Touchable
                 key={opt.mode}
                 onPress={() => setMode(opt.mode)}
                 activeOpacity={0.85}
@@ -85,7 +92,7 @@ export default function ProfileScreen() {
               >
                 <Ionicons name={opt.icon as any} size={16} color={active ? "#fff" : colors.textMuted} />
                 <Text className={`ml-1.5 text-sm font-semibold ${active ? "text-white" : "text-slate-600 dark:text-slate-300"}`}>{opt.label}</Text>
-              </TouchableOpacity>
+              </Touchable>
             );
           })}
         </PremiumCard>
@@ -95,7 +102,7 @@ export default function ProfileScreen() {
         <SectionHeader title="Quick Access" />
         {menuItems.map((item) => (
           <Link key={item.label} href={item.href as any} asChild>
-            <TouchableOpacity activeOpacity={0.85}>
+            <Touchable activeOpacity={0.85}>
               <PremiumCard className="p-4 mb-2 flex-row items-center">
                 <View className="w-10 h-10 rounded-xl items-center justify-center mr-3" style={{ backgroundColor: item.color + "1F" }}>
                   <Ionicons name={item.icon as any} size={20} color={item.color} />
@@ -108,14 +115,14 @@ export default function ProfileScreen() {
                 ) : null}
                 <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
               </PremiumCard>
-            </TouchableOpacity>
+            </Touchable>
           </Link>
         ))}
 
-        <TouchableOpacity onPress={handleLogout} className="bg-red-50 dark:bg-red-950/40 rounded-2xl p-4 mt-4 flex-row items-center justify-center border border-red-100 dark:border-red-900">
+        <Touchable onPress={handleLogout} className="bg-red-50 dark:bg-red-950/40 rounded-2xl p-4 mt-4 flex-row items-center justify-center border border-red-100 dark:border-red-900">
           <Ionicons name="log-out-outline" size={18} color="#EF4444" />
           <Text className="text-red-500 font-bold ml-2">Logout</Text>
-        </TouchableOpacity>
+        </Touchable>
       </View>
     </ScrollView>
   );

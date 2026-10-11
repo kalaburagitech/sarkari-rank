@@ -7,11 +7,12 @@ import { Id } from "@convex/_generated/dataModel";
 import { toast } from "sonner";
 import {
   Plus, FolderTree, BookOpen, ChevronRight, Pencil, Trash2, FileJson,
-  Check, X, GripVertical,
+  Check, X,
 } from "lucide-react";
 import { PageHeader, Button, Card, Input, Textarea, Badge, LoadingState, EmptyState } from "@/components/admin/ui";
 import { cn } from "@/lib/utils";
 import { PracticeQuestionForm, PracticeQuestion } from "./PracticeQuestionForm";
+import { richToPlain } from "@/lib/rich";
 import { PracticeJsonImport } from "./PracticeJsonImport";
 
 type SubjectRow = {
@@ -19,6 +20,7 @@ type SubjectRow = {
   name: string;
   description?: string;
   icon?: string;
+  order: number;
   chapterCount: number;
   questionCount: number;
 };
@@ -26,6 +28,7 @@ type ChapterRow = {
   _id: Id<"chapters">;
   name: string;
   description?: string;
+  order: number;
   questionCount: number;
   publishedCount: number;
 };
@@ -104,20 +107,23 @@ function SubjectsPanel({
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
 
-  const reset = () => { setAdding(false); setEditing(null); setName(""); setDescription(""); };
+  const [serial, setSerial] = useState("");
+  const nextSerial = String(subjects.reduce((m, s) => Math.max(m, s.order), 0) + 1);
+
+  const reset = () => { setAdding(false); setEditing(null); setName(""); setDescription(""); setSerial(""); };
 
   const startEdit = (s: SubjectRow) => {
-    setEditing(s._id); setAdding(false); setName(s.name); setDescription(s.description ?? "");
+    setEditing(s._id); setAdding(false); setName(s.name); setDescription(s.description ?? ""); setSerial(String(s.order));
   };
 
   const submit = async () => {
     if (!name.trim()) { toast.error("Subject name is required"); return; }
     try {
       if (editing) {
-        await updateSubject({ id: editing as Id<"subjects">, name, description });
+        await updateSubject({ id: editing as Id<"subjects">, name, description, order: serialNum(serial) });
         toast.success("Subject updated");
       } else {
-        const id = await createSubject({ name, description });
+        const id = await createSubject({ name, description, order: serialNum(serial) });
         toast.success("Subject created");
         onSelect(id as Id<"subjects">);
       }
@@ -140,7 +146,7 @@ function SubjectsPanel({
           <Badge color="blue">{subjects.length}</Badge>
         </div>
         {!adding && !editing && (
-          <Button size="sm" onClick={() => { setAdding(true); setName(""); setDescription(""); }}>
+          <Button size="sm" onClick={() => { setAdding(true); setName(""); setDescription(""); setSerial(nextSerial); }}>
             <Plus size={15} /> New Subject
           </Button>
         )}
@@ -148,7 +154,10 @@ function SubjectsPanel({
 
       {(adding || editing) && (
         <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 mb-3 space-y-2">
-          <Input label={editing ? "Rename subject" : "Subject name"} placeholder="e.g. Indian Polity" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
+          <div className="grid grid-cols-[88px_1fr] gap-2">
+            <Input label="Serial No." type="number" min={1} value={serial} onChange={(e) => setSerial(e.target.value)} />
+            <Input label={editing ? "Rename subject" : "Subject name"} placeholder="e.g. Indian Polity" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
+          </div>
           <Textarea label="Description (optional)" rows={2} value={description} onChange={(e) => setDescription(e.target.value)} />
           <div className="flex gap-2">
             <Button size="sm" onClick={submit}><Check size={15} /> {editing ? "Save" : "Create"}</Button>
@@ -170,6 +179,7 @@ function SubjectsPanel({
                 selectedId === s._id ? "border-indigo-300 bg-indigo-50" : "border-transparent hover:bg-slate-50"
               )}
             >
+              <SerialBadge n={s.order} active={selectedId === s._id} />
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-sm text-slate-900 truncate">{s.icon ? `${s.icon} ` : ""}{s.name}</p>
                 <p className="text-xs text-slate-400">{s.chapterCount} chapter(s) · {s.questionCount} question(s)</p>
@@ -186,6 +196,24 @@ function SubjectsPanel({
         </div>
       )}
     </Card>
+  );
+}
+
+// Serial No. field → order. Blank/invalid = let the server pick the next number
+// (on create) or leave it unchanged (on edit).
+function serialNum(v: string): number | undefined {
+  const n = parseInt(v, 10);
+  return Number.isFinite(n) && n > 0 ? n : undefined;
+}
+
+function SerialBadge({ n, active }: { n: number; active: boolean }) {
+  return (
+    <span className={cn(
+      "shrink-0 min-w-7 h-7 px-1.5 rounded-lg text-xs font-bold flex items-center justify-center tabular-nums",
+      active ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-500"
+    )}>
+      {n}
+    </span>
   );
 }
 
@@ -208,18 +236,21 @@ function ChaptersPanel({
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
 
-  const reset = () => { setAdding(false); setEditing(null); setName(""); setDescription(""); };
-  const startEdit = (c: ChapterRow) => { setEditing(c._id); setAdding(false); setName(c.name); setDescription(c.description ?? ""); };
+  const [serial, setSerial] = useState("");
+  const nextSerial = String((chapters ?? []).reduce((m, c) => Math.max(m, c.order), 0) + 1);
+
+  const reset = () => { setAdding(false); setEditing(null); setName(""); setDescription(""); setSerial(""); };
+  const startEdit = (c: ChapterRow) => { setEditing(c._id); setAdding(false); setName(c.name); setDescription(c.description ?? ""); setSerial(String(c.order)); };
 
   const submit = async () => {
     if (!subject) return;
     if (!name.trim()) { toast.error("Chapter name is required"); return; }
     try {
       if (editing) {
-        await updateChapter({ id: editing as Id<"chapters">, name, description });
+        await updateChapter({ id: editing as Id<"chapters">, name, description, order: serialNum(serial) });
         toast.success("Chapter updated");
       } else {
-        const id = await createChapter({ subjectId: subject._id, name, description });
+        const id = await createChapter({ subjectId: subject._id, name, description, order: serialNum(serial) });
         toast.success("Chapter created");
         onSelect(id as Id<"chapters">);
       }
@@ -255,7 +286,7 @@ function ChaptersPanel({
           <h3 className="font-semibold text-slate-900 truncate">Chapters · <span className="text-indigo-600">{subject.name}</span></h3>
         </div>
         {!adding && !editing && (
-          <Button size="sm" onClick={() => { setAdding(true); setName(""); setDescription(""); }}>
+          <Button size="sm" onClick={() => { setAdding(true); setName(""); setDescription(""); setSerial(nextSerial); }}>
             <Plus size={15} /> New Chapter
           </Button>
         )}
@@ -263,7 +294,10 @@ function ChaptersPanel({
 
       {(adding || editing) && (
         <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 mb-3 space-y-2">
-          <Input label={editing ? "Rename chapter" : "Chapter name"} placeholder="e.g. Fundamental Rights" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
+          <div className="grid grid-cols-[88px_1fr] gap-2">
+            <Input label="Serial No." type="number" min={1} value={serial} onChange={(e) => setSerial(e.target.value)} />
+            <Input label={editing ? "Rename chapter" : "Chapter name"} placeholder="e.g. Fundamental Rights" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
+          </div>
           <Textarea label="Description (optional)" rows={2} value={description} onChange={(e) => setDescription(e.target.value)} />
           <div className="flex gap-2">
             <Button size="sm" onClick={submit}><Check size={15} /> {editing ? "Save" : "Create"}</Button>
@@ -287,7 +321,7 @@ function ChaptersPanel({
                 selectedId === c._id ? "border-indigo-300 bg-indigo-50" : "border-transparent hover:bg-slate-50"
               )}
             >
-              <GripVertical size={14} className="text-slate-300 shrink-0" />
+              <SerialBadge n={c.order} active={selectedId === c._id} />
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-sm text-slate-900 truncate">{c.name}</p>
                 <p className="text-xs text-slate-400">
@@ -452,7 +486,11 @@ function QuestionsPanel({
                   />
                   <span className="text-xs font-bold text-slate-400 mt-0.5 w-6 shrink-0">{i + 1}.</span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-slate-900">{q.questionText}</p>
+                    <p className="text-sm text-slate-900">
+                      {q.passage && <span className="text-amber-600 font-semibold">[Passage] </span>}
+                      {richToPlain(q.questionText) || "[image question]"}
+                      {q.questionImage && q.questionText ? <span className="text-slate-400"> 🖼</span> : null}
+                    </p>
                     <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                       <span className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-md px-1.5 py-0.5">
                         ✓ {correct?.text ?? q.correctOptionId.toUpperCase()}

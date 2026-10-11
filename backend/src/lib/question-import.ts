@@ -6,14 +6,20 @@ const OPT_IDS = ["a", "b", "c", "d", "e", "f"];
 
 export type Diff = "easy" | "medium" | "hard";
 
+type Opt = { id: string; text: string; image?: string };
+
 export type ParsedQuestion = {
   questionText: string;
-  options: { id: string; text: string }[];
+  questionImage?: string;
+  passage?: string;
+  passageKn?: string;
+  options: Opt[];
   correctOptionId: string;
   explanation?: string;
   questionTextKn?: string;
   optionsKn?: { id: string; text: string }[];
   explanationKn?: string;
+  subject?: string;
   topic?: string;
   year?: number;
   message?: string;
@@ -42,16 +48,18 @@ function pick<T = unknown>(
   return undefined;
 }
 
-function normalizeOptions(rawOpts: unknown): { id: string; text: string }[] {
+function normalizeOptions(rawOpts: unknown): Opt[] {
   if (!Array.isArray(rawOpts)) return [];
   return rawOpts.map((o, i) => {
     const id = OPT_IDS[i] ?? String(i);
     if (typeof o === "string") return { id, text: o.trim() };
     if (o && typeof o === "object") {
       const oo = o as Record<string, unknown>;
+      const image = pick<string>(oo, ["image", "img", "imageUrl"]);
       return {
         id: (oo.id as string) ?? id,
         text: String(oo.text ?? oo.value ?? "").trim(),
+        ...(image ? { image: String(image).trim() } : {}),
       };
     }
     return { id, text: String(o) };
@@ -62,7 +70,7 @@ function normalizeOptions(rawOpts: unknown): { id: string; text: string }[] {
 // (1-based or 0-based), an option id, or the exact option text.
 function resolveAnswer(
   rawAns: unknown,
-  options: { id: string; text: string }[]
+  options: Opt[]
 ): string | null {
   if (rawAns === undefined || rawAns === null) return null;
   const s = String(rawAns).trim();
@@ -107,8 +115,22 @@ export function parseQuestionsJson(
       ],
     };
 
+  // Passage groups: { "passage": "...", "questions": [ ... ] } expands into
+  // its questions, each carrying the passage.
+  const flat: unknown[] = arr.flatMap((item) => {
+    const g = item as Record<string, unknown>;
+    if (g && typeof g === "object" && Array.isArray(g.questions)) {
+      const passage = pick(g, ["passage", "paragraph", "comprehension"]);
+      const passageKn = pick(g, ["passageKn", "paragraphKn"]);
+      return (g.questions as unknown[]).map((q) =>
+        q && typeof q === "object" ? { passage, passageKn, ...(q as object) } : q
+      );
+    }
+    return [item];
+  });
+
   const ok: ParsedQuestion[] = [];
-  arr.forEach((item, i) => {
+  flat.forEach((item, i) => {
     const n = i + 1;
     if (!item || typeof item !== "object") {
       errors.push(`Q${n}: not an object`);
@@ -118,8 +140,9 @@ export function parseQuestionsJson(
     const text = String(
       pick<string>(q, ["question", "questionText", "q", "text"]) ?? ""
     ).trim();
-    if (!text) {
-      errors.push(`Q${n}: missing "question"`);
+    const questionImage = pick<string>(q, ["image", "questionImage", "img", "imageUrl"]);
+    if (!text && !questionImage) {
+      errors.push(`Q${n}: missing "question" (text or image)`);
       return;
     }
     const options = normalizeOptions(pick(q, ["options", "opts", "choices"]));
@@ -127,7 +150,7 @@ export function parseQuestionsJson(
       errors.push(`Q${n}: needs at least 2 options`);
       return;
     }
-    if (options.some((o) => !o.text)) {
+    if (options.some((o) => !o.text && !o.image)) {
       errors.push(`Q${n}: an option is empty`);
       return;
     }
@@ -154,8 +177,14 @@ export function parseQuestionsJson(
         }))
       : undefined;
 
+    const str = (keys: string[]) =>
+      (pick<string>(q, keys) ?? "").toString().trim() || undefined;
     ok.push({
       questionText: text,
+      questionImage: questionImage ? String(questionImage).trim() : undefined,
+      passage: str(["passage", "paragraph", "comprehension"]),
+      passageKn: str(["passageKn", "paragraphKn"]),
+      subject: str(["subject", "sub"]),
       options,
       correctOptionId,
       explanation:

@@ -1,4 +1,7 @@
-import { View, Text, ScrollView, TouchableOpacity } from "react-native";
+import { Touchable } from "../../components/Touchable";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { HeroBackground } from "../../components/Gradient";
+import { View, Text, ScrollView } from "react-native";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useCached } from "../../lib/offline";
@@ -10,6 +13,7 @@ import { useTheme } from "../../lib/theme";
 
 export default function AnalyticsScreen() {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const analytics = useCached<any>(`analytics:${user?._id}`, api.attempts.getPerformanceAnalytics, user ? { userId: user._id } : "skip", []);
   const attempts = useCached<any[]>(`attempts:${user?._id}`, api.attempts.getUserAttempts, user ? { userId: user._id } : "skip", []);
@@ -20,11 +24,11 @@ export default function AnalyticsScreen() {
 
   return (
     <ScrollView className="flex-1 bg-slate-50 dark:bg-ink-bg" showsVerticalScrollIndicator={false}>
-      <View style={{ backgroundColor: colors.hero }} className="px-5 pt-5 pb-8">
+      <HeroBackground style={{ paddingTop: insets.top + 16 }} className="px-5 pb-8 rounded-b-[32px]">
         <Text className="text-indigo-300 text-sm font-medium">Performance Dashboard</Text>
         <Text className="text-white text-2xl font-bold mt-1">Your Analytics</Text>
         <Text className="text-indigo-200 text-sm mt-1">Track progress · Find weak areas · Improve rank</Text>
-      </View>
+      </HeroBackground>
 
       <PremiumCard className="mx-4 -mt-5 p-1 flex-row flex-wrap">
         {[
@@ -41,7 +45,7 @@ export default function AnalyticsScreen() {
 
       <View className="px-4 mt-6">
         <Link href="/leaderboard" asChild>
-          <TouchableOpacity activeOpacity={0.9}>
+          <Touchable activeOpacity={0.9}>
             <View style={{ backgroundColor: colors.primary }} className="rounded-2xl p-4 flex-row items-center mb-6">
               <View className="w-12 h-12 rounded-xl bg-white/20 items-center justify-center mr-3">
                 <Ionicons name="podium" size={24} color="#fff" />
@@ -52,7 +56,7 @@ export default function AnalyticsScreen() {
               </View>
               <Ionicons name="chevron-forward" size={20} color="#fff" />
             </View>
-          </TouchableOpacity>
+          </Touchable>
         </Link>
 
         {analytics?.subjectBreakdown && analytics.subjectBreakdown.length > 0 && (

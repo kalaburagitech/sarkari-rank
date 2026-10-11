@@ -1,4 +1,5 @@
-import { View, Text, ScrollView, TouchableOpacity, TextInput } from "react-native";
+import { Touchable } from "../../components/Touchable";
+import { View, Text, ScrollView, TextInput } from "react-native";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useCached } from "../../lib/offline";
@@ -37,7 +38,7 @@ export default function ExamsScreen() {
 
   const renderBodyCard = (cat: (typeof categories)[number]) => (
     <Link key={cat._id} href={`/category/${cat.slug}`} asChild>
-      <TouchableOpacity activeOpacity={0.85}>
+      <Touchable activeOpacity={0.85}>
         <PremiumCard className="p-4 mb-3 flex-row items-center">
           <View style={{ backgroundColor: cat.color + "18" }} className="w-14 h-14 rounded-2xl items-center justify-center mr-3">
             <Text className="text-2xl">{cat.icon}</Text>
@@ -51,7 +52,7 @@ export default function ExamsScreen() {
           </View>
           <Ionicons name="chevron-forward" size={20} color="#CBD5E1" />
         </PremiumCard>
-      </TouchableOpacity>
+      </Touchable>
     </Link>
   );
 
@@ -64,9 +65,9 @@ export default function ExamsScreen() {
             <TextInput placeholder="Search exams (KAS, FDA, PDO, PSI...)" value={search} onChangeText={setSearch}
               className="flex-1 ml-3 text-slate-900 dark:text-slate-50 text-sm" placeholderTextColor="#94A3B8" />
             {search.length > 0 && (
-              <TouchableOpacity onPress={() => setSearch("")}>
+              <Touchable onPress={() => setSearch("")}>
                 <Ionicons name="close-circle" size={18} color="#CBD5E1" />
-              </TouchableOpacity>
+              </Touchable>
             )}
           </View>
           <Text className="text-slate-500 dark:text-slate-400 text-xs px-1">
@@ -87,7 +88,7 @@ export default function ExamsScreen() {
               ) : (
                 searchResults.map((exam) => (
                   <Link key={exam._id} href={`/exam/${exam.slug}`} asChild>
-                    <TouchableOpacity activeOpacity={0.85}>
+                    <Touchable activeOpacity={0.85}>
                       <PremiumCard className="p-4 mb-2 flex-row items-center">
                         <View style={{ backgroundColor: colors.primary + "15" }} className="w-11 h-11 rounded-2xl items-center justify-center mr-3">
                           <Text className="text-lg">{exam.icon ?? "📘"}</Text>
@@ -98,7 +99,7 @@ export default function ExamsScreen() {
                         </View>
                         <Ionicons name="chevron-forward" size={18} color="#CBD5E1" />
                       </PremiumCard>
-                    </TouchableOpacity>
+                    </Touchable>
                   </Link>
                 ))
               )}

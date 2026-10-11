@@ -1,5 +1,7 @@
+import { SELL_PASS } from "../../constants/features";
+import { Touchable } from "../../components/Touchable";
 import { useMemo, useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity, Alert, ActivityIndicator, Linking } from "react-native";
+import { View, Text, ScrollView, Alert, ActivityIndicator, Linking } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
@@ -123,7 +125,7 @@ export default function StudyNoteScreen() {
             {examName ? (
               <Text className="text-slate-500 dark:text-slate-400 text-xs mt-1 text-center">{examName}</Text>
             ) : null}
-            <TouchableOpacity
+            <Touchable
               onPress={handleDownload}
               disabled={downloading}
               activeOpacity={0.85}
@@ -132,7 +134,7 @@ export default function StudyNoteScreen() {
             >
               <Ionicons name="open-outline" size={18} color="#fff" />
               <Text className="text-white font-bold ml-2">{downloading ? "Opening..." : "Open PDF"}</Text>
-            </TouchableOpacity>
+            </Touchable>
             <Text className="text-slate-400 dark:text-slate-500 text-[11px] mt-3 text-center leading-4">
               Opens in your device's PDF app, where you can save or print it.
             </Text>
@@ -153,9 +155,9 @@ export default function StudyNoteScreen() {
         subtitle={note.subject ?? examName}
         onBack={() => router.back()}
         right={
-          <TouchableOpacity onPress={handleDownload} disabled={downloading} hitSlop={8} className="w-10 h-10 rounded-xl bg-white/10 items-center justify-center">
+          <Touchable onPress={handleDownload} disabled={downloading} hitSlop={8} className="w-10 h-10 rounded-xl bg-white/10 items-center justify-center">
             {downloading ? <ActivityIndicator size="small" color="#fff" /> : <Ionicons name="download-outline" size={20} color="#fff" />}
-          </TouchableOpacity>
+          </Touchable>
         }
       />
       <LanguageBar />
@@ -170,7 +172,7 @@ export default function StudyNoteScreen() {
             {note.subject ? <Badge label={note.subject} color="#8B5CF6" /> : null}
             {note.topic ? <Badge label={note.topic} color="#0EA5E9" /> : null}
             <Badge label={note.language ?? "English"} color={colors.secondary} />
-            {note.isPremium ? <Badge label="Premium" color={colors.accent} /> : <Badge label="Free" color={colors.success} />}
+            {note.isPremium && SELL_PASS ? <Badge label="Premium" color={colors.accent} /> : <Badge label="Free" color={colors.success} />}
           </View>
 
           <Text style={{ color: colors.text }} className="text-2xl font-black leading-8">{note.title}</Text>
@@ -191,7 +193,7 @@ export default function StudyNoteScreen() {
           <Markdown content={note.content ?? ""} />
         </View>
 
-        <TouchableOpacity
+        <Touchable
           onPress={handleDownload}
           disabled={downloading}
           activeOpacity={0.85}
@@ -206,7 +208,7 @@ export default function StudyNoteScreen() {
               <Text className="text-white font-bold text-base ml-2">Download as PDF</Text>
             </>
           )}
-        </TouchableOpacity>
+        </Touchable>
 
         <View className="mt-4">
           <DisclaimerBanner onPress={() => router.push("/disclaimer")} />

@@ -1,4 +1,5 @@
-import { View, Text, ScrollView, TouchableOpacity } from "react-native";
+import { Touchable } from "../components/Touchable";
+import { View, Text, ScrollView } from "react-native";
 import { api } from "../convex/_generated/api";
 import { useCached } from "../lib/offline";
 import { useBookmarks } from "../lib/bookmarks";
@@ -34,9 +35,9 @@ export default function BookmarksScreen() {
             </View>
             {b.testId && (
               <Link href={`/test/${b.testId}`} asChild>
-                <TouchableOpacity className="bg-indigo-50 px-3 py-1.5 rounded-full">
+                <Touchable className="bg-indigo-50 px-3 py-1.5 rounded-full">
                   <Text className="text-indigo-600 text-xs font-bold">Open</Text>
-                </TouchableOpacity>
+                </Touchable>
               </Link>
             )}
           </PremiumCard>

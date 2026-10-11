@@ -4,7 +4,14 @@ import { useAuth } from "../../lib/auth";
 import { useTheme } from "../../lib/theme";
 import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Logo, LogoRow } from "../../components/Logo";
+import { Logo } from "../../components/Logo";
+import { HeroBackground } from "../../components/Gradient";
+
+// Filled icon when active, outline otherwise. (The tab icon slot is ~30px
+// wide, so no pill background — it gets clipped.)
+function TabIcon({ name, focused, color }: { name: string; focused: boolean; color: unknown }) {
+  return <Ionicons name={(focused ? name : `${name}-outline`) as any} size={24} color={String(color)} />;
+}
 
 export default function TabLayout() {
   const { user, isLoading } = useAuth();
@@ -26,8 +33,11 @@ export default function TabLayout() {
       screenOptions={{
         tabBarActiveTintColor: colors.tabActive,
         tabBarInactiveTintColor: colors.tabInactive,
-        tabBarStyle: { backgroundColor: colors.tabBar, borderTopColor: colors.tabBarBorder, height: 64 + insets.bottom, paddingBottom: insets.bottom + 10, paddingTop: 4, elevation: 8, shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 8 },
+        tabBarStyle: { backgroundColor: colors.tabBar, borderTopWidth: 0, height: 66 + insets.bottom, paddingBottom: insets.bottom + 8, paddingTop: 8, elevation: 16, shadowColor: "#0B1B3F", shadowOpacity: 0.08, shadowRadius: 16, shadowOffset: { width: 0, height: -4 } },
+        tabBarLabelStyle: { fontSize: 11, fontWeight: "700", marginTop: 2 },
         headerStyle: { backgroundColor: colors.hero },
+        headerBackground: () => <HeroBackground style={{ flex: 1 }} glow={false} />,
+        headerShadowVisible: false,
         headerTintColor: "#fff",
         headerTitleStyle: { fontWeight: "700" },
       }}
@@ -36,36 +46,38 @@ export default function TabLayout() {
         name="index"
         options={{
           title: "Home",
-          headerTitle: () => <LogoRow size={30} subtitle="Govt Exam Prep" />,
-          tabBarIcon: ({ color, size }) => <Ionicons name="home" size={size} color={color} />,
+          headerShown: false, // the home hero is its own header
+          tabBarIcon: ({ color, focused }) => <TabIcon name="home" focused={focused} color={color} />,
         }}
       />
       <Tabs.Screen
         name="exams"
         options={{
           title: "Exams",
-          tabBarIcon: ({ color, size }) => <Ionicons name="school" size={size} color={color} />,
+          tabBarIcon: ({ color, focused }) => <TabIcon name="school" focused={focused} color={color} />,
         }}
       />
       <Tabs.Screen
         name="tests"
         options={{
           title: "Tests",
-          tabBarIcon: ({ color, size }) => <Ionicons name="document-text" size={size} color={color} />,
+          tabBarIcon: ({ color, focused }) => <TabIcon name="document-text" focused={focused} color={color} />,
         }}
       />
       <Tabs.Screen
         name="analytics"
         options={{
           title: "Analytics",
-          tabBarIcon: ({ color, size }) => <Ionicons name="bar-chart" size={size} color={color} />,
+          headerShown: false, // the screen's gradient hero is its header
+          tabBarIcon: ({ color, focused }) => <TabIcon name="bar-chart" focused={focused} color={color} />,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: "Profile",
-          tabBarIcon: ({ color, size }) => <Ionicons name="person" size={size} color={color} />,
+          headerShown: false, // the screen's gradient hero is its header
+          tabBarIcon: ({ color, focused }) => <TabIcon name="person" focused={focused} color={color} />,
         }}
       />
     </Tabs>

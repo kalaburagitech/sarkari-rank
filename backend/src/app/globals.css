@@ -1,11 +1,27 @@
 @import "tailwindcss";
 
+/* Astraa brand: remap Tailwind's indigo scale to the logo navy so existing
+   indigo-* utility classes follow the brand. Amber accent = #f5a300. */
+@theme {
+  --color-indigo-50: #eef3fc;
+  --color-indigo-100: #dae5f8;
+  --color-indigo-200: #b7cbf1;
+  --color-indigo-300: #8aa9e5;
+  --color-indigo-400: #5a82d3;
+  --color-indigo-500: #2f60be;
+  --color-indigo-600: #1a49a3;
+  --color-indigo-700: #0b3a8c;
+  --color-indigo-800: #0a2f72;
+  --color-indigo-900: #08275e;
+  --color-indigo-950: #051a40;
+}
+
 :root {
   --background: #f8fafc;
   --foreground: #0f172a;
-  --primary: #4f46e5;
-  --primary-dark: #312e81;
-  --accent: #f59e0b;
+  --primary: #1a49a3;
+  --primary-dark: #08275e;
+  --accent: #f5a300;
   --card: #ffffff;
   --border: #e2e8f0;
   --muted: #64748b;
@@ -61,14 +77,14 @@ body {
 }
 
 .gradient-text {
-  background: linear-gradient(135deg, #4f46e5, #7c3aed, #ec4899);
+  background: linear-gradient(135deg, #1a49a3, #0b3a8c, #f5a300);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
 .sidebar-gradient {
-  background: linear-gradient(180deg, #1e1b4b 0%, #312e81 50%, #3730a3 100%);
+  background: linear-gradient(180deg, #051a40 0%, #08275e 50%, #0a2f72 100%);
 }
 
 .stat-card-hover {
@@ -76,14 +92,14 @@ body {
 }
 .stat-card-hover:hover {
   transform: translateY(-4px);
-  box-shadow: 0 20px 40px -12px rgba(79, 70, 229, 0.25);
+  box-shadow: 0 20px 40px -12px rgba(26, 73, 163, 0.25);
 }
 
 input:focus, select:focus, textarea:focus {
   outline: none;
   ring: 2px;
-  border-color: #4f46e5;
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+  border-color: #1a49a3;
+  box-shadow: 0 0 0 3px rgba(26, 73, 163, 0.15);
 }
 
 /* ─── Markdown preview (admin notes editor) ─────────────────── */
@@ -94,8 +110,8 @@ input:focus, select:focus, textarea:focus {
 .md-preview p { margin: 0 0 12px; }
 .md-preview ul, .md-preview ol { margin: 0 0 12px; padding-left: 22px; }
 .md-preview li { margin-bottom: 5px; }
-.md-preview blockquote { margin: 0 0 12px; padding: 8px 14px; border-left: 3px solid #6366f1; background: #f1f5f9; border-radius: 6px; color: #475569; font-style: italic; }
-.md-preview code { font-family: ui-monospace, Menlo, monospace; background: #eef2ff; color: #4338ca; padding: 1px 5px; border-radius: 4px; font-size: 12.5px; }
-.md-preview a { color: #4f46e5; text-decoration: underline; }
+.md-preview blockquote { margin: 0 0 12px; padding: 8px 14px; border-left: 3px solid #2f60be; background: #f1f5f9; border-radius: 6px; color: #475569; font-style: italic; }
+.md-preview code { font-family: ui-monospace, Menlo, monospace; background: #eef3fc; color: #0b3a8c; padding: 1px 5px; border-radius: 4px; font-size: 12.5px; }
+.md-preview a { color: #1a49a3; text-decoration: underline; }
 .md-preview hr { border: none; border-top: 1px solid #e2e8f0; margin: 16px 0; }
 .md-preview strong { font-weight: 700; }

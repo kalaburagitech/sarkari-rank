@@ -30,6 +30,8 @@ const questionFields = {
     v.array(v.object({ id: v.string(), text: v.string() }))
   ),
   explanationKn: v.optional(v.string()),
+  passage: v.optional(v.string()),
+  passageKn: v.optional(v.string()),
   difficulty: v.union(v.literal("easy"), v.literal("medium"), v.literal("hard")),
   marks: v.number(),
   negativeMarks: v.number(),
@@ -39,6 +41,16 @@ const questionFields = {
   message: v.optional(v.string()),
   status: v.optional(v.union(v.literal("draft"), v.literal("published"))),
 };
+
+// Drops omitted fields and turns "" into undefined, which Convex's patch treats
+// as "remove the field" — so the admin can clear an image or explanation.
+export function cleanPatch<T extends Record<string, unknown>>(updates: T): Partial<T> {
+  return Object.fromEntries(
+    Object.entries(updates)
+      .filter(([, val]) => val !== undefined)
+      .map(([k, val]) => [k, val === "" ? undefined : val])
+  ) as Partial<T>;
+}
 
 // ═══ SUBJECTS ══════════════════════════════════════════════════════════════
 
@@ -74,6 +86,8 @@ export const createSubject = mutation({
     name: v.string(),
     description: v.optional(v.string()),
     icon: v.optional(v.string()),
+    // Serial number shown in the app; defaults to the next free number.
+    order: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     await touch(ctx, "practice");
@@ -87,7 +101,7 @@ export const createSubject = mutation({
       .first();
     if (existing) slug = `${slug}-${Date.now().toString(36)}`;
     const all = await ctx.db.query("subjects").collect();
-    const order = all.reduce((m, s) => Math.max(m, s.order), 0) + 1;
+    const order = args.order ?? all.reduce((m, s) => Math.max(m, s.order), 0) + 1;
     return await ctx.db.insert("subjects", {
       name,
       slug,
@@ -175,6 +189,7 @@ export const createChapter = mutation({
     subjectId: v.id("subjects"),
     name: v.string(),
     description: v.optional(v.string()),
+    order: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     await touch(ctx, "practice");
@@ -194,7 +209,7 @@ export const createChapter = mutation({
       .query("chapters")
       .withIndex("by_subject", (q) => q.eq("subjectId", args.subjectId))
       .collect();
-    const order = siblings.reduce((m, c) => Math.max(m, c.order), 0) + 1;
+    const order = args.order ?? siblings.reduce((m, c) => Math.max(m, c.order), 0) + 1;
     return await ctx.db.insert("chapters", {
       subjectId: args.subjectId,
       name,
@@ -291,6 +306,10 @@ export const updatePracticeQuestion = mutation({
   args: {
     id: v.id("practiceQuestions"),
     questionText: v.optional(v.string()),
+    // "" clears an optional field (image / passage / explanation).
+    questionImage: v.optional(v.string()),
+    passage: v.optional(v.string()),
+    passageKn: v.optional(v.string()),
     options: v.optional(
       v.array(
         v.object({ id: v.string(), text: v.string(), image: v.optional(v.string()) })
@@ -312,10 +331,7 @@ export const updatePracticeQuestion = mutation({
   handler: async (ctx, args) => {
     await touch(ctx, "practice");
     const { id, ...updates } = args;
-    const filtered = Object.fromEntries(
-      Object.entries(updates).filter(([, val]) => val !== undefined)
-    );
-    await ctx.db.patch(id, filtered);
+    await ctx.db.patch(id, cleanPatch(updates));
     const q = await ctx.db.get(id);
     if (q) await recountChapter(ctx, q.chapterId);
   },
@@ -434,6 +450,7 @@ export const getPracticeTree = query({
           _id: c._id,
           name: c.name,
           slug: c.slug,
+          order: c.order,
           description: c.description,
           questionCount: c.questionCount,
         }));
@@ -445,6 +462,7 @@ export const getPracticeTree = query({
           _id: s._id,
           name: s.name,
           slug: s.slug,
+          order: s.order,
           description: s.description,
           icon: s.icon,
           chapters: visibleChapters,
@@ -477,8 +495,8 @@ export const getChapterPractice = query({
       .filter((q) => (q.status ?? "published") === "published")
       .sort((a, b) => a.order - b.order);
     return {
-      chapter: { _id: chapter._id, name: chapter.name, slug: chapter.slug },
-      subject: subject ? { _id: subject._id, name: subject.name } : null,
+      chapter: { _id: chapter._id, name: chapter.name, slug: chapter.slug, order: chapter.order },
+      subject: subject ? { _id: subject._id, name: subject.name, order: subject.order } : null,
       questions,
     };
   },

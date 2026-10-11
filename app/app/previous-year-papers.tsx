@@ -1,5 +1,6 @@
+import { Touchable } from "../components/Touchable";
 import { useMemo, useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity } from "react-native";
+import { View, Text, ScrollView } from "react-native";
 import { api } from "../convex/_generated/api";
 import { useCached } from "../lib/offline";
 import { useRouter, Link } from "expo-router";
@@ -152,7 +153,7 @@ function PaperGroupCard({ group, examName, showExam }: { group: PaperGroup; exam
           {group.versions.map((v) => {
             const active = v._id === selectedId;
             return (
-              <TouchableOpacity
+              <Touchable
                 key={v._id}
                 onPress={() => setSelectedId(v._id)}
                 activeOpacity={0.8}
@@ -162,19 +163,19 @@ function PaperGroupCard({ group, examName, showExam }: { group: PaperGroup; exam
                 <Text className={`text-xs font-semibold ${active ? "text-white" : "text-slate-600 dark:text-slate-300"}`}>
                   {v.language ?? "English"}
                 </Text>
-              </TouchableOpacity>
+              </Touchable>
             );
           })}
         </View>
       )}
 
       <Link href={`/test/${selected._id}`} asChild>
-        <TouchableOpacity activeOpacity={0.85} style={{ backgroundColor: colors.primary }} className="rounded-xl py-3 mt-3 flex-row items-center justify-center">
+        <Touchable activeOpacity={0.85} style={{ backgroundColor: colors.primary }} className="rounded-xl py-3 mt-3 flex-row items-center justify-center">
           <Ionicons name="play" size={16} color="#fff" />
           <Text className="text-white font-bold text-sm ml-2">
             Start{multi ? ` · ${selected.language ?? "English"}` : ""}
           </Text>
-        </TouchableOpacity>
+        </Touchable>
       </Link>
     </PremiumCard>
   );

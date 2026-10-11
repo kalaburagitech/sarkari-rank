@@ -1,3 +1,5 @@
+import { palette } from "../constants/theme";
+import { HeroBackground } from "../components/Gradient";
 import "../global.css";
 import { Stack } from "expo-router";
 import { ConvexProvider } from "convex/react";
@@ -33,7 +35,19 @@ export default function RootLayout() {
       <ThemeProvider>
         <AuthProvider>
           <StatusBar style="light" />
-          <Stack screenOptions={{ headerShown: false }}>
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              // Screens that do show a system header get the brand gradient,
+              // so it flows into each screen's gradient hero.
+              headerBackground: () => <HeroBackground style={{ flex: 1 }} glow={false} />,
+              // Solid fallback: Android's native header ignores headerBackground.
+              headerStyle: { backgroundColor: palette.primary[950] },
+              headerTintColor: "#fff",
+              headerTitleStyle: { fontWeight: "700" },
+              headerShadowVisible: false,
+            }}
+          >
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="(auth)" />
           <Stack.Screen name="category/[slug]" options={{ headerShown: false }} />

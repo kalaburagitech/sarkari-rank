@@ -1,10 +1,11 @@
+import { HeroBackground } from "../../components/Gradient";
 import { useState } from "react";
 import { View, Text, KeyboardAvoidingView, Platform, ScrollView } from "react-native";
 import { useAuth } from "../../lib/auth";
 import { Link, useRouter } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { InputField, PrimaryButton, PremiumCard } from "../../components/ui";
-import { Logo } from "../../components/Logo";
+import { LogoFull } from "../../components/Logo";
 import { useTheme } from "../../lib/theme";
 
 export default function RegisterScreen() {
@@ -35,10 +36,12 @@ export default function RegisterScreen() {
   };
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} className="flex-1" style={{ backgroundColor: colors.hero }}>
+    <HeroBackground className="flex-1">
+    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} className="flex-1">
       <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: "center" }} className="px-6 py-10">
         <View className="items-center mb-6">
-          <Logo size={72} showText subtitle="Start free · No credit card required" />
+          <LogoFull width={150} />
+          <Text className="text-primary-200 text-sm mt-3 text-center">Start free · No credit card required</Text>
         </View>
 
         <PremiumCard className="p-6">
@@ -69,12 +72,13 @@ export default function RegisterScreen() {
         <View className="mt-6 px-2">
           {["Free mock tests", "Daily quiz & streak", "Performance analytics", "All India rank"].map((f) => (
             <View key={f} className="flex-row items-center mb-2">
-              <Ionicons name="checkmark-circle" size={16} color="#818CF8" />
+              <Ionicons name="checkmark-circle" size={16} color="#5A82D3" />
               <Text className="text-indigo-200 text-sm ml-2">{f}</Text>
             </View>
           ))}
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
+    </HeroBackground>
   );
 }

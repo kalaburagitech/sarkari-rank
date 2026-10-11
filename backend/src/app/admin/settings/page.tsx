@@ -9,7 +9,7 @@ export default function SettingsPage() {
       <PageHeader title="Settings" description="Platform configuration" />
       <div className="grid gap-4 max-w-2xl">
         {[
-          { label: "App Name", value: "SarkariRank - Govt Exam Prep" },
+          { label: "App Name", value: "Astraa Exam App" },
           { label: "Convex URL", value: "capable-gazelle-597.convex.cloud" },
           { label: "Premium Pass Price", value: "₹499/year" },
           { label: "Supported Languages", value: "English, Hindi, Bengali, Tamil, Telugu, Marathi, Gujarati, Kannada" },

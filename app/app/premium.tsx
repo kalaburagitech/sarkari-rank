@@ -1,4 +1,6 @@
-import { View, Text, ScrollView, TouchableOpacity, Alert } from "react-native";
+import { Touchable } from "../components/Touchable";
+import { HeroBackground } from "../components/Gradient";
+import { View, Text, ScrollView, Alert } from "react-native";
 import { useMutation } from "convex/react";
 import { api } from "../convex/_generated/api";
 import { useAuth } from "../lib/auth";
@@ -40,7 +42,7 @@ export default function PremiumScreen() {
         onPress: async () => {
           await createSubscription({ userId: user._id, plan: plan.id, amount: plan.price, paymentId: `demo_${Date.now()}` });
           await refreshUser();
-          Alert.alert("🎉 Welcome to Premium!", "Your SarkariRank Pass is now active. Enjoy unlimited tests!");
+          Alert.alert("🎉 Welcome to Premium!", "Your Astraa Pass is now active. Enjoy unlimited tests!");
           router.back();
         },
       },
@@ -49,16 +51,16 @@ export default function PremiumScreen() {
 
   return (
     <View className="flex-1 bg-slate-50 dark:bg-ink-bg">
-      <ScreenHeader title="SarkariRank Pass" subtitle="Unlock your full potential" onBack={() => router.back()} />
+      <ScreenHeader title="Astraa Pass" subtitle="Unlock your full potential" onBack={() => router.back()} />
 
       <ScrollView className="p-4" showsVerticalScrollIndicator={false}>
-        <View style={{ backgroundColor: colors.hero }} className="rounded-2xl p-5 mb-5">
+        <HeroBackground className="rounded-2xl p-5 mb-5">
           <LogoRow size={44} subtitle="Premium Exam Preparation" />
           <Text className="text-indigo-200 text-sm mt-4 leading-5">55+ mock tests · Live tests · PYP · Study notes · Analytics</Text>
-        </View>
+        </HeroBackground>
 
         {PLANS.map((plan) => (
-          <TouchableOpacity key={plan.id} activeOpacity={0.9} onPress={() => handlePurchase(plan)}>
+          <Touchable key={plan.id} activeOpacity={0.9} onPress={() => handlePurchase(plan)}>
             <PremiumCard className={`p-5 mb-3 ${plan.popular ? "border-2 border-amber-400" : ""}`}>
               <View className="flex-row justify-between items-start">
                 <View>
@@ -72,7 +74,7 @@ export default function PremiumScreen() {
                 </View>
               </View>
             </PremiumCard>
-          </TouchableOpacity>
+          </Touchable>
         ))}
 
         <PremiumCard className="p-5 mt-2 mb-8">

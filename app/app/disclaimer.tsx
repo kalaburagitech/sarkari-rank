@@ -1,4 +1,5 @@
-import { View, Text, ScrollView, TouchableOpacity, Linking } from "react-native";
+import { Touchable } from "../components/Touchable";
+import { View, Text, ScrollView, Linking } from "react-native";
 import { useRouter } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { ScreenHeader, PremiumCard } from "../components/ui";
@@ -30,7 +31,7 @@ export default function DisclaimerScreen() {
         </Text>
         <PremiumCard className="p-2 mb-4">
           {OFFICIAL_PORTALS.map((p, i) => (
-            <TouchableOpacity
+            <Touchable
               key={p.url}
               activeOpacity={0.8}
               onPress={() => Linking.openURL(p.url)}
@@ -44,13 +45,13 @@ export default function DisclaimerScreen() {
                 <Text className="text-slate-400 dark:text-slate-500 text-xs">{p.url.replace("https://", "")}</Text>
               </View>
               <Ionicons name="open-outline" size={18} color={colors.primary} />
-            </TouchableOpacity>
+            </Touchable>
           ))}
         </PremiumCard>
 
         <Text className="text-slate-400 dark:text-slate-500 text-xs text-center px-4 leading-5">
           Always confirm exam notifications, eligibility, dates and results on the official
-          websites above. SarkariRank is a study-preparation tool only.
+          websites above. Astraa is a study-preparation tool only.
         </Text>
       </ScrollView>
     </View>

@@ -97,6 +97,9 @@ export function PracticeJsonImport({
         chapterId: chapterId as Id<"chapters">,
         questions: result.ok.map((q) => ({
           questionText: q.questionText,
+          questionImage: q.questionImage,
+          passage: q.passage,
+          passageKn: q.passageKn,
           options: q.options,
           correctOptionId: q.correctOptionId,
           explanation: q.explanation,

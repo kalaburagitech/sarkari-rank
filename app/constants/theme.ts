@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────
-// SarkariRank Design Tokens
+// Astraa Design Tokens (navy + amber from the logo)
 // One source of truth for colors. `lightColors` / `darkColors` are
 // consumed through useTheme() (lib/theme.tsx). The legacy `theme`
 // export stays as a light alias so screens migrate incrementally.
@@ -8,17 +8,17 @@
 // Raw brand scales (also mirrored in tailwind.config.js for classes)
 export const palette = {
   primary: {
-    50: "#EEF2FF",
-    100: "#E0E7FF",
-    200: "#C7D2FE",
-    300: "#A5B4FC",
-    400: "#818CF8",
-    500: "#6366F1",
-    600: "#4F46E5",
-    700: "#4338CA",
-    800: "#3730A3",
-    900: "#312E81",
-    950: "#1E1B4B",
+    50: "#EEF3FC",
+    100: "#DAE5F8",
+    200: "#B7CBF1",
+    300: "#8AA9E5",
+    400: "#5A82D3",
+    500: "#2F60BE",
+    600: "#1A49A3",
+    700: "#0B3A8C",
+    800: "#0A2F72",
+    900: "#08275E",
+    950: "#051A40",
   },
   secondary: {
     50: "#ECFDF5",
@@ -30,11 +30,11 @@ export const palette = {
     700: "#047857",
   },
   accent: {
-    50: "#FFFBEB",
-    100: "#FEF3C7",
-    400: "#FBBF24",
-    500: "#F59E0B",
-    600: "#D97706",
+    50: "#FFF8E5",
+    100: "#FEEDBF",
+    400: "#FFBA2E",
+    500: "#F5A300",
+    600: "#D48A00",
   },
   danger: { 400: "#F87171", 500: "#EF4444", 600: "#DC2626" },
   info: { 400: "#60A5FA", 500: "#3B82F6" },
@@ -138,7 +138,7 @@ export const darkColors: ThemeColors = {
   textFaint: palette.neutral[500],
   primary: palette.primary[500],
   primaryDark: palette.primary[950],
-  primarySoft: "#1c2242",
+  primarySoft: "#13213F",
   onPrimary: "#FFFFFF",
   secondary: palette.secondary[400],
   secondaryDark: palette.secondary[500],
@@ -170,9 +170,9 @@ export const theme = {
   muted: lightColors.muted,
   border: lightColors.border,
   gradients: {
-    hero: ["#1E1B4B", "#312E81", "#4338CA"],
-    card: ["#6366F1", "#8B5CF6"],
-    gold: ["#F59E0B", "#D97706"],
+    hero: [palette.primary[950], palette.primary[900], palette.primary[700]],
+    card: [palette.primary[500], palette.primary[700]],
+    gold: [palette.accent[500], palette.accent[600]],
     success: ["#10B981", "#059669"],
   },
 };

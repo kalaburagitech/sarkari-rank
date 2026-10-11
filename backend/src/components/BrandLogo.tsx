@@ -13,7 +13,7 @@ type BrandLogoProps = {
 export function BrandLogo({
   size = 40,
   showText = true,
-  subtitle = "Govt Exam Prep",
+  subtitle = "Exam App",
   className,
   horizontal = false,
   variant = "light",
@@ -26,8 +26,8 @@ export function BrandLogo({
       <div className={cn("flex items-center", className)}>
         <Image
           src="/logo-horizontal.png"
-          alt="SarkariRank"
-          width={220}
+          alt="Astraa"
+          width={238}
           height={48}
           className="h-10 w-auto object-contain"
           priority
@@ -40,16 +40,16 @@ export function BrandLogo({
     <div className={cn("flex items-center gap-3", className)}>
       <Image
         src="/logo-icon.png"
-        alt="SarkariRank"
+        alt="Astraa"
         width={size}
         height={size}
-        className="rounded-2xl shadow-lg shadow-indigo-500/20"
+        className="rounded-2xl bg-white shadow-lg shadow-indigo-500/20"
         style={{ width: size, height: size }}
         priority
       />
       {showText && (
         <div>
-          <h1 className={cn("text-xl font-bold tracking-tight", titleClass)}>SarkariRank</h1>
+          <h1 className={cn("text-xl font-bold tracking-tight", titleClass)}>Astraa</h1>
           {subtitle && <p className={cn("text-xs", subtitleClass)}>{subtitle}</p>}
         </div>
       )}

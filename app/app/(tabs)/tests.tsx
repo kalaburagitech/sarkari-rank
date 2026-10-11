@@ -1,4 +1,6 @@
-import { View, Text, ScrollView, TouchableOpacity, TextInput } from "react-native";
+import { SELL_PASS } from "../../constants/features";
+import { Touchable } from "../../components/Touchable";
+import { View, Text, ScrollView, TextInput } from "react-native";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useCached } from "../../lib/offline";
@@ -102,14 +104,14 @@ export default function TestsScreen() {
                 const cfg = TEST_TYPE_CONFIG[test.type] ?? TEST_TYPE_CONFIG.mock;
                 return (
                   <Link key={test._id} href={`/test/${test._id}`} asChild>
-                    <TouchableOpacity activeOpacity={0.85} className="mb-3">
+                    <Touchable activeOpacity={0.85} className="mb-3">
                       <PremiumCard className="p-4">
                         <View className="flex-row justify-between items-start">
                           <View className="flex-1 mr-3">
                             <View className="flex-row items-center gap-2 mb-2 flex-wrap">
                               <Badge label={cfg.label} color={cfg.color} />
                               <Badge label={(test as any).language ?? "English"} color={colors.primary} />
-                              {test.isFree ? <Badge label="FREE" color={colors.success} /> : <Badge label="PREMIUM" color={colors.accent} />}
+                              {test.isFree || !SELL_PASS ? <Badge label="FREE" color={colors.success} /> : <Badge label="PREMIUM" color={colors.accent} />}
                             </View>
                             <Text className="font-bold text-slate-900 dark:text-slate-50 text-base leading-5">{test.title}</Text>
                             <View className="flex-row gap-3 mt-2 flex-wrap">
@@ -124,7 +126,7 @@ export default function TestsScreen() {
                           </View>
                         </View>
                       </PremiumCard>
-                    </TouchableOpacity>
+                    </Touchable>
                   </Link>
                 );
               })}

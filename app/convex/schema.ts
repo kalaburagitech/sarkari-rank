@@ -147,6 +147,11 @@ export default defineSchema({
       )
     ),
     explanationKn: v.optional(v.string()),
+    // Comprehension / common-data passage. Questions that share a passage carry
+    // the same text (set once in the admin form, kept by "Save & Add Another");
+    // the app shows it above the question. Optional → older rows valid.
+    passage: v.optional(v.string()),
+    passageKn: v.optional(v.string()),
     subject: v.optional(v.string()),
     topic: v.optional(v.string()),
     difficulty: v.union(
@@ -361,6 +366,8 @@ export default defineSchema({
       v.array(v.object({ id: v.string(), text: v.string() }))
     ),
     explanationKn: v.optional(v.string()),
+    passage: v.optional(v.string()),
+    passageKn: v.optional(v.string()),
     difficulty: v.union(
       v.literal("easy"),
       v.literal("medium"),

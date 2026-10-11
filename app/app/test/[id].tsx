@@ -1,5 +1,8 @@
+import { SELL_PASS } from "../../constants/features";
+import { Touchable } from "../../components/Touchable";
+import { HeroBackground } from "../../components/Gradient";
 import { useState, useEffect, useCallback, useRef, memo } from "react";
-import { View, Text, TouchableOpacity, ScrollView, Alert } from "react-native";
+import { View, Text, ScrollView, Alert, Image } from "react-native";
 import { useLocalSearchParams, useRouter, Redirect, Stack } from "expo-router";
 import { useCached, getQuestions } from "../../lib/offline";
 import { grade, saveAttempt, flushAttempts } from "../../lib/attempts";
@@ -12,6 +15,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { PremiumCard, Badge, PrimaryButton, LoadingScreen, EmptyScreen, AnswerOptionCard } from "../../components/ui";
 import { TEST_TYPE_CONFIG } from "../../constants/theme";
 import { useTheme } from "../../lib/theme";
+import { QuestionContent, RichText } from "../../components/RichText";
+import { questionImageUrls } from "../../lib/rich";
 
 // Memoized so it doesn't re-render on every timer tick — only when the current
 // question or the answered set actually changes. Big win for long tests.
@@ -29,13 +34,13 @@ const QuestionNav = memo(function QuestionNav({
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-1 mx-2">
       {items.map((q, idx) => (
-        <TouchableOpacity
+        <Touchable
           key={q._id}
           onPress={() => onJump(idx)}
           className={`w-8 h-8 rounded-lg items-center justify-center mr-1 ${idx === currentIndex ? "bg-indigo-600" : selected[q._id] ? "bg-emerald-500" : "bg-slate-200 dark:bg-slate-700"}`}
         >
           <Text className={`text-xs font-bold ${idx === currentIndex || selected[q._id] ? "text-white" : "text-slate-600 dark:text-slate-300"}`}>{idx + 1}</Text>
-        </TouchableOpacity>
+        </Touchable>
       ))}
     </ScrollView>
   );
@@ -63,7 +68,10 @@ export default function TestScreen() {
     // array means the test genuinely has no questions. Conflating the two made
     // a test with 100 questions read as "No questions in database yet".
     getQuestions<any[]>(testId, test.qv ?? 0).then((qs) => {
-      if (!cancelled) setQuestions(qs);
+      if (cancelled) return;
+      setQuestions(qs);
+      // Warm the image cache while online so figure questions still show offline.
+      for (const url of new Set((qs ?? []).flatMap(questionImageUrls))) Image.prefetch(url).catch(() => {});
     });
     return () => {
       cancelled = true;
@@ -149,7 +157,7 @@ export default function TestScreen() {
       Alert.alert("No Questions", "This test has no questions yet. Please check back later or contact admin.");
       return;
     }
-    if (test.isPremium && !test.isFree && !user.isPremium) {
+    if (SELL_PASS && test.isPremium && !test.isFree && !user.isPremium) {
       Alert.alert("Premium Required", "Premium Pass required for this test", [
         { text: "Cancel", style: "cancel" },
         { text: "Get Premium", onPress: () => router.push("/premium") },
@@ -197,7 +205,7 @@ export default function TestScreen() {
   }
 
   const typeCfg = TEST_TYPE_CONFIG[test.type] ?? TEST_TYPE_CONFIG.mock;
-  const locked = test.isPremium && !user.isPremium && !test.isFree;
+  const locked = SELL_PASS && test.isPremium && !user.isPremium && !test.isFree;
 
   const header = <Stack.Screen options={{ title: typeCfg.label }} />;
 
@@ -208,9 +216,9 @@ export default function TestScreen() {
         <PremiumCard className="p-6">
           <View className="flex-row items-start justify-between mb-2">
             <Badge label={typeCfg.label} color={typeCfg.color} />
-            <TouchableOpacity onPress={handleToggleBookmark}>
+            <Touchable onPress={handleToggleBookmark}>
               <Ionicons name={isBookmarked ? "bookmark" : "bookmark-outline"} size={24} color={isBookmarked ? colors.primary : "#94A3B8"} />
-            </TouchableOpacity>
+            </Touchable>
           </View>
           <Text className="text-2xl font-bold text-slate-900 dark:text-slate-50 mt-2">{test.title}</Text>
           <Text className="text-slate-500 dark:text-slate-400 mt-2 leading-5">{test.description}</Text>
@@ -258,7 +266,7 @@ export default function TestScreen() {
             <View className="mt-6">
               <View className="bg-indigo-50 dark:bg-primary-950 rounded-xl p-4 mb-3 flex-row items-center">
                 <Ionicons name="lock-closed" size={20} color={colors.primary} />
-                <Text className="text-indigo-800 text-sm ml-2 flex-1">Premium test — unlock with SarkariRank Pass</Text>
+                <Text className="text-indigo-800 text-sm ml-2 flex-1">Premium test — unlock with Astraa Pass</Text>
               </View>
               <PrimaryButton title="Get Premium Pass · ₹499/yr" onPress={() => router.push("/premium")} variant="gold" />
             </View>
@@ -286,6 +294,7 @@ export default function TestScreen() {
 
   const currentQ = questions[currentIndex];
   const qText = lang === "kn" && (currentQ as any).questionTextKn ? (currentQ as any).questionTextKn : currentQ.questionText;
+  const passage = lang === "kn" && currentQ.passageKn ? currentQ.passageKn : currentQ.passage;
   const optKnById: Record<string, string> = {};
   for (const o of ((currentQ as any).optionsKn ?? []) as { id: string; text: string }[]) optKnById[o.id] = o.text;
   const rev = revealed[currentQ._id];
@@ -295,31 +304,31 @@ export default function TestScreen() {
   return (
     <View className="flex-1 bg-slate-50 dark:bg-ink-bg">
       {header}
-      <View style={{ backgroundColor: colors.hero }} className="px-4 py-3 flex-row justify-between items-center">
+      <HeroBackground className="px-4 py-3 flex-row justify-between items-center">
         <Text className="text-white font-semibold">Q {currentIndex + 1}/{questions.length}</Text>
         <View className="flex-row items-center gap-2">
           {/* Language toggle */}
           <View className="flex-row bg-white/10 rounded-full p-0.5">
-            <TouchableOpacity onPress={() => setLang("en")} className={`px-2.5 py-1 rounded-full ${lang === "en" ? "bg-white" : ""}`}>
+            <Touchable onPress={() => setLang("en")} className={`px-2.5 py-1 rounded-full ${lang === "en" ? "bg-white" : ""}`}>
               <Text className={`text-xs font-bold ${lang === "en" ? "text-indigo-700" : "text-white"}`}>EN</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => setLang("kn")} className={`px-2.5 py-1 rounded-full ${lang === "kn" ? "bg-white" : ""}`}>
+            </Touchable>
+            <Touchable onPress={() => setLang("kn")} className={`px-2.5 py-1 rounded-full ${lang === "kn" ? "bg-white" : ""}`}>
               <Text className={`text-xs font-bold ${lang === "kn" ? "text-indigo-700" : "text-white"}`}>ಕನ್ನಡ</Text>
-            </TouchableOpacity>
+            </Touchable>
           </View>
           <View className="flex-row items-center bg-white/10 px-3 py-1 rounded-full">
             <Ionicons name="time-outline" size={14} color={timeLeft < 300 ? "#FCA5A5" : "#fff"} />
             <Text className={`ml-1 font-bold text-sm ${timeLeft < 300 ? "text-red-300" : "text-white"}`}>{formatTime(timeLeft)}</Text>
           </View>
-          <TouchableOpacity onPress={handleSubmit} className="bg-amber-500 px-3 py-1.5 rounded-full">
+          <Touchable onPress={handleSubmit} className="bg-amber-500 px-3 py-1.5 rounded-full">
             <Text className="text-white font-bold text-xs">Submit</Text>
-          </TouchableOpacity>
+          </Touchable>
         </View>
-      </View>
+      </HeroBackground>
 
       <ScrollView className="flex-1 p-4">
         <PremiumCard className="p-5 mb-4">
-          <Text className="text-slate-900 dark:text-slate-50 text-base leading-7">{qText}</Text>
+          <QuestionContent key={currentQ._id} passage={passage} text={qText} image={currentQ.questionImage} />
           {currentQ.subject && (
             <View className="flex-row mt-3 gap-2">
               <Badge label={currentQ.subject} color={colors.primary} />
@@ -328,7 +337,7 @@ export default function TestScreen() {
           )}
         </PremiumCard>
 
-        {(currentQ.options as { id: string; text: string }[]).map((opt) => {
+        {(currentQ.options as { id: string; text: string; image?: string }[]).map((opt) => {
           const isSelected = selectedId === opt.id;
           const state: "idle" | "selected" | "correct" | "wrong" = rev
             ? opt.id === rev.correctOptionId
@@ -344,6 +353,7 @@ export default function TestScreen() {
               key={opt.id}
               optionId={opt.id}
               text={lang === "kn" && optKnById[opt.id] ? optKnById[opt.id] : opt.text}
+              image={opt.image}
               state={state}
               disabled={!!rev}
               onPress={() => handleSelectOption(opt.id)}
@@ -364,24 +374,24 @@ export default function TestScreen() {
                 {selectedId === rev.correctOptionId ? (lang === "kn" ? "ಸರಿ ಉತ್ತರ!" : "Correct!") : (lang === "kn" ? "ತಪ್ಪು ಉತ್ತರ" : "Incorrect")}
               </Text>
             </View>
-            {explText ? <Text className="text-slate-600 dark:text-slate-300 text-sm leading-6">💡 {explText}</Text> : null}
+            {explText ? <RichText text={explText} size={14} color={colors.textMuted} /> : null}
           </View>
         )}
       </ScrollView>
 
       <View className="flex-row justify-between px-4 pt-4 bg-white dark:bg-ink-card border-t border-slate-100 dark:border-slate-800" style={{ paddingBottom: insets.bottom + 16 }}>
-        <TouchableOpacity onPress={() => setCurrentIndex(Math.max(0, currentIndex - 1))} disabled={currentIndex === 0}
+        <Touchable onPress={() => setCurrentIndex(Math.max(0, currentIndex - 1))} disabled={currentIndex === 0}
           className={`px-5 py-3 rounded-xl ${currentIndex === 0 ? "bg-slate-100 dark:bg-slate-800" : "bg-slate-200 dark:bg-slate-700"}`}>
           <Text className="font-semibold text-slate-700 dark:text-slate-200">Prev</Text>
-        </TouchableOpacity>
+        </Touchable>
 
         <QuestionNav items={questions} currentIndex={currentIndex} selected={selectedAnswers} onJump={setCurrentIndex} />
 
-        <TouchableOpacity onPress={() => setCurrentIndex(Math.min(questions.length - 1, currentIndex + 1))}
+        <Touchable onPress={() => setCurrentIndex(Math.min(questions.length - 1, currentIndex + 1))}
           disabled={currentIndex === questions.length - 1}
           className={`px-5 py-3 rounded-xl ${currentIndex === questions.length - 1 ? "bg-slate-100" : "bg-indigo-600"}`}>
           <Text className={`font-semibold ${currentIndex === questions.length - 1 ? "text-slate-400" : "text-white"}`}>Next</Text>
-        </TouchableOpacity>
+        </Touchable>
       </View>
     </View>
   );

@@ -78,28 +78,28 @@ export function buildNoteHtml(note: {
   @page { margin: 40px 44px; }
   * { box-sizing: border-box; }
   body { font-family: Georgia, 'Times New Roman', serif; color: #1e293b; line-height: 1.65; font-size: 15px; }
-  .brand { font-family: -apple-system, Helvetica, Arial, sans-serif; font-size: 12px; letter-spacing: .5px; color: #6366F1; font-weight: 700; text-transform: uppercase; }
+  .brand { font-family: -apple-system, Helvetica, Arial, sans-serif; font-size: 12px; letter-spacing: .5px; color: #2F60BE; font-weight: 700; text-transform: uppercase; }
   .crumb { font-family: -apple-system, Helvetica, Arial, sans-serif; font-size: 12px; color: #64748b; margin-top: 4px; }
   h1.title { font-size: 26px; margin: 10px 0 4px; color: #0f172a; line-height: 1.25; }
-  .rule { height: 3px; width: 56px; background: #6366F1; border-radius: 3px; margin: 14px 0 22px; }
+  .rule { height: 3px; width: 56px; background: #2F60BE; border-radius: 3px; margin: 14px 0 22px; }
   h1 { font-size: 21px; margin: 22px 0 8px; color: #0f172a; }
   h2 { font-size: 18px; margin: 20px 0 8px; color: #0f172a; }
   h3 { font-size: 16px; margin: 16px 0 6px; color: #0f172a; }
   p { margin: 0 0 12px; }
   ul, ol { margin: 0 0 14px; padding-left: 22px; }
   li { margin-bottom: 6px; }
-  blockquote { margin: 0 0 14px; padding: 8px 14px; border-left: 3px solid #6366F1; background: #f1f5f9; border-radius: 6px; color: #475569; font-style: italic; }
-  code { font-family: 'SF Mono', Menlo, monospace; background: #eef2ff; color: #4338ca; padding: 1px 5px; border-radius: 4px; font-size: 13px; }
-  a { color: #4f46e5; }
+  blockquote { margin: 0 0 14px; padding: 8px 14px; border-left: 3px solid #2F60BE; background: #f1f5f9; border-radius: 6px; color: #475569; font-style: italic; }
+  code { font-family: 'SF Mono', Menlo, monospace; background: #EEF3FC; color: #0B3A8C; padding: 1px 5px; border-radius: 4px; font-size: 13px; }
+  a { color: #1A49A3; }
   hr { border: none; border-top: 1px solid #e2e8f0; margin: 20px 0; }
   .footer { font-family: -apple-system, Helvetica, Arial, sans-serif; margin-top: 34px; padding-top: 12px; border-top: 1px solid #e2e8f0; font-size: 11px; color: #94a3b8; }
 </style></head>
 <body>
-  <div class="brand">SarkariRank · Study Notes</div>
+  <div class="brand">Astraa · Study Notes</div>
   ${crumb ? `<div class="crumb">${escapeHtml(crumb)}</div>` : ""}
   <h1 class="title">${escapeHtml(note.title)}</h1>
   <div class="rule"></div>
   ${markdownToHtml(note.content)}
-  <div class="footer">Generated from SarkariRank for educational use. Verify official information on the respective official government websites. SarkariRank is not a government entity.</div>
+  <div class="footer">Generated from Astraa for educational use. Verify official information on the respective official government websites. Astraa is not a government entity.</div>
 </body></html>`;
 }

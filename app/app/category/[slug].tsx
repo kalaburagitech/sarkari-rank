@@ -1,4 +1,6 @@
-import { View, Text, ScrollView, TouchableOpacity } from "react-native";
+import { Touchable } from "../../components/Touchable";
+import { HeroBackground } from "../../components/Gradient";
+import { View, Text, ScrollView } from "react-native";
 import { useLocalSearchParams, useRouter, Link } from "expo-router";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
@@ -37,14 +39,14 @@ export default function CategoryScreen() {
       />
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
-        <View style={{ backgroundColor: colors.hero }} className="px-5 pb-5">
+        <HeroBackground className="px-5 pb-5 rounded-b-[28px]">
           <View className="flex-row items-center">
             <View style={{ backgroundColor: "#ffffff22" }} className="w-12 h-12 rounded-2xl items-center justify-center mr-3">
               <Text className="text-2xl">{category.icon}</Text>
             </View>
             <Text className="text-indigo-200 text-sm flex-1 leading-5">{category.description}</Text>
           </View>
-        </View>
+        </HeroBackground>
 
         <View className="px-4 pt-4">
           {exams.length === 0 ? (
@@ -52,7 +54,7 @@ export default function CategoryScreen() {
           ) : (
             exams.map((exam) => (
               <Link key={exam._id} href={`/exam/${exam.slug}`} asChild>
-                <TouchableOpacity activeOpacity={0.85}>
+                <Touchable activeOpacity={0.85}>
                   <PremiumCard className="p-4 mb-3">
                     <View className="flex-row items-center">
                       <View style={{ backgroundColor: category.color + "18" }} className="w-12 h-12 rounded-2xl items-center justify-center mr-3">
@@ -71,7 +73,7 @@ export default function CategoryScreen() {
                       )}
                     </View>
                   </PremiumCard>
-                </TouchableOpacity>
+                </Touchable>
               </Link>
             ))
           )}

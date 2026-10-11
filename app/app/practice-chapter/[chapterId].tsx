@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity } from "react-native";
+import { Touchable } from "../../components/Touchable";
+import { useEffect, useMemo, useState } from "react";
+import { View, Text, ScrollView, Image } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
@@ -9,11 +10,16 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ScreenHeader, PremiumCard, Badge, PrimaryButton, LoadingScreen, EmptyScreen, AnswerOptionCard } from "../../components/ui";
 import { useTheme } from "../../lib/theme";
+import { QuestionContent, RichText } from "../../components/RichText";
+import { questionImageUrls } from "../../lib/rich";
+import { getProgress, saveProgress, clearProgress } from "../../lib/progress";
 
-type Opt = { id: string; text: string };
+type Opt = { id: string; text: string; image?: string };
 type Question = {
   _id: string;
   questionText: string;
+  questionImage?: string;
+  passage?: string;
   options: Opt[];
   correctOptionId: string;
   explanation?: string;
@@ -50,6 +56,41 @@ export default function PracticeChapterScreen() {
   const questions = data?.questions ?? [];
   const total = questions.length;
 
+  // Resume where the student left this chapter (once, when questions arrive).
+  const [restored, setRestored] = useState(false);
+  useEffect(() => {
+    if (!data?.questions?.length || restored) return;
+    getProgress(chapterId).then((p) => {
+      if (p) {
+        const ids = new Set(data.questions.map((q) => q._id));
+        setAnswers(Object.fromEntries(Object.entries(p.answers).filter(([id]) => ids.has(id))));
+        setIndex(Math.min(p.index, data.questions.length - 1));
+      }
+      setRestored(true);
+    });
+  }, [data, chapterId, restored]);
+
+  // Save progress after every answer / move.
+  useEffect(() => {
+    // Nothing answered yet (or just reset) → nothing worth resuming.
+    if (!restored || !data?.questions?.length || !Object.keys(answers).length) return;
+    saveProgress({
+      chapterId,
+      chapterName: data.chapter.name,
+      subjectName: data.subject?.name,
+      total: data.questions.length,
+      index,
+      answers,
+      correct: data.questions.reduce((n, q) => (answers[q._id] === q.correctOptionId ? n + 1 : n), 0),
+      updatedAt: Date.now(),
+    });
+  }, [restored, data, chapterId, index, answers]);
+
+  // Warm the image cache so figure questions still show offline.
+  useEffect(() => {
+    for (const url of new Set((data?.questions ?? []).flatMap(questionImageUrls))) Image.prefetch(url).catch(() => {});
+  }, [data]);
+
   const score = useMemo(
     () =>
       questions.reduce(
@@ -76,7 +117,7 @@ export default function PracticeChapterScreen() {
   // ── Summary ──
   if (finished) {
     const pct = total ? Math.round((score / total) * 100) : 0;
-    const reset = () => { setAnswers({}); setIndex(0); setFinished(false); };
+    const reset = () => { setAnswers({}); setIndex(0); setFinished(false); void clearProgress(chapterId); };
     return (
       <View className="flex-1 bg-slate-50 dark:bg-ink-bg">
         <ScreenHeader title="Practice Complete" subtitle={data.chapter.name} onBack={() => router.back()} />
@@ -153,7 +194,7 @@ export default function PracticeChapterScreen() {
               </Text>
             </View>
           )}
-          <Text className="text-slate-900 dark:text-slate-50 text-[16px] leading-6 font-medium">{q.questionText}</Text>
+          <QuestionContent key={q._id} passage={q.passage} text={q.questionText} image={q.questionImage} />
         </PremiumCard>
 
         {q.options.map((opt) => (
@@ -161,6 +202,7 @@ export default function PracticeChapterScreen() {
             key={opt.id}
             optionId={opt.id}
             text={opt.text}
+            image={opt.image}
             state={optState(opt.id)}
             disabled={answered}
             onPress={() => select(opt.id)}
@@ -184,10 +226,10 @@ export default function PracticeChapterScreen() {
               </Text>
             </View>
             {q.explanation ? (
-              <Text className="text-slate-600 dark:text-slate-300 text-sm leading-6">{q.explanation}</Text>
+              <RichText text={q.explanation} size={14} color={colors.textMuted} />
             ) : (
               <Text className="text-slate-400 dark:text-slate-500 text-sm">
-                Correct answer: {q.options.find((o) => o.id === q.correctOptionId)?.text}
+                Correct answer: {q.correctOptionId.toUpperCase()}
               </Text>
             )}
           </PremiumCard>
@@ -199,14 +241,14 @@ export default function PracticeChapterScreen() {
         style={{ paddingBottom: insets.bottom + 12, backgroundColor: colors.surface, borderTopColor: colors.border }}
         className="px-4 pt-3 border-t flex-row items-center gap-3"
       >
-        <TouchableOpacity
+        <Touchable
           onPress={() => setIndex((i) => Math.max(i - 1, 0))}
           disabled={index === 0}
           className={`w-12 h-12 rounded-xl items-center justify-center border ${index === 0 ? "opacity-30" : ""}`}
           style={{ borderColor: colors.border }}
         >
           <Ionicons name="chevron-back" size={22} color={colors.text} />
-        </TouchableOpacity>
+        </Touchable>
         <View className="flex-1">
           <PrimaryButton
             title={isLast ? (answered ? "Finish" : "Skip & Finish") : answered ? "Next Question" : "Skip"}

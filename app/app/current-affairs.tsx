@@ -1,5 +1,6 @@
+import { Touchable } from "../components/Touchable";
 import { useMemo, useState, useCallback } from "react";
-import { View, Text, ScrollView, TouchableOpacity, RefreshControl } from "react-native";
+import { View, Text, ScrollView, RefreshControl } from "react-native";
 import { useQuery, useAction } from "convex/react";
 import { api } from "../convex/_generated/api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -10,8 +11,8 @@ import { ScreenHeader, PremiumCard, Badge, LoadingScreen, EmptyScreen, FilterChi
 import { useTheme } from "../lib/theme";
 
 const CATEGORY_COLORS: Record<string, string> = {
-  National: "#6366F1",
-  Politics: "#6366F1",
+  National: "#2F60BE",
+  Politics: "#2F60BE",
   Economy: "#10B981",
   Banking: "#3B82F6",
   Science: "#8B5CF6",
@@ -134,9 +135,9 @@ export default function CurrentAffairsScreen() {
         subtitle={range ? `Archive · ${month === null ? year : `${MONTHS[month]} ${year}`}` : "Fresh daily · pull to refresh"}
         onBack={() => router.back()}
         right={
-          <TouchableOpacity onPress={onRefresh} hitSlop={8} className="w-10 h-10 rounded-xl bg-white/10 items-center justify-center">
+          <Touchable onPress={onRefresh} hitSlop={8} className="w-10 h-10 rounded-xl bg-white/10 items-center justify-center">
             <Ionicons name="refresh" size={20} color="#fff" />
-          </TouchableOpacity>
+          </Touchable>
         }
       />
 
@@ -197,7 +198,7 @@ export default function CurrentAffairsScreen() {
             <Text className="text-xs font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500 mb-2 ml-1">{bucket}</Text>
             {items.map((item) => (
               <Link key={item._id} href={`/current-affair/${item.slug}`} asChild>
-                <TouchableOpacity activeOpacity={0.85}>
+                <Touchable activeOpacity={0.85}>
                   <PremiumCard className="p-4 mb-2.5">
                     <View className="flex-row items-center mb-2">
                       <Badge label={item.category} color={CATEGORY_COLORS[item.category] ?? colors.primary} />
@@ -210,7 +211,7 @@ export default function CurrentAffairsScreen() {
                       <Text className="text-slate-500 dark:text-slate-400 text-sm mt-1.5 leading-5" numberOfLines={2}>{item.summary}</Text>
                     ) : null}
                   </PremiumCard>
-                </TouchableOpacity>
+                </Touchable>
               </Link>
             ))}
           </View>

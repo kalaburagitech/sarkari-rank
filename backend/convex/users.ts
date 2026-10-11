@@ -1,5 +1,17 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import bcrypt from "bcryptjs";
+
+// Clients send the plain password in the (historically named) `passwordHash`
+// arg over HTTPS; only a bcrypt hash is stored. Rows saved before hashing hold
+// the plain text and are upgraded to a hash on their next successful login.
+// Salts only need to be unique, not secret: if the runtime has no WebCrypto,
+// fall back to Convex's per-mutation Math.random rather than failing sign-up.
+bcrypt.setRandomFallback((n: number) => Array.from({ length: n }, () => Math.floor(Math.random() * 256)));
+const isBcrypt = (s: string) => /^\$2[aby]\$\d{2}\$/.test(s);
+const hash = (plain: string) => bcrypt.hashSync(plain, 10);
+const matches = (plain: string, stored: string) =>
+  isBcrypt(stored) ? bcrypt.compareSync(plain, stored) : plain === stored;
 
 export const register = mutation({
   args: {
@@ -19,7 +31,7 @@ export const register = mutation({
       email: args.email,
       name: args.name,
       phone: args.phone,
-      passwordHash: args.passwordHash,
+      passwordHash: hash(args.passwordHash),
       role: "student",
       isPremium: false,
       streak: 0,
@@ -36,7 +48,8 @@ export const login = mutation({
       .query("users")
       .withIndex("by_email", (q) => q.eq("email", args.email))
       .first();
-    if (!user || user.passwordHash !== args.passwordHash) return null;
+    if (!user || !user.passwordHash || !matches(args.passwordHash, user.passwordHash)) return null;
+    if (!isBcrypt(user.passwordHash)) await ctx.db.patch(user._id, { passwordHash: hash(args.passwordHash) });
     return {
       _id: user._id,
       email: user.email,
@@ -108,7 +121,7 @@ export const createAdmin = mutation({
     return await ctx.db.insert("users", {
       email: args.email,
       name: args.name,
-      passwordHash: args.passwordHash,
+      passwordHash: hash(args.passwordHash),
       role: "admin",
       isPremium: true,
       streak: 0,

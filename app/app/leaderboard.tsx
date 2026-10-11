@@ -1,5 +1,6 @@
+import { Touchable } from "../components/Touchable";
 import { useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity } from "react-native";
+import { View, Text, ScrollView } from "react-native";
 import { useQuery } from "convex/react";
 import { api } from "../convex/_generated/api";
 import { useCached } from "../lib/offline";
@@ -49,7 +50,7 @@ export default function LeaderboardScreen() {
           {mockTests.map((t) => {
             const active = activeTestId === t._id;
             return (
-              <TouchableOpacity
+              <Touchable
                 key={t._id}
                 onPress={() => setSelectedTestId(t._id)}
                 className={`px-4 py-2 rounded-full mr-2 ${active ? "bg-indigo-600" : "bg-slate-100 dark:bg-slate-800"}`}
@@ -57,7 +58,7 @@ export default function LeaderboardScreen() {
                 <Text className={`text-xs font-semibold ${active ? "text-white" : "text-slate-600 dark:text-slate-400"}`} numberOfLines={1}>
                   {t.title.length > 22 ? t.title.slice(0, 20) + "…" : t.title}
                 </Text>
-              </TouchableOpacity>
+              </Touchable>
             );
           })}
         </ScrollView>

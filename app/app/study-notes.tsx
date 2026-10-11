@@ -1,5 +1,7 @@
+import { SELL_PASS } from "../constants/features";
+import { Touchable } from "../components/Touchable";
 import { useMemo, useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity } from "react-native";
+import { View, Text, ScrollView } from "react-native";
 import { useQuery } from "convex/react";
 import { api } from "../convex/_generated/api";
 import { useCached } from "../lib/offline";
@@ -91,7 +93,7 @@ export default function StudyNotesScreen() {
                 ) : null}
                 {chapterNotes.map((note) => (
                   <Link key={note._id} href={`/study-note/${note.slug}`} asChild>
-                    <TouchableOpacity activeOpacity={0.85}>
+                    <Touchable activeOpacity={0.85}>
                       <PremiumCard className="p-4 mb-2">
                         <View className="flex-row items-start justify-between">
                           <View className="flex-1 mr-2">
@@ -105,10 +107,10 @@ export default function StudyNotesScreen() {
                         <View className="flex-row mt-2 gap-2 flex-wrap">
                           <Badge label={note.language ?? "English"} color={colors.primary} />
                           {note.pdfUrl ? <Badge label="PDF" color="#0EA5E9" /> : null}
-                          {note.isPremium ? <Badge label="Premium" color={colors.accent} /> : <Badge label="Free" color={colors.success} />}
+                          {note.isPremium && SELL_PASS ? <Badge label="Premium" color={colors.accent} /> : <Badge label="Free" color={colors.success} />}
                         </View>
                       </PremiumCard>
-                    </TouchableOpacity>
+                    </Touchable>
                   </Link>
                 ))}
               </View>

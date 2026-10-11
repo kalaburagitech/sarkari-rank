@@ -1,10 +1,11 @@
+import { HeroBackground } from "../../components/Gradient";
 import { useState } from "react";
 import { View, Text, KeyboardAvoidingView, Platform, ScrollView } from "react-native";
 import { useAuth } from "../../lib/auth";
 import { Link, useRouter } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { InputField, PrimaryButton, PremiumCard } from "../../components/ui";
-import { Logo } from "../../components/Logo";
+import { LogoFull } from "../../components/Logo";
 import { useTheme } from "../../lib/theme";
 
 export default function LoginScreen() {
@@ -30,12 +31,13 @@ export default function LoginScreen() {
   };
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} className="flex-1" style={{ backgroundColor: colors.hero }}>
+    <HeroBackground className="flex-1">
+    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} className="flex-1">
       <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: "center" }} className="px-6 py-10">
         <View className="items-center mb-8">
-          <Logo size={80} showText subtitle="India&apos;s #1 Govt Exam Prep Platform" />
+          <LogoFull width={170} />
           <View className="flex-row flex-wrap justify-center gap-2 mt-3">
-            {["SSC", "Banking", "Railway", "UPSC", "Teaching"].map((tag) => (
+            {["KPSC", "KEA", "Police", "SSC", "Banking"].map((tag) => (
               <View key={tag} className="bg-white/10 px-3 py-1 rounded-full">
                 <Text className="text-indigo-200 text-xs font-medium">{tag}</Text>
               </View>
@@ -57,7 +59,7 @@ export default function LoginScreen() {
             </View>
           ) : null}
 
-          <PrimaryButton title="Login to SarkariRank" onPress={handleLogin} loading={loading} />
+          <PrimaryButton title="Login to Astraa" onPress={handleLogin} loading={loading} />
 
           <View className="flex-row justify-center mt-5">
             <Text className="text-slate-500 text-sm">New here? </Text>
@@ -76,7 +78,7 @@ export default function LoginScreen() {
           ].map((f) => (
             <View key={f.label} className="items-center">
               <View className="w-10 h-10 rounded-xl bg-white/10 items-center justify-center mb-1">
-                <Ionicons name={f.icon as any} size={18} color="#A5B4FC" />
+                <Ionicons name={f.icon as any} size={18} color="#8AA9E5" />
               </View>
               <Text className="text-indigo-300 text-xs">{f.label}</Text>
             </View>
@@ -84,5 +86,6 @@ export default function LoginScreen() {
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
+    </HeroBackground>
   );
 }

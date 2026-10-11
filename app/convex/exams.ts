@@ -1,5 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { touch, touchTestQuestions } from "./sync";
+import { cleanPatch } from "./practiceBank";
 import type { MutationCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { v } from "convex/values";
@@ -435,6 +436,17 @@ export const updateTest = mutation({
     id: v.id("tests"),
     title: v.optional(v.string()),
     description: v.optional(v.string()),
+    type: v.optional(
+      v.union(
+        v.literal("mock"),
+        v.literal("live"),
+        v.literal("chapter"),
+        v.literal("subject"),
+        v.literal("pyp"),
+        v.literal("daily"),
+        v.literal("practice")
+      )
+    ),
     year: v.optional(v.number()),
     durationMinutes: v.optional(v.number()),
     totalMarks: v.optional(v.number()),
@@ -520,6 +532,8 @@ export const createQuestion = mutation({
     ),
     correctOptionId: v.string(),
     explanation: v.optional(v.string()),
+    passage: v.optional(v.string()),
+    passageKn: v.optional(v.string()),
     subject: v.optional(v.string()),
     topic: v.optional(v.string()),
     difficulty: v.union(
@@ -551,10 +565,12 @@ export const bulkCreateQuestions = mutation({
     questions: v.array(
       v.object({
         questionText: v.string(),
+        questionImage: v.optional(v.string()),
         options: v.array(
           v.object({
             id: v.string(),
             text: v.string(),
+            image: v.optional(v.string()),
           })
         ),
         correctOptionId: v.string(),
@@ -564,6 +580,8 @@ export const bulkCreateQuestions = mutation({
           v.array(v.object({ id: v.string(), text: v.string() }))
         ),
         explanationKn: v.optional(v.string()),
+        passage: v.optional(v.string()),
+        passageKn: v.optional(v.string()),
         subject: v.optional(v.string()),
         topic: v.optional(v.string()),
         difficulty: v.union(
@@ -598,10 +616,133 @@ export const bulkCreateQuestions = mutation({
   },
 });
 
+// Resolve (or lazily create) the auto-managed "Practice Questions" container
+// test for an exam + language. Practice questions are filed by Subject → Chapter
+// on the question itself; they all live in this single per-language bank test.
+async function resolvePracticeContainer(
+  ctx: MutationCtx,
+  examId: Id<"exams">,
+  lang: string,
+  negativeMarks: number
+): Promise<Id<"tests">> {
+  const exam = await ctx.db.get(examId);
+  if (!exam) throw new Error("Exam not found");
+  const norm = (s: string) =>
+    s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+  const title = `${exam.name} — Practice Questions`;
+  const examTests = await ctx.db
+    .query("tests")
+    .withIndex("by_exam", (q) => q.eq("examId", examId))
+    .collect();
+  const existing = examTests.find(
+    (t) => t.type === "practice" && t.title === title && (t.language ?? "English") === lang
+  );
+  if (existing) return existing._id;
+  const id = await ctx.db.insert("tests", {
+    examId,
+    title,
+    slug: `${exam.slug}-practice-${norm(lang)}`,
+    description: `Practice question bank for ${exam.name}`,
+    type: "practice",
+    durationMinutes: 0,
+    totalQuestions: 0,
+    totalMarks: 0,
+    negativeMarking: negativeMarks,
+    languages: [lang],
+    language: lang,
+    paperGroup: `${exam.slug}-practice`,
+    isFree: true,
+    isPremium: false,
+    isActive: true,
+    attemptCount: 0,
+    createdAt: Date.now(),
+  });
+  await bumpExamTests(ctx, examId);
+  return id;
+}
+
+// Bulk import for Practice questions: no test picker — questions are routed into
+// the exam's practice bank and filed by Subject → Chapter. Subject/topic default
+// to the ones chosen in the import panel but each question may override them.
+export const bulkCreatePracticeQuestions = mutation({
+  args: {
+    examId: v.id("exams"),
+    subject: v.string(),
+    topic: v.optional(v.string()),
+    language: v.string(),
+    negativeMarks: v.number(),
+    questions: v.array(
+      v.object({
+        questionText: v.string(),
+        questionImage: v.optional(v.string()),
+        options: v.array(
+          v.object({ id: v.string(), text: v.string(), image: v.optional(v.string()) })
+        ),
+        correctOptionId: v.string(),
+        explanation: v.optional(v.string()),
+        questionTextKn: v.optional(v.string()),
+        optionsKn: v.optional(
+          v.array(v.object({ id: v.string(), text: v.string() }))
+        ),
+        explanationKn: v.optional(v.string()),
+        passage: v.optional(v.string()),
+        passageKn: v.optional(v.string()),
+        subject: v.optional(v.string()),
+        topic: v.optional(v.string()),
+        difficulty: v.union(
+          v.literal("easy"),
+          v.literal("medium"),
+          v.literal("hard")
+        ),
+        marks: v.number(),
+        negativeMarks: v.number(),
+        order: v.number(),
+        language: v.string(),
+      })
+    ),
+  },
+  handler: async (ctx, args) => {
+    if (!args.subject.trim())
+      throw new Error("Subject is required for Practice questions");
+    const lang = args.language || "English";
+    const containerId = await resolvePracticeContainer(
+      ctx,
+      args.examId,
+      lang,
+      args.negativeMarks
+    );
+    const container = await ctx.db.get(containerId);
+    let order = container?.totalQuestions ?? 0;
+    const ids = [];
+    for (const q of args.questions) {
+      order += 1;
+      const { order: _ignored, ...rest } = q;
+      const id = await ctx.db.insert("questions", {
+        testId: containerId,
+        ...rest,
+        subject: rest.subject?.trim() || args.subject.trim(),
+        topic: rest.topic?.trim() || args.topic?.trim() || undefined,
+        order,
+        status: "published",
+      });
+      ids.push(id);
+    }
+    if (container)
+      await ctx.db.patch(containerId, {
+        totalQuestions: container.totalQuestions + args.questions.length,
+      });
+    return ids;
+  },
+});
+
 export const updateQuestion = mutation({
   args: {
     id: v.id("questions"),
     questionText: v.optional(v.string()),
+    // "" clears an optional field (image / passage / explanation).
+    questionImage: v.optional(v.string()),
+    passage: v.optional(v.string()),
+    passageKn: v.optional(v.string()),
     options: v.optional(
       v.array(
         v.object({
@@ -626,10 +767,7 @@ export const updateQuestion = mutation({
   },
   handler: async (ctx, args) => {
     const { id, ...updates } = args;
-    const filtered = Object.fromEntries(
-      Object.entries(updates).filter(([, v]) => v !== undefined)
-    );
-    await ctx.db.patch(id, filtered);
+    await ctx.db.patch(id, cleanPatch(updates));
     const question = await ctx.db.get(id);
     if (question) await touchTestQuestions(ctx, question.testId);
   },
@@ -723,6 +861,9 @@ async function bumpExamTests(ctx: MutationCtx, examId: Id<"exams">) {
 
 type QuestionPayload = {
   questionText: string;
+  questionImage?: string;
+  passage?: string;
+  passageKn?: string;
   options: { id: string; text: string; image?: string }[];
   correctOptionId: string;
   explanation?: string;
@@ -746,6 +887,9 @@ async function attachQuestion(
   const questionId = await ctx.db.insert("questions", {
     testId: containerId,
     questionText: p.questionText,
+    questionImage: p.questionImage,
+    passage: p.passage,
+    passageKn: p.passageKn,
     options: p.options,
     correctOptionId: p.correctOptionId,
     explanation: p.explanation,
@@ -785,6 +929,9 @@ export const addQuestion = mutation({
     testName: v.optional(v.string()),
     // Question payload
     questionText: v.string(),
+    questionImage: v.optional(v.string()),
+    passage: v.optional(v.string()),
+    passageKn: v.optional(v.string()),
     options: v.array(
       v.object({ id: v.string(), text: v.string(), image: v.optional(v.string()) })
     ),
@@ -825,8 +972,8 @@ export const addQuestion = mutation({
       .collect();
 
     if (args.questionType === "practice") {
-      if (!args.subject?.trim())
-        throw new Error("Subject is required for Practice questions");
+      // Blank subject → "General" so a quick question never gets blocked.
+      if (!args.subject?.trim()) args = { ...args, subject: "General" };
       const title = `${exam.name} — Practice Questions`;
       const existing = examTests.find(
         (t) => t.type === "practice" && t.title === title && (t.language ?? "English") === lang
@@ -855,9 +1002,7 @@ export const addQuestion = mutation({
       if (!existing) await bumpExamTests(ctx, args.examId);
     } else if (args.questionType === "pyp") {
       if (!args.year) throw new Error("Year is required for Previous Year papers");
-      if (!args.paperName?.trim())
-        throw new Error("Paper name is required for Previous Year papers");
-      const title = args.paperName.trim();
+      const title = args.paperName?.trim() || `${exam.name} ${args.year}`;
       // Same paper name + year in a different language → a separate, grouped doc.
       const grp = `${exam.slug}-pyp-${args.year}-${norm(title)}`;
       const existing = examTests.find(
@@ -935,7 +1080,10 @@ export const addQuestion = mutation({
       }
     }
 
-    return await attachQuestion(ctx, containerId, args);
+    const created = await attachQuestion(ctx, containerId, args);
+    // Bump the container's question version so devices drop their cached copy.
+    await touchTestQuestions(ctx, containerId);
+    return created;
   },
 });
 

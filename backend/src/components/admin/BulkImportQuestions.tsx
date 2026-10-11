@@ -7,8 +7,8 @@ import { Id } from "@convex/_generated/dataModel";
 import { toast } from "sonner";
 import { UploadCloud, FileJson, CheckCircle2, AlertTriangle, X, Copy } from "lucide-react";
 import { Button, Input, Textarea, Select, Card } from "@/components/admin/ui";
+import { parseQuestionsJson, ParsedQuestion, Diff } from "@/lib/question-import";
 
-const OPT_IDS = ["a", "b", "c", "d", "e", "f"];
 
 // Minimal sample — only these 3 fields are required. Everything else
 // (subject, difficulty, marks, negative marks, language) comes from the
@@ -44,76 +44,13 @@ const FULL_SAMPLE_JSON = `[
   }
 ]`;
 
-type Diff = "easy" | "medium" | "hard";
-
-type NormalizedQ = {
-  questionText: string;
-  options: { id: string; text: string }[];
-  correctOptionId: string;
-  explanation?: string;
-  questionTextKn?: string;
-  optionsKn?: { id: string; text: string }[];
-  explanationKn?: string;
-  subject?: string;
-  topic?: string;
-  difficulty: Diff;
-  marks: number;
-  negativeMarks: number;
-  order: number;
-  language: string;
-};
+type NormalizedQ = Omit<ParsedQuestion, "year" | "message"> & { order: number };
 
 function slugify(text: string): string {
   return (
     text.toLowerCase().replace(/[^\w\s-]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-").trim() ||
     `test-${Date.now()}`
   );
-}
-
-// Pick first defined field from a list of possible key names
-function pick<T = unknown>(obj: Record<string, unknown>, keys: string[]): T | undefined {
-  for (const k of keys) {
-    if (obj[k] !== undefined && obj[k] !== null && obj[k] !== "") return obj[k] as T;
-  }
-  return undefined;
-}
-
-function normalizeOptions(rawOpts: unknown): { id: string; text: string }[] {
-  if (!Array.isArray(rawOpts)) return [];
-  return rawOpts.map((o, i) => {
-    const id = OPT_IDS[i] ?? String(i);
-    if (typeof o === "string") return { id, text: o.trim() };
-    if (o && typeof o === "object") {
-      const oo = o as Record<string, unknown>;
-      return { id: (oo.id as string) ?? id, text: String(oo.text ?? oo.value ?? "").trim() };
-    }
-    return { id, text: String(o) };
-  });
-}
-
-// Resolve the answer into an option id. Accepts letter (A-D), number (1-based or 0-based), or exact text.
-function resolveAnswer(rawAns: unknown, options: { id: string; text: string }[]): string | null {
-  if (rawAns === undefined || rawAns === null) return null;
-  const s = String(rawAns).trim();
-  if (!s) return null;
-  // single letter
-  if (/^[a-zA-Z]$/.test(s)) {
-    const idx = s.toLowerCase().charCodeAt(0) - 97;
-    if (options[idx]) return options[idx].id;
-  }
-  // numeric (1-based preferred, fall back to 0-based)
-  if (/^\d+$/.test(s)) {
-    const n = parseInt(s, 10);
-    if (options[n - 1]) return options[n - 1].id;
-    if (options[n]) return options[n].id;
-  }
-  // match option id directly
-  const byId = options.find((o) => o.id.toLowerCase() === s.toLowerCase());
-  if (byId) return byId.id;
-  // match option text
-  const byText = options.find((o) => o.text.toLowerCase() === s.toLowerCase());
-  if (byText) return byText.id;
-  return null;
 }
 
 export function BulkImportQuestions({
@@ -160,60 +97,20 @@ export function BulkImportQuestions({
   const selectedTest = tests?.find((t) => t._id === testId);
 
   const parse = (): { ok: NormalizedQ[]; errors: string[] } => {
-    const errors: string[] = [];
-    let data: unknown;
-    try {
-      data = JSON.parse(raw);
-    } catch (e) {
-      return { ok: [], errors: [`Invalid JSON: ${(e as Error).message}`] };
-    }
-    const arr: unknown[] = Array.isArray(data)
-      ? data
-      : Array.isArray((data as Record<string, unknown>)?.questions)
-        ? ((data as Record<string, unknown>).questions as unknown[])
-        : [];
-    if (arr.length === 0) return { ok: [], errors: ["No questions found. Provide a JSON array (or an object with a \"questions\" array)."] };
-
+    const res = parseQuestionsJson(raw, def);
     // Practice imports append server-side (order is recomputed in the mutation);
     // for a specific existing test we continue after its current questions.
     const startOrder = !isPractice && testId ? selectedTest?.totalQuestions ?? 0 : 0;
-    const ok: NormalizedQ[] = [];
-    arr.forEach((item, i) => {
-      const n = i + 1;
-      if (!item || typeof item !== "object") { errors.push(`Q${n}: not an object`); return; }
-      const q = item as Record<string, unknown>;
-      const text = String(pick<string>(q, ["question", "questionText", "q", "text"]) ?? "").trim();
-      if (!text) { errors.push(`Q${n}: missing "question"`); return; }
-      const options = normalizeOptions(pick(q, ["options", "opts", "choices"]));
-      if (options.length < 2) { errors.push(`Q${n}: needs at least 2 options`); return; }
-      if (options.some((o) => !o.text)) { errors.push(`Q${n}: an option is empty`); return; }
-      const correctOptionId = resolveAnswer(pick(q, ["answer", "correct", "correctOption", "correctAnswer", "ans"]), options);
-      if (!correctOptionId) { errors.push(`Q${n}: "answer" does not match any option`); return; }
-
-      const rawDiff = String(pick<string>(q, ["difficulty", "diff", "level"]) ?? def.difficulty).toLowerCase();
-      const difficulty: Diff = rawDiff === "easy" || rawDiff === "hard" ? (rawDiff as Diff) : "medium";
-
-      const optsKnRaw = pick(q, ["optionsKn", "opts_kn", "kannadaOptions"]);
-      const optionsKn = optsKnRaw ? normalizeOptions(optsKnRaw).map((o, idx) => ({ id: options[idx]?.id ?? o.id, text: o.text })) : undefined;
-
-      ok.push({
-        questionText: text,
-        options,
-        correctOptionId,
-        explanation: (pick<string>(q, ["explanation", "exp", "solution"]) ?? "").toString().trim() || undefined,
-        questionTextKn: (pick<string>(q, ["questionKn", "questionTextKn", "qKn"]) ?? "").toString().trim() || undefined,
-        optionsKn: optionsKn && optionsKn.length ? optionsKn : undefined,
-        explanationKn: (pick<string>(q, ["explanationKn", "expKn"]) ?? "").toString().trim() || undefined,
-        subject: (pick<string>(q, ["subject", "sub"]) ?? def.subject).toString().trim() || undefined,
-        topic: (pick<string>(q, ["topic", "chapter"]) ?? chapter).toString().trim() || undefined,
-        difficulty,
-        marks: Number(pick(q, ["marks", "mark"]) ?? def.marks) || def.marks,
-        negativeMarks: Number(pick(q, ["negativeMarks", "negative", "neg"]) ?? def.negativeMarks),
-        order: startOrder + ok.length + 1,
-        language: (pick<string>(q, ["language", "lang"]) ?? def.language).toString(),
-      });
-    });
-    return { ok, errors };
+    return {
+      errors: res.errors,
+      // year/message are Practice-Bank-only fields; the test validators reject them.
+      ok: res.ok.map(({ year: _y, message: _m, ...q }, i) => ({
+        ...q,
+        subject: q.subject ?? (def.subject.trim() || undefined),
+        topic: q.topic ?? (chapter.trim() || undefined),
+        order: startOrder + i + 1,
+      })),
+    };
   };
 
   const handleValidate = () => {
@@ -236,14 +133,14 @@ export function BulkImportQuestions({
   };
 
   const readyContext = isPractice
-    ? examId && def.subject.trim()
+    ? !!examId
     : examId && (testId || newTest.title.trim());
 
   const handleImport = async () => {
     if (!readyContext) {
       toast.error(
         isPractice
-          ? "Select an exam and enter a subject"
+          ? "Select an exam"
           : "Select an exam, then pick a test or enter a title for the new one"
       );
       return;
@@ -255,14 +152,14 @@ export function BulkImportQuestions({
       if (isPractice) {
         await bulkCreatePractice({
           examId: examId as Id<"exams">,
-          subject: def.subject.trim(),
+          subject: def.subject.trim() || "General",
           topic: chapter.trim() || undefined,
           language: def.language,
           negativeMarks: def.negativeMarks,
           questions: result.ok,
         });
         const n = result.ok.length;
-        toast.success(`✅ Imported ${n} practice question(s) into ${def.subject.trim()}${chapter.trim() ? ` › ${chapter.trim()}` : ""}! Paste another batch below.`);
+        toast.success(`✅ Imported ${n} practice question(s) into ${def.subject.trim() || "General"}${chapter.trim() ? ` › ${chapter.trim()}` : ""}! Paste another batch below.`);
         setRaw("");
         setPreview(null);
         setSessionCount((c) => c + n);
@@ -331,7 +228,7 @@ export function BulkImportQuestions({
               <option value="">— Select exam —</option>
               {(exams ?? []).map((e) => <option key={e._id} value={e._id}>{e.name}</option>)}
             </Select>
-            <Input label="Subject *" value={def.subject} onChange={(e) => setDef({ ...def, subject: e.target.value })} placeholder="e.g. Indian Polity" />
+            <Input label="Subject" value={def.subject} onChange={(e) => setDef({ ...def, subject: e.target.value })} placeholder="e.g. Indian Polity" />
             <Input label="Chapter / Topic" value={chapter} onChange={(e) => setChapter(e.target.value)} placeholder="e.g. Fundamental Rights" />
           </div>
         </>
@@ -458,6 +355,9 @@ export function BulkImportQuestions({
           <li><b>answer</b> <span className="text-red-500 font-semibold">(required)</span> — the correct option as a letter (A/B/C/D), a number (1-based), or the exact option text.</li>
           <li><b>explanation</b>, <b>subject</b>, <b>difficulty</b> (easy/medium/hard), <b>marks</b>, <b>negativeMarks</b>, <b>topic</b> — <b className="text-emerald-600">optional</b>; leave them out and they use the Step-2 defaults above.</li>
           <li><b>questionKn</b>, <b>optionsKn</b>, <b>explanationKn</b> — optional Kannada translations for bilingual tests.</li>
+          <li><b>image</b> — optional image URL for the question (then the question text may be empty). Options can be objects: <code>{"{"}&quot;text&quot;: &quot;&quot;, &quot;image&quot;: &quot;https://…&quot;{"}"}</code>.</li>
+          <li><b>passage</b> — optional comprehension passage. For a group, use <code>{"{"}&quot;passage&quot;: &quot;…&quot;, &quot;questions&quot;: [ … ]{"}"}</code> and every question inside gets it.</li>
+          <li>Formatting in any text: <code>**bold**</code>, lines starting <code>- </code>, <code>1. </code>, <code>a) </code> for lists.</li>
         </ul>
       </details>
     </Card>

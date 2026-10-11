@@ -1,7 +1,9 @@
 import { View, Text, Image, ImageStyle, ViewStyle } from "react-native";
-import { theme } from "../constants/theme";
+import { theme, palette } from "../constants/theme";
 
-const logoSource = require("../assets/icon.png");
+const emblemSource = require("../assets/icon.png");
+const fullLogoSource = require("../assets/logo-full.png");
+const FULL_LOGO_RATIO = 800 / 952; // width / height of assets/logo-full.png
 
 type LogoProps = {
   size?: number;
@@ -12,6 +14,23 @@ type LogoProps = {
   imageStyle?: ImageStyle;
 };
 
+// Emblem on a white rounded tile (the logo artwork is designed for a white background).
+function Emblem({ size, imageStyle }: { size: number; imageStyle?: ImageStyle }) {
+  return (
+    <View
+      style={{
+        width: size,
+        height: size,
+        borderRadius: size * 0.22,
+        backgroundColor: "#FFFFFF",
+        overflow: "hidden",
+      }}
+    >
+      <Image source={emblemSource} style={[{ width: size, height: size }, imageStyle]} resizeMode="contain" />
+    </View>
+  );
+}
+
 export function Logo({
   size = 64,
   showText = false,
@@ -21,26 +40,15 @@ export function Logo({
   imageStyle,
 }: LogoProps) {
   const textColor = variant === "light" ? "#FFFFFF" : theme.text;
-  const subColor = variant === "light" ? "#C7D2FE" : theme.muted;
+  const subColor = variant === "light" ? palette.primary[200] : theme.muted;
 
   return (
-    <View className={`items-center ${showText ? "" : ""}`} style={style}>
-      <Image
-        source={logoSource}
-        style={[
-          {
-            width: size,
-            height: size,
-            borderRadius: size * 0.22,
-          },
-          imageStyle,
-        ]}
-        resizeMode="cover"
-      />
+    <View className="items-center" style={style}>
+      <Emblem size={size} imageStyle={imageStyle} />
       {showText && (
         <View className="items-center mt-3">
           <Text style={{ color: textColor }} className="text-2xl font-black tracking-tight">
-            SarkariRank
+            Astraa
           </Text>
           {subtitle && (
             <Text style={{ color: subColor }} className="text-sm mt-1 text-center">
@@ -49,6 +57,21 @@ export function Logo({
           )}
         </View>
       )}
+    </View>
+  );
+}
+
+/** Full logo (emblem + "Astraa / EXAM APP" + Kannada tagline) inside a white card. */
+export function LogoFull({ width = 200, style }: { width?: number; style?: ViewStyle }) {
+  const pad = width * 0.08;
+  return (
+    <View style={[{ backgroundColor: "#FFFFFF", borderRadius: 24, padding: pad }, style]}>
+      <Image
+        source={fullLogoSource}
+        style={{ width: width - pad * 2, height: (width - pad * 2) / FULL_LOGO_RATIO }}
+        resizeMode="contain"
+        accessibilityLabel="Astraa Exam App"
+      />
     </View>
   );
 }
@@ -63,21 +86,18 @@ export function LogoRow({
   variant?: "light" | "dark";
 }) {
   const textColor = variant === "light" ? "#FFFFFF" : theme.text;
-  const subColor = variant === "light" ? "#C7D2FE" : theme.muted;
+  const subColor = variant === "light" ? palette.primary[200] : theme.muted;
 
   return (
     <View className="flex-row items-center">
-      <Image
-        source={logoSource}
-        style={{ width: size, height: size, borderRadius: size * 0.22 }}
-        resizeMode="cover"
-      />
+      <Emblem size={size} />
       <View className="ml-3">
         <Text style={{ color: textColor }} className="text-lg font-black">
-          SarkariRank
+          Astraa
         </Text>
         {subtitle && (
-          <Text style={{ color: subColor }} className="text-xs">
+          // "simple" stops Android clipping the last Kannada word when measuring.
+          <Text style={{ color: subColor }} className="text-xs" textBreakStrategy="simple">
             {subtitle}
           </Text>
         )}

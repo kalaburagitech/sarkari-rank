@@ -1,7 +1,7 @@
 import { Redirect } from "expo-router";
 import { useAuth } from "../lib/auth";
 import { View } from "react-native";
-import { Logo } from "../components/Logo";
+import { LogoFull } from "../components/Logo";
 import { theme } from "../constants/theme";
 
 export default function Index() {
@@ -10,7 +10,7 @@ export default function Index() {
   if (isLoading) {
     return (
       <View className="flex-1 items-center justify-center" style={{ backgroundColor: theme.primaryDark }}>
-        <Logo size={96} showText subtitle="Loading your exam prep..." />
+        <LogoFull width={200} />
       </View>
     );
   }
