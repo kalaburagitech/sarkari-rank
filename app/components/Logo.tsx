@@ -96,8 +96,9 @@ export function LogoRow({
           Astraa
         </Text>
         {subtitle && (
-          // "simple" stops Android clipping the last Kannada word when measuring.
-          <Text style={{ color: subColor }} className="text-xs" textBreakStrategy="simple">
+          // Android under-measures Kannada (measured before the fallback font
+          // loads) and clips the last word; reserve room so it always fits.
+          <Text style={{ color: subColor, minWidth: 150 }} className="text-xs">
             {subtitle}
           </Text>
         )}
