@@ -23,7 +23,7 @@ export default function CurrentAffairsPage() {
 
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ title: "", summary: "", content: "", category: "General" });
+  const [form, setForm] = useState({ title: "", summary: "", content: "", category: "General", sourceUrl: "", sourceName: "" });
 
   const [editRow, setEditRow] = useState<EditForm | null>(null);
   const [deleteRow, setDeleteRow] = useState<{ _id: string; title: string } | null>(null);
@@ -32,18 +32,27 @@ export default function CurrentAffairsPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.title.trim() || !form.content.trim()) { toast.error("Title and content required"); return; }
+    // Play "Misleading Claims": every news / government item must link to its source.
+    if (!/^https:\/\/\S+\.\S+/.test(form.sourceUrl.trim())) { toast.error("A source URL (https://…) is required"); return; }
     setSaving(true);
     try {
-      await createAffair({ ...form, slug: slugify(form.title), date: Date.now() });
+      await createAffair({
+        ...form,
+        sourceUrl: form.sourceUrl.trim(),
+        sourceName: form.sourceName.trim() || undefined,
+        slug: slugify(form.title),
+        date: Date.now(),
+      });
       toast.success("Article published!");
       setShowForm(false);
-      setForm({ title: "", summary: "", content: "", category: "General" });
+      setForm({ title: "", summary: "", content: "", category: "General", sourceUrl: "", sourceName: "" });
     } catch (err) { toast.error((err as Error).message); }
     setSaving(false);
   };
 
   const saveEdit = async () => {
     if (!editRow) return;
+    if (!/^https:\/\/\S+\.\S+/.test(editRow.sourceUrl.trim())) { toast.error("A source URL (https://…) is required"); return; }
     setSaving(true);
     try {
       await updateAffair({
@@ -71,6 +80,8 @@ export default function CurrentAffairsPage() {
           <Input label="Summary *" value={form.summary} onChange={(e) => setForm({ ...form, summary: e.target.value })} required />
           <Textarea label="Full Content *" value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} rows={6} required />
           <Input label="Category" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} />
+          <Input label="Source URL * (official site or news article)" placeholder="https://pib.gov.in/…" value={form.sourceUrl} onChange={(e) => setForm({ ...form, sourceUrl: e.target.value })} required />
+          <Input label="Source Name" placeholder="e.g. PIB, The Hindu" value={form.sourceName} onChange={(e) => setForm({ ...form, sourceName: e.target.value })} />
           <div className="flex gap-3">
             <Button type="submit" disabled={saving}>{saving ? "Publishing..." : "Publish"}</Button>
             <Button variant="secondary" onClick={() => setShowForm(false)}>Cancel</Button>
