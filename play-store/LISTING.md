@@ -50,7 +50,7 @@ Privacy policy: https://sarkari-rank.vercel.app/privacy
 
 - App icon: `play-store/icon-512.png`
 - Feature graphic: `play-store/feature-graphic-1024x500.png`
-- Phone screenshots: `play-store/screenshots/*.png` (1080×1920)
+- Phone screenshots: `play-store/screenshots-final/1.png … 7.png` (1080×1920)
 - App category: Education · Tags: Education, Exam preparation
 - Contact email: kalaburagitech@gmail.com · Website: https://kalaburagitech.com
 - Privacy policy URL: https://sarkari-rank.vercel.app/privacy
