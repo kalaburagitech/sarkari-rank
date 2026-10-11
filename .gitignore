@@ -22,3 +22,4 @@ dist/
 # DB snapshots / migration dumps (contain user PII) — keep out of git
 data/
 *.zip
+play-store/apk/
