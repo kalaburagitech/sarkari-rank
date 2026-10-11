@@ -266,7 +266,7 @@ export default function TestScreen() {
             <View className="mt-6">
               <View className="bg-indigo-50 dark:bg-primary-950 rounded-xl p-4 mb-3 flex-row items-center">
                 <Ionicons name="lock-closed" size={20} color={colors.primary} />
-                <Text className="text-indigo-800 text-sm ml-2 flex-1">Premium test — unlock with Astraa Pass</Text>
+                <Text className="text-indigo-800 text-sm ml-2 flex-1">Premium test — unlock with Astra Pass</Text>
               </View>
               <PrimaryButton title="Get Premium Pass · ₹499/yr" onPress={() => router.push("/premium")} variant="gold" />
             </View>

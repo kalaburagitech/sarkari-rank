@@ -1,4 +1,4 @@
-# Astraa Exam App — ನಿಮ್ಮ ಯಶಸ್ಸಿನ ಅಸ್ತ್ರ
+# Astra Exam App — ನಿಮ್ಮ ಯಶಸ್ಸಿನ ಅಸ್ತ್ರ
 
 Testbook-style exam preparation app with React Native mobile app + Next.js admin dashboard + Convex backend.
 

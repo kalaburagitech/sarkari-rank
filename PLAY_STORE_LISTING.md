@@ -6,7 +6,7 @@
 > NOT change the description. You must paste the text below into the store listing.
 
 ## Exact steps (5 minutes)
-1. Go to **play.google.com/console** → select the **Astraa Exam App** app (formerly SarkariRank).
+1. Go to **play.google.com/console** → select the **Astra Exam App** app (formerly SarkariRank).
 2. Left menu: **Grow → Store presence → Main store listing** (or **Store settings → Main store listing**).
 3. Find the **Full description** box. **Delete everything in it.**
 4. **Paste the entire block below** (from the line `⚠️ DISCLAIMER…` to the end).
@@ -20,9 +20,9 @@
 
 ## ✅ FULL DESCRIPTION — copy everything below this line
 
-⚠️ DISCLAIMER — NOT A GOVERNMENT APP: Astraa Exam App is an INDEPENDENT educational and exam-preparation app. It is NOT affiliated with, endorsed by, authorized by, or associated with any government, government department, ministry, agency, board, commission, or official recruitment body. This app does NOT provide any government service, job, application, or recruitment. All exam names, logos, and trademarks are the property of their respective official organizations. All content is for general educational and preparation purposes only, is aggregated from publicly available sources, and may not always be accurate, complete, or current. Always verify official notifications, eligibility, exam dates, syllabus, admit cards, and results on the official government websites listed below.
+⚠️ DISCLAIMER — NOT A GOVERNMENT APP: Astra Exam App is an INDEPENDENT educational and exam-preparation app. It is NOT affiliated with, endorsed by, authorized by, or associated with any government, government department, ministry, agency, board, commission, or official recruitment body. This app does NOT provide any government service, job, application, or recruitment. All exam names, logos, and trademarks are the property of their respective official organizations. All content is for general educational and preparation purposes only, is aggregated from publicly available sources, and may not always be accurate, complete, or current. Always verify official notifications, eligibility, exam dates, syllabus, admit cards, and results on the official government websites listed below.
 
-Astraa Exam App is a study and practice app to help you prepare for competitive exams — with mock tests, previous-year questions, study notes, and current affairs.
+Astra Exam App is a study and practice app to help you prepare for competitive exams — with mock tests, previous-year questions, study notes, and current affairs.
 
 KEY FEATURES
 📚 Mock tests & quizzes — real exam pattern, instant score & analysis
@@ -48,7 +48,7 @@ SSC (CGL, CHSL, MTS), UPSC, Banking (IBPS, SBI), Railways (RRB), Police, Defence
 • Karnataka State Police — https://ksp.karnataka.gov.in
 • School Education Department, Karnataka — https://schooleducation.karnataka.gov.in
 
-Astraa Exam App is an independent preparation tool only and does not represent or act on behalf of any government entity. For any official process — applications, fees, admit cards, or results — always use the official government portals listed above.
+Astra Exam App is an independent preparation tool only and does not represent or act on behalf of any government entity. For any official process — applications, fees, admit cards, or results — always use the official government portals listed above.
 
 ## ✅ END OF FULL DESCRIPTION — copy everything above this line
 

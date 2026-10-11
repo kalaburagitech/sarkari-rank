@@ -30,7 +30,7 @@ export default function AdminDashboard() {
 
   return (
     <div>
-      <PageHeader title="Dashboard" description="Real-time Astraa platform overview"
+      <PageHeader title="Dashboard" description="Real-time Astra platform overview"
         action={
           <div className="flex gap-2">
             <Button onClick={handleBasicSeed} variant="secondary"><Database size={16} /> Basic Seed</Button>

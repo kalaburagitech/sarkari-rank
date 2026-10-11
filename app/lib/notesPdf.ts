@@ -95,11 +95,11 @@ export function buildNoteHtml(note: {
   .footer { font-family: -apple-system, Helvetica, Arial, sans-serif; margin-top: 34px; padding-top: 12px; border-top: 1px solid #e2e8f0; font-size: 11px; color: #94a3b8; }
 </style></head>
 <body>
-  <div class="brand">Astraa · Study Notes</div>
+  <div class="brand">Astra · Study Notes</div>
   ${crumb ? `<div class="crumb">${escapeHtml(crumb)}</div>` : ""}
   <h1 class="title">${escapeHtml(note.title)}</h1>
   <div class="rule"></div>
   ${markdownToHtml(note.content)}
-  <div class="footer">Generated from Astraa for educational use. Verify official information on the respective official government websites. Astraa is not a government entity.</div>
+  <div class="footer">Generated from Astra for educational use. Verify official information on the respective official government websites. Astra is not a government entity.</div>
 </body></html>`;
 }

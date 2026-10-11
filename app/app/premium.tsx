@@ -42,7 +42,7 @@ export default function PremiumScreen() {
         onPress: async () => {
           await createSubscription({ userId: user._id, plan: plan.id, amount: plan.price, paymentId: `demo_${Date.now()}` });
           await refreshUser();
-          Alert.alert("🎉 Welcome to Premium!", "Your Astraa Pass is now active. Enjoy unlimited tests!");
+          Alert.alert("🎉 Welcome to Premium!", "Your Astra Pass is now active. Enjoy unlimited tests!");
           router.back();
         },
       },
@@ -51,7 +51,7 @@ export default function PremiumScreen() {
 
   return (
     <View className="flex-1 bg-slate-50 dark:bg-ink-bg">
-      <ScreenHeader title="Astraa Pass" subtitle="Unlock your full potential" onBack={() => router.back()} />
+      <ScreenHeader title="Astra Pass" subtitle="Unlock your full potential" onBack={() => router.back()} />
 
       <ScrollView className="p-4" showsVerticalScrollIndicator={false}>
         <HeroBackground className="rounded-2xl p-5 mb-5">

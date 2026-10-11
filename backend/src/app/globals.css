@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* Astraa brand: remap Tailwind's indigo scale to the logo navy so existing
+/* Astra brand: remap Tailwind's indigo scale to the logo navy so existing
    indigo-* utility classes follow the brand. Amber accent = #f5a300. */
 @theme {
   --color-indigo-50: #eef3fc;

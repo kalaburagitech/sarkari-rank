@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────
-// Astraa Design Tokens (navy + amber from the logo)
+// Astra Design Tokens (navy + amber from the logo)
 // One source of truth for colors. `lightColors` / `darkColors` are
 // consumed through useTheme() (lib/theme.tsx). The legacy `theme`
 // export stays as a light alias so screens migrate incrementally.

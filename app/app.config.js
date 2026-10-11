@@ -1,6 +1,6 @@
 export default {
   expo: {
-    name: "Astraa Exam App",
+    name: "Astra Exam App",
     slug: "sarkari-rank-govt-exam-prep",
     version: "1.0.11",
     orientation: "portrait",
@@ -21,7 +21,7 @@ export default {
         backgroundColor: "#FFFFFF",
         foregroundImage: "./assets/android-icon-foreground.png",
       },
-      package: "com.astraa.examapp",
+      package: "com.astra.examapp",
       versionCode: 12,
     },
     web: {

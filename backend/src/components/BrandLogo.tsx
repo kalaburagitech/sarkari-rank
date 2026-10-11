@@ -26,8 +26,8 @@ export function BrandLogo({
       <div className={cn("flex items-center", className)}>
         <Image
           src="/logo-horizontal.png"
-          alt="Astraa"
-          width={238}
+          alt="Astra"
+          width={208}
           height={48}
           className="h-10 w-auto object-contain"
           priority
@@ -40,7 +40,7 @@ export function BrandLogo({
     <div className={cn("flex items-center gap-3", className)}>
       <Image
         src="/logo-icon.png"
-        alt="Astraa"
+        alt="Astra"
         width={size}
         height={size}
         className="rounded-2xl bg-white shadow-lg shadow-indigo-500/20"
@@ -49,7 +49,7 @@ export function BrandLogo({
       />
       {showText && (
         <div>
-          <h1 className={cn("text-xl font-bold tracking-tight", titleClass)}>Astraa</h1>
+          <h1 className={cn("text-xl font-bold tracking-tight", titleClass)}>Astra</h1>
           {subtitle && <p className={cn("text-xs", subtitleClass)}>{subtitle}</p>}
         </div>
       )}

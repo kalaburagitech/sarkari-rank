@@ -2,7 +2,7 @@
 // deletion). Plain server components — no admin auth, no Convex calls.
 
 export const SUPPORT_EMAIL = "kalaburagitech@gmail.com";
-export const APP_NAME = "Astraa Exam App";
+export const APP_NAME = "Astra Exam App";
 export const DEVELOPER = "KalaburagiTech";
 
 export function LegalPage({ title, updated, children }: { title: string; updated: string; children: React.ReactNode }) {

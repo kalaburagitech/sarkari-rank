@@ -59,7 +59,7 @@ export default function LoginScreen() {
             </View>
           ) : null}
 
-          <PrimaryButton title="Login to Astraa" onPress={handleLogin} loading={loading} />
+          <PrimaryButton title="Login to Astra" onPress={handleLogin} loading={loading} />
 
           <View className="flex-row justify-center mt-5">
             <Text className="text-slate-500 text-sm">New here? </Text>

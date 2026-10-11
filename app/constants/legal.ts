@@ -6,7 +6,7 @@ export const DISCLAIMER_SHORT =
   "Independent educational app — not affiliated with, or endorsed by, any government entity. Tap for official sources.";
 
 export const DISCLAIMER_FULL =
-  "Astraa is an independent educational application created to help candidates prepare for competitive examinations. It is NOT affiliated with, endorsed by, authorized by, or associated with any government department, ministry, agency, board, commission, or official recruitment body.\n\n" +
+  "Astra is an independent educational application created to help candidates prepare for competitive examinations. It is NOT affiliated with, endorsed by, authorized by, or associated with any government department, ministry, agency, board, commission, or official recruitment body.\n\n" +
   "All exam names, logos, and trademarks are the property of their respective official organizations. All content in this app — including practice questions, mock tests, study notes, exam details, and current affairs — is provided for general educational and preparation purposes only. It is aggregated from publicly available sources and may not always be accurate, complete, or up to date.\n\n" +
   "Always verify official notifications, eligibility, exam dates, syllabus, and results on the respective official government websites listed below before taking any action. Current affairs shown in this app are aggregated from public news sources — open each item and tap “Read at source” to view the original article.";
 

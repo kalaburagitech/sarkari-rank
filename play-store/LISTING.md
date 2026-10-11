@@ -1,10 +1,10 @@
-# Astraa Exam App — Play Console submission sheet
+# Astra Exam App — Play Console submission sheet
 
-New app · package **com.astraa.examapp** · version 1.0.11 (versionCode 12)
+New app · package **com.astra.examapp** · version 1.0.11 (versionCode 12)
 AAB: `app/android/app/build/outputs/bundle/release/app-release.aab`
 
 ## Create app
-- App name: **Astraa Exam App**
+- App name: **Astra Exam App**
 - Default language: English (India) – en-IN
 - App or game: App · Free
 - Declarations: Developer Program Policies ✔ · US export laws ✔
@@ -14,9 +14,9 @@ AAB: `app/android/app/build/outputs/bundle/release/app-release.aab`
 Exam prep for KPSC, KEA, Police, SSC & Banking. Not a government app.
 
 **Full description:**
-⚠️ DISCLAIMER — NOT A GOVERNMENT APP: Astraa is an independent educational app published by KalaburagiTech. It is NOT affiliated with, endorsed by, or associated with any government, ministry, department, board, commission or recruitment body, and it does not provide any government service, job, application or result. All exam names belong to their respective organisations. Content is for exam preparation only and may not always be accurate or current — always verify official notifications, eligibility, dates, syllabus and results on the official websites listed below.
+⚠️ DISCLAIMER — NOT A GOVERNMENT APP: Astra is an independent educational app published by KalaburagiTech. It is NOT affiliated with, endorsed by, or associated with any government, ministry, department, board, commission or recruitment body, and it does not provide any government service, job, application or result. All exam names belong to their respective organisations. Content is for exam preparation only and may not always be accurate or current — always verify official notifications, eligibility, dates, syllabus and results on the official websites listed below.
 
-Astraa — ನಿಮ್ಮ ಯಶಸ್ಸಿನ ಅಸ್ತ್ರ — helps you prepare for Karnataka and all-India competitive exams in English and ಕನ್ನಡ.
+Astra — ನಿಮ್ಮ ಯಶಸ್ಸಿನ ಅಸ್ತ್ರ — helps you prepare for Karnataka and all-India competitive exams in English and ಕನ್ನಡ.
 
 WHAT YOU GET
 📝 Mock tests & live tests in the real exam pattern, with instant scores
@@ -74,6 +74,6 @@ Privacy policy: https://sarkari-rank.vercel.app/privacy
 - **Account deletion URL:** https://sarkari-rank.vercel.app/delete-account (also in app: Profile → Delete Account)
 
 ## Release
-Production track → upload AAB → release name "1.0.11 — Astraa launch" → notes:
-"Astraa Exam App launch: mock tests, practice by chapter with progress tracking, previous year papers, study notes and official source links for every exam."
+Production track → upload AAB → release name "1.0.11 — Astra launch" → notes:
+"Astra Exam App launch: mock tests, practice by chapter with progress tracking, previous year papers, study notes and official source links for every exam."
 Countries: India.

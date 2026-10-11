@@ -48,7 +48,7 @@ export function Logo({
       {showText && (
         <View className="items-center mt-3">
           <Text style={{ color: textColor }} className="text-2xl font-black tracking-tight">
-            Astraa
+            Astra
           </Text>
           {subtitle && (
             <Text style={{ color: subColor }} className="text-sm mt-1 text-center">
@@ -61,7 +61,7 @@ export function Logo({
   );
 }
 
-/** Full logo (emblem + "Astraa / EXAM APP" + Kannada tagline) inside a white card. */
+/** Full logo (emblem + "Astra / EXAM APP" + Kannada tagline) inside a white card. */
 export function LogoFull({ width = 200, style }: { width?: number; style?: ViewStyle }) {
   const pad = width * 0.08;
   return (
@@ -70,7 +70,7 @@ export function LogoFull({ width = 200, style }: { width?: number; style?: ViewS
         source={fullLogoSource}
         style={{ width: width - pad * 2, height: (width - pad * 2) / FULL_LOGO_RATIO }}
         resizeMode="contain"
-        accessibilityLabel="Astraa Exam App"
+        accessibilityLabel="Astra Exam App"
       />
     </View>
   );
@@ -93,7 +93,7 @@ export function LogoRow({
       <Emblem size={size} />
       <View className="ml-3">
         <Text style={{ color: textColor }} className="text-lg font-black">
-          Astraa
+          Astra
         </Text>
         {subtitle && (
           // Android under-measures Kannada (measured before the fallback font

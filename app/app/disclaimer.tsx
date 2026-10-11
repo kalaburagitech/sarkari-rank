@@ -51,7 +51,7 @@ export default function DisclaimerScreen() {
 
         <Text className="text-slate-400 dark:text-slate-500 text-xs text-center px-4 leading-5">
           Always confirm exam notifications, eligibility, dates and results on the official
-          websites above. Astraa is a study-preparation tool only.
+          websites above. Astra is a study-preparation tool only.
         </Text>
       </ScrollView>
     </View>

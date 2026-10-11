@@ -51,7 +51,7 @@ export default function HomeScreen() {
   const analytics = useCached<any>(`analytics:${user?._id}`, api.attempts.getPerformanceAnalytics, user ? { userId: user._id } : "skip", []);
   const unreadCount = notifications?.filter((n) => !n.isRead).length ?? 0;
 
-  if (!categories || !tests || !exams) return <LoadingScreen message="Loading Astraa..." />;
+  if (!categories || !tests || !exams) return <LoadingScreen message="Loading Astra..." />;
 
   const popularTests = tests.filter((t) => t.isFree).slice(0, 4);
   const liveTests = tests.filter((t) => t.type === "live").slice(0, 3);

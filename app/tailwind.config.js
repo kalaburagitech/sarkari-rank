@@ -1,4 +1,4 @@
-// Brand navy sampled from the Astraa logo (mirrors palette.primary in constants/theme.ts).
+// Brand navy sampled from the Astra logo (mirrors palette.primary in constants/theme.ts).
 const navy = {
   50: "#EEF3FC",
   100: "#DAE5F8",
