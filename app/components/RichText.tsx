@@ -115,19 +115,27 @@ export function RichText({
   const base: TextStyle = { color: color ?? colors.text, fontSize: size, lineHeight: lineHeight ?? Math.round(size * 1.6), fontWeight: weight };
   return (
     <View>
-      {parseRich(text).map((b, i) => {
-        if (b.kind === "gap") return <View key={i} style={{ height: size * 0.6 }} />;
+      {parseRich(text).map((b, i, all) => {
+        // Breathing room so each statement reads as its own line: a gap between
+        // list items, and between a list and the text before / after it.
+        const gap = Math.round(size * 0.6);
+        const prev = all[i - 1]?.kind;
+        if (b.kind === "gap") return <View key={i} style={{ height: gap }} />;
         if (b.kind === "img") return <RichImage key={i} uri={b.url} />;
         if (b.kind === "li")
           return (
-            <View key={i} style={{ flexDirection: "row", marginLeft: b.indent * 18, marginTop: 3 }}>
+            <View key={i} style={{ flexDirection: "row", marginLeft: b.indent * 18, marginTop: i === 0 ? 0 : gap }}>
               <Text style={[base, { minWidth: size * 1.7, fontWeight: "600", color: colors.primary }]}>{b.marker}</Text>
               <View style={{ flex: 1 }}>
                 <Inline text={b.text} style={base} />
               </View>
             </View>
           );
-        return <Inline key={i} text={b.text} style={base} />;
+        return (
+          <View key={i} style={{ marginTop: prev === "li" ? gap : 0 }}>
+            <Inline text={b.text} style={base} />
+          </View>
+        );
       })}
     </View>
   );

@@ -30,8 +30,67 @@ function listItem(line: string): { marker: string; text: string; indent: number;
   return null;
 }
 
+// ─── Inline statement lists ───────────────────────────────────────────────
+// Exam questions often arrive as one paragraph: "Consider: (a) … (b) … (c) …".
+// Split such runs onto their own lines so they render as a list. Only
+// sequential markers count — (a)(b)(c), (A)(B), (i)(ii)(iii) or (1)(2)(3) —
+// and every statement must be substantial, so answer options like
+// "(a) and (b) only" stay on one line.
+
+const ROMAN_SEQ = ["i", "ii", "iii", "iv", "v", "vi", "vii", "viii", "ix", "x"];
+const LOWER = "abcdefghijklmnopqrstuvwxyz";
+const MIN_STATEMENT = 12; // characters (code points) per split-out statement
+
+function sequenceFor(first: string): string[] | null {
+  if (first === "i") return ROMAN_SEQ;
+  if (first === "I") return ROMAN_SEQ.map((x) => x.toUpperCase());
+  if (first === "a") return LOWER.split("");
+  if (first === "A") return LOWER.toUpperCase().split("");
+  if (first === "1") return Array.from({ length: 30 }, (_, k) => String(k + 1));
+  return null;
+}
+
+export function splitInlineList(line: string): string[] | null {
+  // "(x)" or "x)" markers at line start or after whitespace / punctuation.
+  const re = /(^|[\s:;,.!?\u2014\u2013-])(\(?([a-zA-Z]|[ivxIVX]{2,4}|\d{1,2})\))(?=\s)/g;
+  const marks: { at: number; label: string; text: string }[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(line))) marks.push({ at: m.index + m[1].length, label: m[3], text: m[2] });
+  if (marks.length < 2) return null;
+  for (let s0 = 0; s0 < marks.length - 1; s0++) {
+    const seq = sequenceFor(marks[s0].label);
+    if (!seq) continue;
+    const chain = [marks[s0]];
+    for (let j = s0 + 1, k = 1; j < marks.length && k < seq.length; j++) {
+      if (marks[j].label === seq[k]) {
+        chain.push(marks[j]);
+        k++;
+      }
+    }
+    if (chain.length < 2) continue;
+    const bodies = chain.map((c, n) => {
+      const end = n + 1 < chain.length ? chain[n + 1].at : line.length;
+      return line.slice(c.at + c.text.length, end).trim();
+    });
+    if (!bodies.every((b) => [...b].length >= MIN_STATEMENT)) continue;
+    // A closing question after the last statement ("… 1950. Which is correct?")
+    // goes on its own line.
+    let tail = "";
+    const last = bodies[bodies.length - 1].match(/^(.*[.!।])\s+([^.!?।]+\?)$/);
+    if (last && [...last[1]].length >= MIN_STATEMENT) {
+      bodies[bodies.length - 1] = last[1];
+      tail = last[2].trim();
+    }
+    const prefix = line.slice(0, chain[0].at).trim();
+    const items = bodies.map((b, n) => `(${chain[n].label}) ${b}`);
+    return [...(prefix ? [prefix] : []), ...items, ...(tail ? [tail] : [])];
+  }
+  return null;
+}
+
 export function parseRich(src: string): RichBlock[] {
-  const lines = (src ?? "").replace(/\r\n?/g, "\n").replace(/ /g, " ").split("\n");
+  const lines = (src ?? "").replace(/\r\n?/g, "\n").replace(/ /g, " ").split("\n")
+    .flatMap((l) => (IMG.test(l) ? [l] : splitInlineList(l) ?? [l]));
   const items = lines.map(listItem);
   const out: RichBlock[] = [];
   lines.forEach((raw, i) => {
